@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ title }} | LuxeEstate{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="breadcrumb-bar mb-4">
+        <a href="{% url 'properties:home' %}">Home</a> <span class="text-secondary">/</span> <span class="text-white">{{ title }}</span>
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-xl-10">
+            <div class="filter-panel">
+                <h2 class="h4 text-white mb-2">{{ title }}</h2>
+                <p class="text-muted-custom small mb-4">Create a polished listing with photos, pricing, location context, and nearby essentials. The AI assistant can enhance your description automatically.</p>
+
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        {% for field in form %}
+                        <div class="col-md-{% if field.name == 'description' or field.name == 'address' %}12{% elif field.name == 'title' %}12{% else %}6{% endif %}">
+                            <label class="form-label small text-uppercase text-muted-custom" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {% if field.name == 'description' %}
+                            <div class="d-flex gap-2 mb-2">
+                                {{ field }}
+                                <button type="button" id="generate-description-btn" class="btn btn-outline-gold btn-sm btn-pill align-self-start">
+                                    <i class="fas fa-magic me-1"></i>Generate with AI
+                                </button>
+                            </div>
+                            <div id="description-status" class="small text-muted-custom mt-1 status-text"></div>
+                            {% else %}
+                            {{ field }}
+                            {% endif %}
+                            {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <hr class="border-secondary my-4">
+                    <h6 class="text-uppercase small">Property photos</h6>
+                    {% if image_formset.non_form_errors %}
+                    <div class="text-danger small">{{ image_formset.non_form_errors }}</div>
+                    {% endif %}
+                    {{ image_formset.management_form }}
+                    {% for f in image_formset.forms %}
+                    <div class="row g-2 align-items-end mb-2">
+                        <div class="col-md-8">
+                            {% for h in f.hidden_fields %}{{ h }}{% endfor %}
+                            {{ f.image }}
+                            {% if f.instance.pk %}{{ f.DELETE }} <label class="small text-muted-custom ms-2">Delete</label>{% endif %}
+                        </div>
+                    </div>
+                    {% if f.errors %}<div class="text-danger small">{{ f.errors }}</div>{% endif %}
+                    {% endfor %}
+
+                    <hr class="border-secondary my-4">
+                    <h6 class="text-uppercase small">Nearby places</h6>
+                    <p class="text-muted-custom small">Add rows for hospitals, schools, malls, or transit points to increase listing quality and trust.</p>
+                    {{ nearby_formset.management_form }}
+                    {% for f in nearby_formset.forms %}
+                    <div class="row g-2 mb-2 border-bottom border-secondary pb-2">
+                        <div class="col-md-3">{{ f.place_type.label_tag }} {{ f.place_type }}</div>
+                        <div class="col-md-4">{{ f.name.label_tag }} {{ f.name }}</div>
+                        <div class="col-md-2">{{ f.distance.label_tag }} {{ f.distance }}</div>
+                        <div class="col-md-2 d-flex align-items-end">{% if f.instance.pk %}{{ f.DELETE }} <label class="small ms-1">Del</label>{% endif %}</div>
+                        {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+                    </div>
+                    {% endfor %}
+
+                    <div class="mt-4 d-flex gap-2 flex-wrap">
+                        <button type="submit" class="btn btn-gold btn-pill px-5">{{ submit_label }}</button>
+                        <a href="{% if property_obj %}{% url 'properties:property_detail' property_obj.pk %}{% else %}{% url 'properties:home' %}{% endif %}" class="btn btn-outline-gold btn-pill">Cancel</a>
+                    </div>
+                </form>
+
+                {% if GOOGLE_MAPS_API_KEY %}
+                <hr class="border-secondary my-4">
+                <h6 class="text-uppercase small">Smart places helper</h6>
+                <p class="text-muted-custom small">Search a place or auto-fill nearby essentials from your coordinates to speed up publishing.</p>
+                <input type="text" id="place-search" class="form-control mb-2" placeholder="Search hospital, metro…">
+                <button type="button" id="autofill-nearby-btn" class="btn btn-outline-gold btn-sm btn-pill">Auto-fill nearby essentials</button>
+                <p id="autofill-nearby-status" class="small text-muted-custom mt-2 mb-0 status-text"></p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% if GOOGLE_MAPS_API_KEY %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places"></script>
+<script src="{% static 'js/places_autocomplete.js' %}"></script>
+<script>
+(function() {
+  const btn = document.getElementById('autofill-nearby-btn');
+  const status = document.getElementById('autofill-nearby-status');
+  if (!btn || !status) return;
+
+  function toFloat(value) {
+    const n = parseFloat(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function pickCoordinates() {
+    const latEl = document.getElementById('id_latitude');
+    const lngEl = document.getElementById('id_longitude');
+    const lat = toFloat(latEl ? latEl.value : '');
+    const lng = toFloat(lngEl ? lngEl.value : '');
+    if (lat !== null && lng !== null) return Promise.resolve({ lat, lng });
+
+    if (!navigator.geolocation) {
+      return Promise.reject(new Error('Set latitude/longitude manually or enable geolocation.'));
+    }
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => reject(new Error('Could not read device location. Fill coordinates manually.')),
+        { timeout: 8000 }
+      );
+    });
+  }
+
+  function firstEmptyRowIndex() {
+    const rows = document.querySelectorAll('[id^="id_nearby-"][id$="-name"]');
+    for (const el of rows) {
+      if (!el.value.trim()) {
+        const m = el.id.match(/nearby-(\d+)-name/);
+        if (m) return parseInt(m[1], 10);
+      }
+    }
+    return null;
+  }
+
+  function setField(id, value) {
+    const el = document.getElementById(id);
+    if (el && (el.value || '').trim() === '') el.value = value || '';
+  }
+
+  function setStatus(text) {
+    status.classList.remove('visible');
+    void status.offsetWidth;
+    status.textContent = text;
+    if (text && text.trim()) status.classList.add('visible');
+  }
+
+  btn.addEventListener('click', async function() {
+    setStatus('Collecting location...');
+    try {
+      const { lat, lng } = await pickCoordinates();
+      setStatus('Finding nearby essentials...');
+      const r = await fetch('{% url "properties:nearby_places_api" %}?lat=' + encodeURIComponent(lat) + '&lng=' + encodeURIComponent(lng));
+      const data = await r.json();
+      if (!r.ok || data.error) throw new Error(data.error || 'Could not fetch nearby places.');
+      const items = data.items || [];
+      if (!items.length) throw new Error('No nearby places found for this location.');
+
+      let idx = firstEmptyRowIndex();
+      if (idx === null) throw new Error('No empty nearby rows available. Save and edit to add more.');
+
+      let filled = 0;
+      for (const item of items) {
+        const nameEl = document.getElementById('id_nearby-' + idx + '-name');
+        if (!nameEl) break;
+        setField('id_nearby-' + idx + '-place_type', item.place_type || 'other');
+        setField('id_nearby-' + idx + '-name', item.name || '');
+        setField('id_nearby-' + idx + '-distance', item.distance || '');
+        setField('id_nearby-' + idx + '-place_id', item.place_id || '');
+        setField('id_nearby-' + idx + '-latitude', item.latitude || '');
+        setField('id_nearby-' + idx + '-longitude', item.longitude || '');
+        idx += 1;
+        filled += 1;
+      }
+
+      setStatus('Filled ' + filled + ' nearby locations. You can edit before saving.');
+    } catch (err) {
+      setStatus(err.message || 'Unable to auto-fill nearby places.');
+    }
+  });
+})();
+
+// AI Description Generation
+(function() {
+  const btn = document.getElementById('generate-description-btn');
+  const status = document.getElementById('description-status');
+  const descField = document.getElementById('id_description');
+  if (!btn || !status || !descField) return;
+
+  function setStatus(text, isError = false) {
+    status.classList.remove('visible', 'text-danger');
+    void status.offsetWidth;
+    status.textContent = text;
+    if (text && text.trim()) {
+      status.classList.add('visible');
+      if (isError) status.classList.add('text-danger');
+    }
+  }
+
+  function getFormData() {
+    return {
+      title: document.getElementById('id_title')?.value || '',
+      city: document.getElementById('id_city')?.value || '',
+      property_type: document.getElementById('id_property_type')?.value || '',
+      address: document.getElementById('id_address')?.value || '',
+      price: document.getElementById('id_price')?.value || '',
+    };
+  }
+
+  btn.addEventListener('click', async function() {
+    const data = getFormData();
+    if (!data.title || !data.city || !data.property_type) {
+      setStatus('Please fill in title, city, and property type first.', true);
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generating...';
+    setStatus('Generating AI description...');
+
+    try {
+      const response = await fetch('{% url "properties:generate_description_api" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to generate description');
+      }
+
+      descField.value = result.description;
+      setStatus('AI description generated successfully! You can edit it before saving.');
+    } catch (error) {
+      setStatus(error.message || 'Failed to generate description. Please try again.', true);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-magic me-1"></i>Generate with AI';
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

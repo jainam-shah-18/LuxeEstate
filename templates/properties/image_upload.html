@@ -1,0 +1,762 @@
+{% extends "base.html" %}
+{% block title %}✨ Visual Property Search | LuxeEstate{% endblock %}
+
+{% block content %}
+<style>
+  .image-upload-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(224, 190, 93, 0.03) 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .upload-card {
+    background: rgba(20, 18, 12, 0.70);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 2rem;
+    padding: 4rem 3rem;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+                inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    animation: slideInUp 0.8s ease-out;
+    position: relative;
+    z-index: 10;
+  }
+
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .upload-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .upload-header h1 {
+    font-size: 2.5rem;
+    margin: 0 0 0.5rem 0;
+    background: linear-gradient(135deg, #d4af37, #f4d96f);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: fadeIn 0.6s ease-out;
+  }
+
+  .upload-header p {
+    color: #d3c291;
+    font-size: 1.1rem;
+    margin: 0;
+    animation: fadeIn 0.8s ease-out 0.2s backwards;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .drop-zone {
+    border: 2px dashed rgba(212, 175, 55, 0.4);
+    border-radius: 1.5rem;
+    padding: 3rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(212, 175, 55, 0.02);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .drop-zone::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+    animation: pulse 3s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 0.5;
+    }
+    50% {
+      transform: scale(1.1);
+      opacity: 0.8;
+    }
+  }
+
+  .drop-zone:hover {
+    border-color: #d4af37;
+    background: rgba(212, 175, 55, 0.08);
+    transform: scale(1.02);
+  }
+
+  .drop-zone.drag-over {
+    border-color: #f4d96f;
+    background: rgba(212, 175, 55, 0.15);
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.3),
+                inset 0 0 20px rgba(212, 175, 55, 0.1);
+  }
+
+  .drop-zone-content {
+    position: relative;
+    z-index: 2;
+  }
+
+  .drop-zone-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+    display: inline-block;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  .drop-zone-text {
+    color: #d3c291;
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .drop-zone-hint {
+    color: #a89968;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+  }
+
+  #fileInput {
+    display: none;
+  }
+
+  .preview-container {
+    margin-top: 3rem;
+    display: none;
+    animation: slideInUp 0.5s ease-out;
+  }
+
+  .preview-container.active {
+    display: block;
+  }
+
+  .image-preview {
+    width: 100%;
+    max-height: 300px;
+    object-fit: cover;
+    border-radius: 1rem;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .analysis-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(212, 175, 55, 0.2);
+  }
+
+  .analysis-title {
+    font-size: 1rem;
+    color: #f4d96f;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .feature-tag {
+    background: rgba(212, 175, 55, 0.12);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    padding: 0.8rem;
+    border-radius: 0.8rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    animation: scaleIn 0.4s ease-out;
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .feature-tag:hover {
+    background: rgba(212, 175, 55, 0.25);
+    border-color: #d4af37;
+    transform: translateY(-4px);
+    box-shadow: 0 5px 15px rgba(212, 175, 55, 0.2);
+  }
+
+  .feature-tag.selected {
+    background: #d4af37;
+    border-color: #f4d96f;
+    color: #070602;
+    font-weight: 600;
+  }
+
+  .feature-icon {
+    font-size: 1.8rem;
+    display: block;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .feature-name {
+    font-size: 0.85rem;
+    color: #d3c291;
+    font-weight: 500;
+  }
+
+  .feature-tag.selected .feature-name {
+    color: #070602;
+  }
+
+  .confidence-meter {
+    margin-top: 1.5rem;
+  }
+
+  .confidence-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #d3c291;
+  }
+
+  .confidence-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(212, 175, 55, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #d4af37, #f4d96f);
+    border-radius: 10px;
+    width: 0%;
+    animation: fillBar 0.8s ease-out;
+  }
+
+  @keyframes fillBar {
+    from {
+      width: 0%;
+    }
+    to {
+      width: var(--confidence-width, 0%);
+    }
+  }
+
+  .button-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-search {
+    flex: 1;
+    min-width: 150px;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, #d4af37, #f4d96f);
+    color: #070602;
+    border: none;
+    border-radius: 0.8rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 10px 25px rgba(212, 175, 55, 0.3);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-search::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: left 0.3s ease;
+  }
+
+  .btn-search:hover::before {
+    left: 100%;
+  }
+
+  .btn-search:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 35px rgba(212, 175, 55, 0.4);
+  }
+
+  .btn-search:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-upload-new {
+    flex: 1;
+    min-width: 150px;
+    padding: 1rem 2rem;
+    background: transparent;
+    color: #d4af37;
+    border: 2px solid #d4af37;
+    border-radius: 0.8rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .btn-upload-new:hover {
+    background: rgba(212, 175, 55, 0.1);
+    transform: translateY(-3px);
+  }
+
+  .loading-animation {
+    display: none;
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .loading-animation.active {
+    display: block;
+  }
+
+  .spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(212, 175, 55, 0.2);
+    border-top-color: #d4af37;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .loading-text {
+    color: #d3c291;
+    font-size: 0.95rem;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #a89968;
+  }
+
+  .info-tips {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(212, 175, 55, 0.15);
+  }
+
+  .tips-title {
+    color: #f4d96f;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+
+  .tips-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.85rem;
+    color: #a89968;
+    line-height: 1.8;
+  }
+
+  .tips-list li {
+    padding: 0.4rem 0;
+  }
+
+  .tips-list li::before {
+    content: '✓ ';
+    color: #d4af37;
+    font-weight: 600;
+    margin-right: 0.5rem;
+  }
+
+  .quick-links {
+    margin-top: 2rem;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .quick-link {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.85rem;
+    color: #d3c291;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 0.6rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+  }
+
+  .quick-link:hover {
+    color: #f4d96f;
+    border-color: #d4af37;
+    background: rgba(212, 175, 55, 0.1);
+  }
+
+  @media (max-width: 768px) {
+    .upload-card {
+      padding: 2rem 1.5rem;
+    }
+
+    .upload-header h1 {
+      font-size: 2rem;
+    }
+
+    .drop-zone {
+      padding: 2rem;
+    }
+
+    .features-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .button-group {
+      flex-direction: column;
+    }
+
+    .btn-search,
+    .btn-upload-new {
+      width: 100%;
+    }
+  }
+
+  .animated-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .gradient-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.3;
+  }
+
+  .orb-1 {
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.4), transparent);
+    top: -200px;
+    right: -200px;
+    animation: floatOrb 20s ease-in-out infinite;
+  }
+
+  .orb-2 {
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(224, 190, 93, 0.3), transparent);
+    bottom: -150px;
+    left: -150px;
+    animation: floatOrb 25s ease-in-out infinite reverse;
+  }
+
+  @keyframes floatOrb {
+    0%, 100% {
+      transform: translate(0, 0);
+    }
+    50% {
+      transform: translate(50px, 50px);
+    }
+  }
+</style>
+
+<div class="animated-background">
+  <div class="gradient-orb orb-1"></div>
+  <div class="gradient-orb orb-2"></div>
+</div>
+
+<div class="image-upload-container">
+  <div class="upload-card">
+    <!-- Header -->
+    <div class="upload-header">
+      <h1>✨ Visual Search</h1>
+      <p>Upload a property photo to discover similar listings</p>
+    </div>
+
+    <!-- Upload Form -->
+    <form id="uploadForm" enctype="multipart/form-data">
+      {% csrf_token %}
+      
+      <!-- Drop Zone -->
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-zone-content">
+          <div class="drop-zone-icon">📸</div>
+          <p class="drop-zone-text">Drop your property photo here</p>
+          <p class="drop-zone-hint">or click to browse</p>
+        </div>
+      </div>
+
+      <input type="file" id="fileInput" name="image" accept="image/*" required>
+
+      <!-- Loading State -->
+      <div class="loading-animation" id="loadingAnimation">
+        <div class="spinner"></div>
+        <p class="loading-text">Analyzing image... Finding features...</p>
+      </div>
+
+      <!-- Preview Container -->
+      <div class="preview-container" id="previewContainer">
+        <img id="imagePreview" class="image-preview" alt="Preview">
+        
+        <!-- Analysis Section -->
+        <div class="analysis-section" id="analysisSection" style="display: none;">
+          <div class="analysis-title">Detected Features</div>
+          <div class="features-grid" id="featuresGrid"></div>
+          
+          <div class="confidence-meter" id="confidenceMeter" style="display: none;">
+            <div class="confidence-label">
+              <span>Confidence Level</span>
+              <span id="confidencePercent">0%</span>
+            </div>
+            <div class="confidence-bar">
+              <div class="confidence-fill" id="confidenceFill"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="button-group" id="buttonGroup" style="display: none;">
+        <button type="button" class="btn-search" id="searchBtn">🔍 Search Properties</button>
+        <button type="button" class="btn-upload-new" id="uploadNewBtn">Upload Another</button>
+      </div>
+    </form>
+
+    <!-- Tips Section -->
+    <div class="info-tips">
+      <div class="tips-title">Pro Tips for Best Results</div>
+      <ul class="tips-list">
+        <li>Clear, well-lit photos work best</li>
+        <li>Frame the feature you want to search (pool, kitchen, etc.)</li>
+        <li>Use high-quality images for accurate detection</li>
+        <li>Multiple photos help identify more features</li>
+      </ul>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="quick-links">
+      <a href="{% url 'properties:property_list' %}" class="quick-link">Browse All</a>
+      <a href="{% url 'properties:ai_chat' %}" class="quick-link">AI Chat</a>
+      <a href="{% url 'properties:recommendations' %}" class="quick-link">Recommendations</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const uploadForm = document.getElementById('uploadForm');
+  const previewContainer = document.getElementById('previewContainer');
+  const imagePreview = document.getElementById('imagePreview');
+  const loadingAnimation = document.getElementById('loadingAnimation');
+  const analysisSection = document.getElementById('analysisSection');
+  const featuresGrid = document.getElementById('featuresGrid');
+  const buttonGroup = document.getElementById('buttonGroup');
+  const searchBtn = document.getElementById('searchBtn');
+  const uploadNewBtn = document.getElementById('uploadNewBtn');
+  const confidenceMeter = document.getElementById('confidenceMeter');
+  const confidenceFill = document.getElementById('confidenceFill');
+  const confidencePercent = document.getElementById('confidencePercent');
+
+  let currentAnalysisData = null;
+
+  // Drag and drop handlers
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('drag-over');
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      fileInput.files = files;
+      handleFileSelect();
+    }
+  });
+
+  fileInput.addEventListener('change', handleFileSelect);
+
+  function handleFileSelect() {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      imagePreview.src = e.target.result;
+      previewContainer.classList.add('active');
+      loadingAnimation.classList.add('active');
+      uploadForm.style.marginTop = '0';
+      analysisSection.style.display = 'none';
+      buttonGroup.style.display = 'none';
+
+      // Analyze the image
+      analyzeImage(file);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function analyzeImage(file) {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await fetch('{% url "properties:image_analyze_api" %}', {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': document.querySelector('[name="csrfmiddlewaretoken"]').value,
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+      currentAnalysisData = data;
+
+      loadingAnimation.classList.remove('active');
+
+      if (data.success && data.features && data.features.length > 0) {
+        // Display features
+        featuresGrid.innerHTML = '';
+        data.features.forEach((feature, index) => {
+          const tag = document.createElement('div');
+          tag.className = 'feature-tag';
+          tag.innerHTML = `
+            <span class="feature-icon">${feature.icon}</span>
+            <div class="feature-name">${feature.name}</div>
+          `;
+          tag.style.animationDelay = `${index * 0.05}s`;
+          tag.addEventListener('click', () => tag.classList.toggle('selected'));
+          featuresGrid.appendChild(tag);
+        });
+
+        // Show confidence meter
+        confidenceMeter.style.display = 'block';
+        const confidence = data.confidence || 0;
+        confidencePercent.textContent = `${confidence}%`;
+        confidenceFill.style.setProperty('--confidence-width', `${confidence}%`);
+
+        analysisSection.style.display = 'block';
+        buttonGroup.style.display = 'flex';
+      } else {
+        analysisSection.innerHTML = '<div class="empty-state">No features detected. Try another image or search manually.</div>';
+        analysisSection.style.display = 'block';
+        buttonGroup.style.display = 'flex';
+      }
+    } catch (error) {
+      console.error('Error analyzing image:', error);
+      loadingAnimation.classList.remove('active');
+      analysisSection.innerHTML = '<div class="empty-state">Error analyzing image. Please try again.</div>';
+      analysisSection.style.display = 'block';
+      buttonGroup.style.display = 'flex';
+    }
+  }
+
+  searchBtn.addEventListener('click', () => {
+    if (currentAnalysisData && currentAnalysisData.features) {
+      // Get selected features or use all
+      const selectedTags = document.querySelectorAll('.feature-tag.selected');
+      let features;
+      
+      if (selectedTags.length > 0) {
+        features = [];
+        selectedTags.forEach(tag => {
+          const cardIndex = Array.from(document.querySelectorAll('.feature-tag')).indexOf(tag);
+          if (cardIndex >= 0 && cardIndex < currentAnalysisData.features.length) {
+            features.push(currentAnalysisData.features[cardIndex]);
+          }
+        });
+      } else {
+        features = currentAnalysisData.features;
+      }
+
+      // Redirect to results page
+      const featuresJson = JSON.stringify(features);
+      const baseUrl = '{% url "properties:image_search_results" %}';
+      const searchUrl = baseUrl + '?features=' + encodeURIComponent(featuresJson);
+      window.location.href = searchUrl;
+    }
+  });
+
+  uploadNewBtn.addEventListener('click', () => {
+    fileInput.value = '';
+    previewContainer.classList.remove('active');
+    analysisSection.style.display = 'none';
+    buttonGroup.style.display = 'none';
+    loadingAnimation.classList.remove('active');
+    currentAnalysisData = null;
+  });
+</script>
+{% endblock %}

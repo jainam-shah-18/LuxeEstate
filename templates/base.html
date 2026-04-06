@@ -1,0 +1,316 @@
+{% load static %}
+{% load socialaccount %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LuxeEstate | Premium Real Estate{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <!-- Magical Background Effects -->
+    <div class="magical-background">
+        <!-- Golden Curve Lines -->
+        <div class="golden-curves">
+            <svg class="curve-line curve-1" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0,400 Q300,200 600,400 T1200,400" stroke="#d4af37" stroke-width="2" fill="none" opacity="0.3"/>
+            </svg>
+            <svg class="curve-line curve-2" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0,500 Q400,300 800,500 T1200,500" stroke="#f4d96f" stroke-width="1.5" fill="none" opacity="0.2"/>
+            </svg>
+            <svg class="curve-line curve-3" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0,300 Q250,500 500,300 T1000,300" stroke="#e0be5d" stroke-width="1" fill="none" opacity="0.25"/>
+            </svg>
+            <svg class="curve-line curve-4" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0,600 Q350,400 700,600 T1200,600" stroke="#d4af37" stroke-width="1.5" fill="none" opacity="0.2"/>
+            </svg>
+        </div>
+        
+        <!-- Smoke Black Layers -->
+        <div class="smoke-layers">
+            <div class="smoke smoke-1"></div>
+            <div class="smoke smoke-2"></div>
+            <div class="smoke smoke-3"></div>
+            <div class="smoke smoke-4"></div>
+            <div class="smoke smoke-5"></div>
+            <div class="smoke smoke-6"></div>
+        </div>
+    </div>
+    
+    <div class="floating-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+    <div class="top-strip py-2 d-none d-md-block">
+        <div class="container d-flex justify-content-between align-items-center small">
+            <span class="text-gold-muted">Discover remarkable spaces with intelligent search</span>
+            <div class="d-flex gap-4">
+                <a href="{% url 'properties:property_list' %}?property_type=commercial" class="link-gold-muted">Commercial</a>
+                <a href="{% url 'payments:premium_checkout' %}" class="link-gold-muted">Premium listing</a>
+            </div>
+        </div>
+    </div>
+
+    <nav class="navbar navbar-expand-lg luxe-navbar sticky-top">
+        <div class="container">
+                <a class="navbar-brand fw-bold" href="{% url 'properties:home' %}">LUXE<span class="text-gold">ESTATE</span></a>
+            <button class="navbar-toggler border-gold" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon luxe-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="mainNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-2">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'properties:property_list' %}">Buy</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'properties:property_list' %}">Rent</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'properties:property_create' %}">Sell</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'properties:property_list' %}">All listings</a></li>
+                </ul>
+                <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2">
+                    {% if user.is_authenticated %}
+                        <a class="nav-link text-center" href="{% url 'favorites:list' %}">Shortlisted</a>
+                        <a class="nav-link text-center" href="{% url 'messaging:chat_threads' %}">Live chat</a>
+                        <a class="nav-link text-center" href="{% url 'messaging:inbox' %}">Inbox</a>
+                        <div class="dropdown">
+                            <a class="nav-link dropdown-toggle text-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                AI tools
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'properties:ai_chat' %}">AI Chat</a></li>
+                                <li><a class="dropdown-item" href="{% url 'properties:recommendations' %}">AI Recs</a></li>
+                            </ul>
+                        </div>
+                        <a class="nav-link text-center" href="{% url 'accounts:profile' %}">Profile</a>
+                        <a class="btn btn-gold btn-pill" href="{% url 'properties:property_create' %}">Post property <span class="badge bg-dark text-white ms-1">FREE</span></a>
+                        <a class="btn btn-outline-gold btn-pill" href="{% url 'accounts:logout' %}">Logout</a>
+                    {% else %}
+                        <a class="nav-link text-center" href="{% url 'accounts:login' %}">Login</a>
+                        <a class="btn btn-outline-gold btn-pill" href="{% url 'accounts:register' %}">Register</a>
+                        <a class="btn btn-gold btn-pill" href="{% url 'properties:property_create' %}">Post property <span class="badge bg-dark text-white ms-1">FREE</span></a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-3">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-dismissible fade show luxe-alert border-0" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <main class="flex-grow-1">
+        <div class="container mt-3">
+            <button type="button" id="go-back-btn" class="btn btn-outline-gold btn-sm btn-pill d-none">← Back</button>
+        </div>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="luxe-footer mt-auto">
+        <div class="container py-5">
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <h5 class="text-gold mb-3">LuxeEstate</h5>
+                    <p class="text-muted-custom mb-0">A modern real estate platform with AI discovery, visual search, and live expert conversations.</p>
+                </div>
+                <div class="col-6 col-lg-2">
+                    <h6 class="text-gold text-uppercase small fw-bold mb-3">Explore</h6>
+                    <ul class="list-unstyled footer-links">
+                        <li><a href="{% url 'properties:home' %}">All listings</a></li>
+                        <li><a href="{% url 'properties:property_list' %}?property_type=apartment">Apartments</a></li>
+                        <li><a href="{% url 'properties:property_list' %}?property_type=villa">Villas</a></li>
+                    </ul>
+                </div>
+                <div class="col-6 col-lg-2">
+                    <h6 class="text-gold text-uppercase small fw-bold mb-3">Account</h6>
+                    <ul class="list-unstyled footer-links">
+                        <li><a href="{% url 'accounts:login' %}">Login</a></li>
+                        <li><a href="{% url 'accounts:register' %}">Register</a></li>
+                        {% get_providers as socialaccount_providers %}
+                        {% for provider in socialaccount_providers %}
+                        <li><a href="{% provider_login_url provider.id %}">{{ provider.name }}</a></li>
+                        {% empty %}
+                        <li class="small text-secondary">Add Google OAuth in admin to enable social login.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="col-lg-4">
+                    <h6 class="text-gold text-uppercase small fw-bold mb-3">Help desk</h6>
+                    <p class="text-muted-custom mb-0">Toll free: 1800-41-99099<br>Email: support@luxeestate.com</p>
+                </div>
+            </div>
+            <hr class="border-secondary my-4">
+            <p class="text-center text-muted-custom small mb-0">&copy; {% now "Y" %} LuxeEstate. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <div class="global-chatbot">
+      <button type="button" id="global-chatbot-btn" class="btn btn-gold global-chatbot-btn" aria-label="Open AI assistant">
+        <span class="robot-fab-icon">🤖</span>
+      </button>
+      <div id="global-chatbot-panel" class="global-chatbot-panel d-none">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <span class="text-gold small text-uppercase fw-bold">AI assistant</span>
+            <p class="text-muted-custom small mb-0">Ask about budget, locality, furnished options, and property fit.</p>
+          </div>
+          <button type="button" class="btn-close btn-close-white" aria-label="Close" id="global-chatbot-close"></button>
+        </div>
+        <div id="global-chatbot-log" class="chat-window small text-muted-custom mb-3">
+          <div class="chat-bubble them">Hi! Tell me your budget, city, and preferences to get started.</div>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+          <input type="text" id="global-chatbot-input" class="form-control" placeholder="Type a message…" aria-label="Chat message">
+          <button class="btn btn-gold btn-chatbot-send" type="button" id="global-chatbot-send" aria-label="Send message">
+            <span class="robot-fab-icon">🤖</span>
+          </button>
+        </div>
+        <p class="small text-muted-custom mt-2 mb-0 status-text" id="global-chatbot-status"></p>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Removed purple chatbot widget - using golden chatbot only -->
+    
+    <script>
+      (function () {
+        const btn = document.getElementById('go-back-btn');
+        if (!btn) return;
+        const isHome = window.location.pathname === '/';
+        if (window.history.length > 1 && !isHome) {
+          btn.classList.remove('d-none');
+        }
+        btn.addEventListener('click', function () {
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            window.location.href = "{% url 'properties:home' %}";
+          }
+        });
+      })();
+
+      (function () {
+        const btn = document.getElementById('global-chatbot-btn');
+        const panel = document.getElementById('global-chatbot-panel');
+        const close = document.getElementById('global-chatbot-close');
+        const input = document.getElementById('global-chatbot-input');
+        const send = document.getElementById('global-chatbot-send');
+        const log = document.getElementById('global-chatbot-log');
+        const statusEl = document.getElementById('global-chatbot-status');
+        if (!btn || !panel || !close || !input || !send || !log || !statusEl) return;
+
+        function csrf() {
+          const m = document.cookie.match(/csrftoken=([^;]+)/);
+          return m ? m[1] : '';
+        }
+
+        function updateStatus(text, loading = false) {
+          statusEl.classList.remove('visible', 'loading-dots');
+          void statusEl.offsetWidth;
+          statusEl.textContent = text;
+          if (text && text.trim()) {
+            statusEl.classList.add('visible');
+            if (loading) statusEl.classList.add('loading-dots');
+          }
+        }
+
+        function addBubble(text, mine = false) {
+          const div = document.createElement('div');
+          div.className = 'chat-bubble ' + (mine ? 'me' : 'them');
+          div.textContent = text;
+          log.appendChild(div);
+          log.scrollTop = log.scrollHeight;
+          return div;
+        }
+
+        function sendMessage() {
+          const message = (input.value || '').trim();
+          if (!message) return;
+          addBubble(message, true);
+          input.value = '';
+          send.disabled = true;
+          send.classList.add('is-loading', 'loading-dots');
+          send.textContent = 'Thinking';
+          updateStatus('Assistant is thinking…', true);
+
+          const typing = document.createElement('div');
+          typing.className = 'chat-bubble them';
+          typing.innerHTML = '<span class="typing-indicator"><span></span><span></span><span></span></span>';
+          log.appendChild(typing);
+          log.scrollTop = log.scrollHeight;
+
+          fetch('{% url "properties:ai_chat_api" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+            body: JSON.stringify({ message })
+          })
+            .then(r => {
+              if (!r.ok) {
+                throw new Error(`HTTP ${r.status}`);
+              }
+              return r.json();
+            })
+            .then(d => {
+              typing.remove();
+              addBubble(d.reply || 'I could not generate a response this time.', false);
+              updateStatus('Response received');
+            })
+            .catch(err => {
+              console.error('Chatbot error:', err);
+              typing.remove();
+              addBubble('Sorry, I had trouble reaching the assistant. Please try again or contact support.', false);
+              updateStatus('Connection issue');
+            })
+            .finally(() => {
+              send.disabled = false;
+              send.classList.remove('is-loading', 'loading-dots');
+              send.textContent = 'Send';
+              input.focus();
+            });
+        }
+
+        btn.addEventListener('click', function (event) {
+          event.stopPropagation();
+          panel.classList.toggle('d-none');
+          if (!panel.classList.contains('d-none')) {
+            input.focus();
+          }
+        });
+
+        close.addEventListener('click', function () {
+          panel.classList.add('d-none');
+        });
+
+        send.addEventListener('click', sendMessage);
+        input.addEventListener('keydown', function (event) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            sendMessage();
+          }
+        });
+
+        document.addEventListener('click', function (event) {
+          if (panel.classList.contains('d-none')) return;
+          if (!panel.contains(event.target) && event.target !== btn && !btn.contains(event.target)) {
+            panel.classList.add('d-none');
+          }
+        });
+      })();
+    </script>
+    
+    <!-- Removed intelligent chatbot widget initialization - using golden chatbot only -->
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

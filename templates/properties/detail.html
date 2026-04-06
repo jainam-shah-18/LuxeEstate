@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ property.title }} | LuxeEstate{% endblock %}
+{% block extra_css %}
+{% if GOOGLE_MAPS_API_KEY %}
+<style>#nearby-map { height: 240px; border-radius: 8px; border: 1px solid #333; }</style>
+{% endif %}
+{% endblock %}
+{% block content %}
+<div class="breadcrumb-bar">
+    <div class="container">
+        <a href="{% url 'properties:home' %}">Home</a>
+        <span class="text-secondary"> / </span>
+        <a href="{% url 'properties:property_list' %}">Listings</a>
+        <span class="text-secondary"> / </span>
+        <span class="text-white-50">{{ property.title|truncatewords:8 }}</span>
+    </div>
+</div>
+
+<div class="container py-4">
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="detail-gallery mb-3">
+                {% if property.images.all %}
+                    <img src="{{ property.images.first.image.url }}" alt="{{ property.title }}">
+                {% else %}
+                    <div class="py-5 text-center text-muted-custom bg-dark">No photos uploaded</div>
+                {% endif %}
+            </div>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                {% for img in property.images.all %}
+                    <a href="{{ img.image.url }}" target="_blank" rel="noopener">
+                        <img src="{{ img.image.url }}" alt="" style="width:96px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #333;">
+                    </a>
+                {% endfor %}
+            </div>
+
+            <div class="filter-panel mb-4">
+                <div class="d-flex flex-wrap justify-content-between gap-2 align-items-start">
+                    <div>
+                        <h1 class="h3 text-white mb-1">{{ property.title }}</h1>
+                        <p class="text-muted-custom mb-0">{{ property.get_property_type_display }} · {{ property.city }}</p>
+                    </div>
+                    <div class="text-end">
+                        <p class="property-price mb-0">₹ {{ property.price|floatformat:0 }}</p>
+                        <small class="text-muted-custom">{{ property.views_count }} views</small>
+                    </div>
+                </div>
+                <hr class="border-secondary">
+                <h6 class="text-gold text-uppercase small">Description</h6>
+                <p class="text-muted-custom" style="white-space: pre-line;">{{ property.description }}</p>
+                {% if property.ai_generated_description %}
+                <h6 class="text-gold text-uppercase small mt-3">AI-enhanced summary</h6>
+                <p class="text-muted-custom small">{{ property.ai_generated_description }}</p>
+                {% endif %}
+                {% if property.seo_meta_description %}
+                <p class="small text-secondary mt-2"><em>SEO:</em> {{ property.seo_meta_description }}</p>
+                {% endif %}
+                {% if property.image_features_json.tags %}
+                <h6 class="text-gold text-uppercase small mt-3">Image-detected features</h6>
+                <p class="text-muted-custom small mb-0">{% for t in property.image_features_json.tags %}<span class="nearby-chip">{{ t }}</span>{% endfor %}</p>
+                {% endif %}
+            </div>
+
+            {% if property.nearby_locations.all %}
+            <div class="filter-panel mb-4">
+                <h6 class="text-gold text-uppercase small mb-3">Nearby (daily life)</h6>
+                <div>
+                    {% for n in property.nearby_locations.all %}
+                    <span class="nearby-chip"><strong>{{ n.get_place_type_display }}</strong> · {{ n.name }} · {{ n.distance }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if GOOGLE_MAPS_API_KEY and property.latitude and property.longitude %}
+            <div class="filter-panel mb-4">
+                <h6 class="text-gold text-uppercase small mb-2">Map</h6>
+                <div id="nearby-map"></div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            <div class="filter-panel mb-3 sticky-top" style="top:88px;">
+                <p class="small text-muted-custom mb-1">Listed by</p>
+                <p class="text-gold mb-3">{{ property.agent.email }}</p>
+                {% if user.is_authenticated %}
+                    {% if user != property.agent %}
+                    <form action="{% url 'favorites:toggle' property.pk %}" method="post" class="mb-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="btn btn-outline-gold w-100 btn-pill">
+                            {% if is_favorite %}Remove from shortlisted{% else %}Shortlist{% endif %}
+                        </button>
+                    </form>
+                    <form action="{% url 'messaging:contact_agent' property.pk %}" method="post" class="mb-2">
+                        {% csrf_token %}
+                        <label class="form-label small">Message to agent</label>
+                        <textarea name="message" class="form-control mb-2" rows="3" placeholder="Hi, I am interested…" required></textarea>
+                        <button type="submit" class="btn btn-gold w-100 btn-pill">Contact agent</button>
+                    </form>
+                    <a class="btn btn-outline-gold w-100 btn-pill mb-2" href="{% url 'messaging:start_chat' property.pk %}">Open live chat (WebSocket)</a>
+                    {% else %}
+                    <a href="{% url 'properties:property_edit' property.pk %}" class="btn btn-gold w-100 btn-pill mb-2">Edit listing</a>
+                    <form action="{% url 'properties:property_delete' property.pk %}" method="post" onsubmit="return confirm('Delete this listing?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-luxe-danger w-100 btn-pill">Delete listing</button>
+                    </form>
+                    {% endif %}
+                {% else %}
+                    <a href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}" class="btn btn-gold w-100 btn-pill">Login to contact</a>
+                {% endif %}
+            </div>
+
+            {% if user.is_authenticated and user != property.agent %}
+            <div class="filter-panel mb-3">
+                <h6 class="text-gold small text-uppercase mb-2">AI assistant</h6>
+                <div id="chatbot-log" class="small text-muted-custom mb-2" style="min-height:4rem;">Ask about visits, budget, or locality.</div>
+                <div class="input-group input-group-sm">
+                    <input type="text" id="chatbot-input" class="form-control" placeholder="Type a question…">
+                    <button class="btn btn-gold" type="button" id="chatbot-send">Send</button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if recommended %}
+    <section class="mt-5">
+        <h3 class="h5 text-gold mb-3">Recommended for you</h3>
+        <div class="row g-3">
+            {% for p in recommended %}
+            <div class="col-md-4">
+                <div class="property-card flex-column">
+                    <div class="property-img-wrapper w-100">
+                        {% if p.images.all %}
+                        <img src="{{ p.images.first.image.url }}" alt="">
+                        {% else %}
+                        <div class="d-flex align-items-center justify-content-center h-100 bg-dark small text-muted-custom">No image</div>
+                        {% endif %}
+                    </div>
+                    <div class="property-details">
+                        <a href="{% url 'properties:property_detail' p.pk %}" class="property-title d-block">{{ p.title }}</a>
+                        <p class="property-price mb-0">₹ {{ p.price|floatformat:0 }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+
+{% if user.is_authenticated and user != property.agent %}
+<script>
+(function() {
+  const input = document.getElementById('chatbot-input');
+  const btn = document.getElementById('chatbot-send');
+  const log = document.getElementById('chatbot-log');
+  function csrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : '';
+  }
+  function send() {
+    const message = (input.value || '').trim();
+    if (!message) return;
+    input.value = '';
+    log.textContent = 'Thinking…';
+    fetch('{% url "properties:chatbot_api" property.pk %}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+      body: JSON.stringify({ message })
+    }).then(r => r.json()).then(d => { log.textContent = d.reply || ''; }).catch(() => { log.textContent = 'Unable to reach assistant.'; });
+  }
+  btn.addEventListener('click', send);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+})();
+</script>
+{% endif %}
+
+{% if GOOGLE_MAPS_API_KEY and property.latitude and property.longitude %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}"></script>
+<script>
+  function initMap() {
+    const pos = { lat: {{ property.latitude }}, lng: {{ property.longitude }} };
+    const map = new google.maps.Map(document.getElementById('nearby-map'), { zoom: 14, center: pos });
+    new google.maps.Marker({ position: pos, map: map });
+  }
+  if (window.google && google.maps) initMap();
+</script>
+{% endif %}
+{% endblock %}

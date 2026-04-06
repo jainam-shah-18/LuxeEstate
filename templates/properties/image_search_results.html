@@ -1,0 +1,499 @@
+{% extends "base.html" %}
+{% block title %}Search Results | LuxeEstate{% endblock %}
+
+{% block content %}
+<style>
+  .results-container {
+    min-height: 100vh;
+    padding: 3rem 0;
+    position: relative;
+  }
+
+  .results-header {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(224, 190, 93, 0.04) 100%);
+    padding: 3rem;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    margin-bottom: 3rem;
+    border-radius: 0 0 2rem 2rem;
+    animation: slideDown 0.6s ease-out;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .results-title {
+    font-size: 2rem;
+    color: #f4d96f;
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .results-count {
+    font-size: 1rem;
+    color: #d3c291;
+    margin: 0;
+  }
+
+  .detected-features-section {
+    margin-bottom: 3rem;
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0 2rem;
+  }
+
+  .features-subtitle {
+    font-size: 0.95rem;
+    color: #a89968;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+  }
+
+  .features-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    animation: fadeIn 0.6s ease-out 0.2s backwards;
+  }
+
+  .feature-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: rgba(212, 175, 55, 0.15);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    padding: 0.8rem 1.2rem;
+    border-radius: 2rem;
+    font-size: 0.9rem;
+    color: #d3c291;
+    transition: all 0.3s ease;
+    animation: slideInLeft 0.4s ease-out;
+  }
+
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .feature-badge:hover {
+    background: rgba(212, 175, 55, 0.25);
+    border-color: #d4af37;
+    transform: translateY(-2px);
+  }
+
+  .feature-badge-icon {
+    font-size: 1.2rem;
+  }
+
+  .no-results {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #a89968;
+    animation: fadeIn 0.6s ease-out;
+  }
+
+  .no-results-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+
+  .no-results-title {
+    font-size: 1.5rem;
+    color: #d3c291;
+    margin: 0 0 1rem 0;
+  }
+
+  .no-results-text {
+    font-size: 1rem;
+    margin: 0 0 2rem 0;
+  }
+
+  .search-again-btn {
+    display: inline-block;
+    padding: 0.8rem 2rem;
+    background: linear-gradient(135deg, #d4af37, #f4d96f);
+    color: #070602;
+    border: none;
+    border-radius: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+  }
+
+  .search-again-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(212, 175, 55, 0.3);
+  }
+
+  .properties-grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-bottom: 4rem;
+  }
+
+  .property-card {
+    background: rgba(20, 18, 12, 0.5);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 1.2rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    animation: cardFadeIn 0.5s ease-out;
+    display: flex;
+    flex-direction: column;
+  }
+
+  @keyframes cardFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .property-card:hover {
+    border-color: #d4af37;
+    transform: translateY(-8px);
+    box-shadow: 0 15px 40px rgba(212, 175, 55, 0.2),
+                0 0 30px rgba(212, 175, 55, 0.1);
+    background: rgba(20, 18, 12, 0.7);
+  }
+
+  .property-image-container {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+    background: rgba(212, 175, 55, 0.1);
+  }
+
+  .property-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  .property-card:hover .property-image {
+    transform: scale(1.1);
+  }
+
+  .property-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(212, 175, 55, 0.9);
+    color: #070602;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    z-index: 2;
+  }
+
+  .property-content {
+    padding: 1.5rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .property-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #f4d96f;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .property-price {
+    font-size: 1.4rem;
+    color: #d4af37;
+    font-weight: 700;
+    margin: 0.5rem 0;
+  }
+
+  .property-location {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #d3c291;
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+  }
+
+  .property-type {
+    display: inline-block;
+    background: rgba(212, 175, 55, 0.12);
+    color: #d3c291;
+    padding: 0.3rem 0.8rem;
+    border-radius: 0.4rem;
+    font-size: 0.8rem;
+    margin-top: 0.8rem;
+    text-transform: capitalize;
+  }
+
+  .property-details {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(212, 175, 55, 0.1);
+    flex-grow: 1;
+    align-items: flex-end;
+  }
+
+  .property-detail {
+    flex: 1;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #a89968;
+  }
+
+  .property-detail-value {
+    display: block;
+    color: #d3c291;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+  }
+
+  .view-button {
+    display: block;
+    text-align: center;
+    padding: 0.8rem;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.15));
+    color: #d4af37;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 0.6rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-top: auto;
+    cursor: pointer;
+  }
+
+  .view-button:hover {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.35), rgba(212, 175, 55, 0.25));
+    border-color: #d4af37;
+    color: #f4d96f;
+  }
+
+  .refinement-section {
+    text-align: center;
+    padding: 2rem;
+    border-top: 1px solid rgba(212, 175, 55, 0.15);
+  }
+
+  .refinement-title {
+    font-size: 1rem;
+    color: #d3c291;
+    margin-bottom: 1.5rem;
+  }
+
+  .refinement-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-refinement {
+    padding: 0.8rem 1.5rem;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    background: transparent;
+    color: #d3c291;
+    border-radius: 0.6rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-refinement:hover {
+    background: rgba(212, 175, 55, 0.15);
+    border-color: #d4af37;
+    color: #f4d96f;
+  }
+
+  .btn-refinement.primary {
+    background: linear-gradient(135deg, #d4af37, #f4d96f);
+    color: #070602;
+    border-color: #d4af37;
+  }
+
+  .btn-refinement.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3);
+  }
+
+  @media (max-width: 768px) {
+    .properties-grid {
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1.5rem;
+      padding: 0 1rem;
+    }
+
+    .results-header {
+      padding: 2rem 1.5rem;
+    }
+
+    .results-title {
+      font-size: 1.5rem;
+    }
+
+    .detected-features-section {
+      padding: 0 1rem;
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+</style>
+
+<div class="results-container">
+  <!-- Header -->
+  <div class="results-header">
+    <h1 class="results-title">✨ Search Results</h1>
+    <p class="results-count">Found {{ result_count }} matching properties</p>
+  </div>
+
+  <!-- Detected Features -->
+  {% if detected_features %}
+  <div class="detected-features-section">
+    <p class="features-subtitle">Detected Features</p>
+    <div class="features-display">
+      {% for feature in detected_features %}
+      <div class="feature-badge">
+        <span class="feature-badge-icon">{{ feature.icon }}</span>
+        <span>{{ feature.name }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Properties Grid -->
+  {% if properties %}
+  <div class="properties-grid">
+    {% for property in properties %}
+    <div class="property-card">
+      <div class="property-image-container">
+        {% if property.images.all %}
+          <img src="{{ property.images.first.image.url }}" alt="{{ property.title }}" class="property-image">
+        {% else %}
+          <div style="height: 100%; background: rgba(212, 175, 55, 0.1); display: flex; align-items: center; justify-content: center; color: #a89968;">
+            No Image
+          </div>
+        {% endif %}
+        {% if property.is_featured %}
+        <div class="property-badge">⭐ Featured</div>
+        {% endif %}
+      </div>
+
+      <div class="property-content">
+        <h3 class="property-title">{{ property.title }}</h3>
+        <div class="property-price">₹{{ property.price|floatformat:0 }}</div>
+        
+        <div class="property-location">
+          📍 {{ property.city }}, {{ property.address|truncatewords:3 }}
+        </div>
+
+        <span class="property-type">{{ property.get_property_type_display }}</span>
+
+        <div class="property-details">
+          <div class="property-detail">
+            <span class="property-detail-value">{{ property.views_count }}</span>
+            Views
+          </div>
+          <div class="property-detail">
+            <span class="property-detail-value">
+              {% if property.nearby_locations.count %}
+                {{ property.nearby_locations.count }}
+              {% else %}
+                0
+              {% endif %}
+            </span>
+            Nearby
+          </div>
+        </div>
+
+        <a href="{% url 'properties:property_detail' property.pk %}" class="view-button">View Details →</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Refinement Section -->
+  <div class="refinement-section">
+    <p class="refinement-title">Want to refine your search?</p>
+    <div class="refinement-buttons">
+      <a href="{% url 'properties:image_upload' %}" class="btn-refinement primary">🔍 Upload Another Image</a>
+      <a href="{% url 'properties:property_list' %}" class="btn-refinement">📋 Browse All Properties</a>
+      <a href="{% url 'properties:user_profile' %}" class="btn-refinement">⚙️ Set Preferences</a>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- No Results -->
+  <div class="no-results">
+    <div class="no-results-icon">🔍</div>
+    <h2 class="no-results-title">No Properties Found</h2>
+    <p class="no-results-text">We couldn't find any properties matching your detected features. Try uploading a different image or browse all listings.</p>
+    <div class="refinement-buttons" style="justify-content: center;">
+      <a href="{% url 'properties:image_upload' %}" class="btn-refinement primary">Upload Another Image</a>
+      <a href="{% url 'properties:property_list' %}" class="btn-refinement">Browse All Properties</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  // Add smooth scroll and animations
+  document.addEventListener('DOMContentLoaded', () => {
+    // Stagger card animations
+    const cards = document.querySelectorAll('.property-card');
+    cards.forEach((card, idx) => {
+      card.style.animationDelay = `${idx * 0.05}s`;
+    });
+  });
+</script>
+{% endblock %}

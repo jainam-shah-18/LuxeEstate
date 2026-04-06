@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Your AI Profile | LuxeEstate{% endblock %}
+
+{% block extra_head %}
+<style>
+.profile-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,215,0,0.1));
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 15px;
+  padding: 30px;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.stat-card {
+  background: rgba(0,0,0,0.5);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+}
+
+.stat-number {
+  font-size: 2em;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.magic-form .form-control {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,215,0,0.3);
+  color: white;
+}
+
+.magic-form .form-control:focus {
+  background: rgba(255,255,255,0.2);
+  border-color: #ffd700;
+  box-shadow: 0 0 0 0.2rem rgba(255,215,0,0.25);
+}
+
+.magic-form .form-check-input:checked {
+  background-color: #ffd700;
+  border-color: #ffd700;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row">
+    <div class="col-lg-8 mx-auto">
+      <div class="profile-card">
+        <div class="text-center mb-4">
+          <h1 class="h3 text-white mb-2">🎯 Your AI Profile</h1>
+          <p class="text-muted-custom">Customize your preferences to unlock magical AI-powered property recommendations</p>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-4">
+            <div class="stat-card">
+              <div class="stat-number">{{ search_count }}</div>
+              <div class="text-muted-custom">Searches</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="stat-card">
+              <div class="stat-number">{{ view_count }}</div>
+              <div class="text-muted-custom">Properties Viewed</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="stat-card">
+              <div class="stat-number">{{ favorite_count }}</div>
+              <div class="text-muted-custom">Favorites</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Profile Form -->
+        <form method="post" class="magic-form">
+          {% csrf_token %}
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="{{ form.budget_min.id_for_label }}" class="form-label text-white">
+                <i class="fas fa-coins"></i> Minimum Budget (₹)
+              </label>
+              {{ form.budget_min }}
+              {% if form.budget_min.errors %}
+                <div class="text-danger small">{{ form.budget_min.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-6">
+              <label for="{{ form.budget_max.id_for_label }}" class="form-label text-white">
+                <i class="fas fa-gem"></i> Maximum Budget (₹)
+              </label>
+              {{ form.budget_max }}
+              {% if form.budget_max.errors %}
+                <div class="text-danger small">{{ form.budget_max.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.preferred_cities.id_for_label }}" class="form-label text-white">
+              <i class="fas fa-map-marked-alt"></i> Preferred Cities
+            </label>
+            {{ form.preferred_cities }}
+            <div class="form-text text-muted-custom">{{ form.preferred_cities.help_text }}</div>
+            {% if form.preferred_cities.errors %}
+              <div class="text-danger small">{{ form.preferred_cities.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label text-white">
+              <i class="fas fa-home"></i> Preferred Property Types
+            </label>
+            <div class="row">
+              {% for value, label in form.preferred_property_types.field.choices %}
+                <div class="col-md-6">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="preferred_property_types" value="{{ value }}" id="id_{{ value }}"
+                           {% if value in form.preferred_property_types.value %}checked{% endif %}>
+                    <label class="form-check-label text-white" for="id_{{ value }}">
+                      {{ label }}
+                    </label>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+            <div class="form-text text-muted-custom">{{ form.preferred_property_types.help_text }}</div>
+          </div>
+
+          <div class="text-center">
+            <button type="submit" class="btn btn-lg" style="background: linear-gradient(45deg, #ffd700, #ffed4e); color: #000; border: none; border-radius: 25px; padding: 12px 30px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease;">
+              <i class="fas fa-magic"></i> Save & Get Magical Recommendations
+            </button>
+          </div>
+        </form>
+
+        <div class="text-center mt-4">
+          <a href="{% url 'properties:recommendations' %}" class="btn btn-outline-gold">
+            <i class="fas fa-arrow-left"></i> Back to Recommendations
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
