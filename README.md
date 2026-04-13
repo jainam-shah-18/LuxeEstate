@@ -2,6 +2,23 @@
 
 A Django-based real estate platform with AI-assisted property discovery, user role dashboards, favorites, messaging, and payment workflows.
 
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![Django](https://img.shields.io/badge/Django-Framework-092E20?logo=django&logoColor=white)
+![License](https://img.shields.io/badge/License-Educational-blue)
+![Status](https://img.shields.io/badge/Status-Active-success)
+
+## Screenshots
+
+> Add your screenshots to `docs/screenshots/` and update the image paths below if needed.
+
+| Home Page | Property Listing |
+| --- | --- |
+| [![LuxeEstate Home](docs/screenshots/home-page.png)](docs/screenshots/home-page.png) | [![Property Listing](docs/screenshots/property-listing.png)](docs/screenshots/property-listing.png) |
+| Property Details | User Dashboard |
+| [![Property Details](docs/screenshots/property-details.png)](docs/screenshots/property-details.png) | [![User Dashboard](docs/screenshots/user-dashboard.png)](docs/screenshots/user-dashboard.png) |
+| Chatbot / Messaging | |
+| [![Chatbot and Messaging](docs/screenshots/chatbot-messaging.png)](docs/screenshots/chatbot-messaging.png) | |
+
 ## Features
 
 - Property listing, search, filters, and detail pages
