@@ -1,0 +1,47 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Promote Property - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section payments-hero">
+    <div class="container text-center">
+        <span class="payments-kicker"><i class="fas fa-rocket"></i> Visibility Upgrade</span>
+        <h1>Promote Property</h1>
+        <p>Choose a visibility package that highlights your listing across the marketplace.</p>
+    </div>
+</section>
+
+<div class="container page-section payments-shell">
+    <div class="row g-4 justify-content-center">
+        <div class="col-12">
+            <div class="card-panel payment-card payment-featured-card mb-4">
+                <p class="payments-meta-label mb-2">Selected Listing</p>
+                <h2 class="mb-2">{{ property.title }}</h2>
+                <p class="text-secondary">Select the best package for your listing.</p>
+            </div>
+        </div>
+        {% for package in packages %}
+            <div class="col-md-6">
+                <div class="card-panel payment-card payment-plan-card h-100 d-flex flex-column justify-content-between">
+                    <div>
+                        <p class="payments-meta-label mb-2">Boost Option</p>
+                        <h3>{{ package.name }}</h3>
+                        <p class="text-secondary">{{ package.description }}</p>
+                        <p class="property-price mb-1">₹{{ package.price|floatformat:2 }}</p>
+                        <p class="text-secondary">Duration: {{ package.duration_days }} days</p>
+                    </div>
+                    <a href="{% url 'payments:create_payment' package.pk %}?property_id={{ property.pk }}" class="btn btn-magical w-100 payment-cta-btn"><i class="fas fa-wand-magic-sparkles"></i> Select</a>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="empty-state text-center">
+                    <div class="empty-state-icon"><i class="fas fa-info-circle"></i></div>
+                    <h3 class="empty-state-title">No promotion packages available</h3>
+                    <p class="empty-state-text">Please check back later.</p>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

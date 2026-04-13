@@ -1,0 +1,270 @@
+﻿{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}LuxeEstate - Find Your Dream Property{% endblock %}
+
+{% block content %}
+<div class="phase2-home-layout home-revamp-shell">
+    <section class="home-revamp-hero">
+        <div class="container">
+            <div class="home-revamp-grid">
+                <article class="home-revamp-story card">
+                    <p class="home-revamp-kicker">Curated Luxury Marketplace</p>
+                    <h1>Live in stories, not square feet.</h1>
+                    <p class="home-revamp-lead">
+                        Discover rare residences, signature architecture, and curated neighborhood gems in a
+                        modern browsing journey crafted for premium buyers.
+                    </p>
+                    <div class="home-revamp-cta">
+                        <a href="{% url 'properties:search' %}" class="btn btn-magical">Explore Properties</a>
+                        <a href="{% url 'accounts:register' %}" class="btn btn-outline-magical">Create Your Account</a>
+                    </div>
+                    <div class="home-revamp-stats">
+                        <div class="home-revamp-stat card-panel">
+                            <span>New listings this week</span>
+                            <strong>{{ latest_properties|length|default:'120+' }}</strong>
+                        </div>
+                        <div class="home-revamp-stat card-panel">
+                            <span>AI concierge status</span>
+                            <strong>Online - instant guidance</strong>
+                        </div>
+                        <div class="home-revamp-stat card-panel">
+                            <span>Design feel</span>
+                            <strong>Magical + Cosmic ready</strong>
+                        </div>
+                    </div>
+                </article>
+
+                <aside class="home-revamp-highlight card-panel">
+                    <p class="home-revamp-highlight-kicker">Spotlight Collection</p>
+                    <h3>Estate in Beverly Hills</h3>
+                    <ul class="home-revamp-highlight-list">
+                        <li><i class="fas fa-location-dot"></i><span>North Crescent Drive, Los Angeles</span></li>
+                        <li><i class="fas fa-layer-group"></i><span>Architectural villa with private sky deck</span></li>
+                        <li><i class="fas fa-indian-rupee-sign"></i><span>From ₹3,512,840 onward</span></li>
+                    </ul>
+                    <div class="home-revamp-highlight-note">
+                        <i class="fas fa-circle-info"></i>
+                        <p>Switch between Magical and Cosmic mode for two unique premium color experiences.</p>
+                    </div>
+                    <a href="{% url 'properties:search' %}" class="btn btn-magical w-100">View Showcase</a>
+                </aside>
+            </div>
+            <div id="homeChatbotAnchor" class="home-chatbot-anchor" aria-hidden="true"></div>
+        </div>
+    </section>
+
+    <section class="home-revamp-intelligence">
+        <div class="container">
+            <div class="home-revamp-intelligence-grid">
+                <article class="home-revamp-intelligence-card card-panel">
+                    <p>Market Pulse</p>
+                    <h3>Premium zones are showing higher intent and faster listing movement.</h3>
+                </article>
+                <article class="home-revamp-intelligence-card card-panel">
+                    <p>Buyer Journey</p>
+                    <h3>From discover to shortlist to site visit in one smooth conversion path.</h3>
+                </article>
+                <article class="home-revamp-intelligence-card card-panel">
+                    <p>AI Assist</p>
+                    <h3>Natural prompts for instant comparisons, recommendations, and lead qualification.</h3>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="home-revamp-search container">
+        <div class="home-revamp-search-card card">
+            <div class="home-revamp-search-header">
+                <h2>Find your next address with style and precision</h2>
+                <p>Use the smart finder below to filter by city, type, and budget in seconds.</p>
+            </div>
+            <form method="GET" action="{% url 'properties:search' %}" class="search-form magical-form home-revamp-form">
+                <div class="row g-3">
+                    <div class="col-lg-3 col-md-6">
+                        <label for="city" class="magical-label"><i class="fas fa-map-marker-alt"></i> City or locality</label>
+                        <input type="text" id="city" name="city" class="form-control magical-input" placeholder="Mumbai, Delhi, Bengaluru...">
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <label for="property_type" class="magical-label"><i class="fas fa-house"></i> Property style</label>
+                        <select id="property_type" name="property_type" class="form-select magical-input">
+                            <option value="">All types</option>
+                            <option value="apartment">Apartment</option>
+                            <option value="house">House</option>
+                            <option value="villa">Villa</option>
+                            <option value="plot">Plot</option>
+                            <option value="commercial">Commercial</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2 col-md-6">
+                        <label for="min_price" class="magical-label"><i class="fas fa-coins"></i> Minimum</label>
+                        <input type="number" id="min_price" name="min_price" class="form-control magical-input" placeholder="₹0">
+                    </div>
+                    <div class="col-lg-2 col-md-6">
+                        <label for="max_price" class="magical-label"><i class="fas fa-wallet"></i> Maximum</label>
+                        <input type="number" id="max_price" name="max_price" class="form-control magical-input" placeholder="₹50,00,000">
+                    </div>
+                    <div class="col-lg-2 col-md-12 d-flex align-items-end">
+                        <button type="submit" class="btn btn-magical w-100">Search Now</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="home-revamp-services">
+        <div class="container">
+            <div class="home-revamp-section-head">
+                <h2>One platform, beautifully orchestrated</h2>
+                <p>Every card, button, and interaction is crafted to feel premium and effortless.</p>
+            </div>
+            <div class="row g-4 mt-1">
+                <div class="col-md-6 col-xl-3">
+                    <article class="home-revamp-service-card card">
+                        <div class="feature-icon"><i class="fas fa-bolt"></i></div>
+                        <h3>Dynamic Discovery</h3>
+                        <p>Discover listings with elegant cards, richer visual hierarchy, and quick actions.</p>
+                    </article>
+                </div>
+                <div class="col-md-6 col-xl-3">
+                    <article class="home-revamp-service-card card">
+                        <div class="feature-icon"><i class="fas fa-heart"></i></div>
+                        <h3>Save and Revisit</h3>
+                        <p>Store favorites and revisit priority homes with cleaner focus and faster navigation.</p>
+                    </article>
+                </div>
+                <div class="col-md-6 col-xl-3">
+                    <article class="home-revamp-service-card card">
+                        <div class="feature-icon"><i class="fas fa-user-check"></i></div>
+                        <h3>Verified Experts</h3>
+                        <p>Message trusted agents and move from browsing to booking without friction.</p>
+                    </article>
+                </div>
+                <div class="col-md-6 col-xl-3">
+                    <article class="home-revamp-service-card card">
+                        <div class="feature-icon"><i class="fas fa-robot"></i></div>
+                        <h3>Visible AI Concierge</h3>
+                        <p>AI assistance remains fully intact while visual design feels newer and more alive.</p>
+                    </article>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="magical-properties-section home-revamp-listings">
+        <div class="container">
+            <div class="home-revamp-section-head">
+                <h2>Featured homes with immersive cards</h2>
+                <p>Freshly listed properties with polished visual storytelling and premium actions.</p>
+            </div>
+
+            {% if latest_properties %}
+                <div class="row g-4 mt-2">
+                    {% for property in latest_properties %}
+                        <div class="col-lg-4 col-md-6">
+                            <div class="magical-property-card card home-revamp-property-card">
+                                <div class="property-image-wrapper">
+                                    {% if property.images.first %}
+                                        <img src="{{ property.images.first.image.url }}" alt="{{ property.title }}">
+                                    {% else %}
+                                        <img src="https://via.placeholder.com/350x233?text=No+Image" alt="No image">
+                                    {% endif %}
+                                    <span class="property-badge">Featured</span>
+                                </div>
+                                <div class="property-content">
+                                    <h3 class="property-title">{{ property.title }}</h3>
+                                    <div class="property-location"><i class="fas fa-map-marker-alt"></i> {{ property.city }} • {{ property.address|truncatewords:3 }}</div>
+                                    <div class="property-features">
+                                        <span><i class="fas fa-building"></i> {{ property.get_property_type_display }}</span>
+                                        <span><i class="fas fa-eye"></i> {{ property.views_count }} views</span>
+                                    </div>
+                                    <div class="property-price">₹{{ property.price|floatformat:0 }}</div>
+                                    <div class="property-actions">
+                                        <a href="{% url 'properties:detail' property.id %}" class="btn btn-magical">View</a>
+                                        <button type="button" class="btn btn-outline-magical btn-favorite" data-property-id="{{ property.id }}"><i class="fas fa-heart"></i> Save</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
+                    <p class="empty-state-title">No Properties Available</p>
+                    <p class="empty-state-text">Browse the search page for more listings and updated results.</p>
+                    <a href="{% url 'properties:search' %}" class="btn btn-magical">Browse All Properties</a>
+                </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="magical-recommendations-section home-revamp-recommendations">
+        <div class="container">
+            <div class="home-revamp-section-head">
+                <h2><i class="fas fa-brain"></i> Recommended for you</h2>
+                <p>AI recommendation logic stays unchanged. This section receives only visual and layout upgrades.</p>
+            </div>
+
+            {% if user.is_authenticated and show_recommendations %}
+                <div class="row g-4 mt-2">
+                    {% for property in recommended_properties %}
+                        <div class="col-lg-4 col-md-6">
+                            <div class="magical-property-card card home-revamp-property-card home-revamp-ai-card">
+                                <div class="property-image-wrapper">
+                                    {% if property.images.first %}
+                                        <img src="{{ property.images.first.image.url }}" alt="{{ property.title }}">
+                                    {% else %}
+                                        <img src="https://via.placeholder.com/350x233?text=No+Image" alt="No image">
+                                    {% endif %}
+                                    <span class="property-badge magical-badge-ai">AI Recommended</span>
+                                </div>
+                                <div class="property-content">
+                                    <h3 class="property-title">{{ property.title }}</h3>
+                                    <div class="property-location"><i class="fas fa-map-marker-alt"></i> {{ property.city }} • {{ property.address|truncatewords:3 }}</div>
+                                    <span class="badge badge-magical">Match score {{ property.recommendation_score_pct }}%</span>
+                                    <div class="recommendation-why-panel">
+                                        <p class="recommendation-why-title">
+                                            <i class="fas fa-circle-info"></i>
+                                            Why this was recommended
+                                        </p>
+                                        <ul class="recommendation-why-list">
+                                            {% for reason in property.recommendation_highlights %}
+                                                <li>{{ reason }}</li>
+                                            {% empty %}
+                                                <li>{{ property.recommendation_reason|default:"Selected based on your recent activity" }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                    <div class="property-features mt-3">
+                                        <span><i class="fas fa-camera"></i> {{ property.images.count }} photos</span>
+                                        <span><i class="fas fa-eye"></i> {{ property.views_count }} views</span>
+                                    </div>
+                                    <div class="property-actions mt-4">
+                                        <a href="{% url 'properties:detail' property.id %}" class="btn btn-magical">View</a>
+                                        <a href="{% url 'messaging:contact' property.id %}" class="btn btn-outline-magical">Contact</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% elif user.is_authenticated %}
+                <div class="empty-state mt-4">
+                    <div class="empty-state-icon"><i class="fas fa-chart-line"></i></div>
+                    <p class="empty-state-title">Personalization is getting ready</p>
+                    <p class="empty-state-text">{{ recommendation_prefill_hint|default:"Browse properties in your target city and budget to activate tailored recommendations." }}</p>
+                    <a href="{% url 'properties:search' %}" class="btn btn-magical">Browse Properties</a>
+                </div>
+            {% else %}
+                <div class="empty-state mt-4">
+                    <div class="empty-state-icon"><i class="fas fa-user-lock"></i></div>
+                    <p class="empty-state-title">Login to unlock AI recommendations</p>
+                    <p class="empty-state-text">We analyze your search behavior, viewed locations, and budget preferences to personalize listings.</p>
+                    <a href="{% url 'accounts:login' %}" class="btn btn-magical">Login</a>
+                </div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+{% endblock %}

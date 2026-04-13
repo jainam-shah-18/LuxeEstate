@@ -1,0 +1,61 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}My Profile - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section profile-hero">
+    <div class="container text-center">
+        <span class="messages-kicker"><i class="fas fa-sparkles"></i> Personal Command Center</span>
+        <h1>My Profile</h1>
+        <p>Shape your LuxeEstate presence with a polished, premium profile workspace.</p>
+    </div>
+</section>
+
+<section class="container page-section profile-revamp-shell">
+    <div class="profile-identity-panel card-panel">
+        <div class="profile-identity-main">
+            <div class="profile-avatar-orb">
+                {{ profile.user.first_name|default:profile.user.username|slice:":1"|upper }}
+            </div>
+            <div>
+                <p class="profile-label mb-2">Account Identity</p>
+                <h2 class="mb-1">{{ profile.user.get_full_name|default:profile.user.username }}</h2>
+                <p class="text-secondary mb-0">{{ profile.role|default:profile.get_role_display }}</p>
+            </div>
+        </div>
+        <span class="profile-role-pill">{{ profile.get_role_display }}</span>
+    </div>
+
+    <div class="profile-details-grid">
+        <article class="card-panel profile-data-card">
+            <p class="profile-label">Name</p>
+            <h4>{{ profile.user.get_full_name|default:profile.user.username }}</h4>
+        </article>
+        <article class="card-panel profile-data-card">
+            <p class="profile-label">Email</p>
+            <h4>{{ profile.user.email }}</h4>
+        </article>
+        <article class="card-panel profile-data-card">
+            <p class="profile-label">Phone</p>
+            <h4>{{ profile.phone|default:'Not set' }}</h4>
+        </article>
+        <article class="card-panel profile-data-card">
+            <p class="profile-label">Email Status</p>
+            <h4>{{ profile.email_verified|yesno:'Verified,Not Verified' }}</h4>
+        </article>
+    </div>
+
+    <div class="card-panel profile-bio-card">
+        <p class="profile-label mb-2">Bio</p>
+        <p class="mb-0">{{ profile.bio|default:'No bio yet.' }}</p>
+    </div>
+
+    <div class="profile-action-grid">
+        <a href="{% url 'accounts:edit_profile' %}" class="btn btn-magical profile-action-btn"><i class="fas fa-pen"></i> Edit Profile</a>
+        <a href="{% url 'account_change_password' %}" class="btn btn-outline-magical profile-action-btn"><i class="fas fa-lock"></i> Change Password</a>
+        <a href="{% url 'properties:add_property' %}" class="btn btn-magical profile-action-btn"><i class="fas fa-plus"></i> List Property</a>
+        <a href="{% url 'properties:my_properties' %}" class="btn btn-outline-magical profile-action-btn"><i class="fas fa-building"></i> My Properties</a>
+        <a href="{% url 'accounts:logout' %}" class="btn btn-outline-magical profile-action-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+</section>
+{% endblock %}

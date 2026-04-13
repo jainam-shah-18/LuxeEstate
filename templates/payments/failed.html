@@ -1,0 +1,22 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Payment Failed - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section payments-hero">
+    <div class="container text-center">
+        <span class="payments-kicker"><i class="fas fa-life-ring"></i> Recovery Flow</span>
+        <h1>Payment Failed</h1>
+        <p>Something went wrong while processing your payment. Let’s get you back on track.</p>
+    </div>
+</section>
+
+<div class="container page-section payments-shell">
+    <div class="card-panel payment-card payment-failed-card text-center">
+        <div class="status-badge status-danger mb-3">Failed</div>
+        <h2 class="mb-2">Order ID: {{ payment.razorpay_order_id }}</h2>
+        <p class="text-secondary">Please try again or contact support if the issue persists.</p>
+        <a href="{% url 'payments:pricing' %}" class="btn btn-magical payment-cta-btn mt-3"><i class="fas fa-rotate-right"></i> Try Again</a>
+    </div>
+</div>
+{% endblock %}

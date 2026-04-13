@@ -1,0 +1,74 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Direct Chat - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section messages-hero">
+    <div class="container text-center">
+        <span class="messages-kicker"><i class="fas fa-satellite-dish"></i> Instant Connect</span>
+        <h1>Live Chat</h1>
+        <p>Respond instantly in a modern, cinematic conversation workspace.</p>
+    </div>
+</section>
+
+<div class="container page-section messages-shell">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card-panel messages-chat-card messages-chat-card-revamp">
+                <div class="d-flex justify-content-between align-items-start mb-4">
+                    <div>
+                        <p class="messages-thread-label mb-2">Direct Channel</p>
+                        <h2 class="mb-1">Chat about <strong>{{ property.title }}</strong></h2>
+                        <p class="text-secondary">Send messages directly from the property page.</p>
+                    </div>
+                    <span class="status-pill status-secondary">Live conversation</span>
+                </div>
+
+                <div id="chat-messages" class="chat-window mb-4 messages-chat-window"></div>
+
+                <div class="d-flex gap-2 flex-column flex-md-row messages-chat-form-revamp">
+                    <input type="text" id="message-input" class="form-control magical-input" placeholder="Type your message...">
+                    <button id="send-button" class="btn btn-magical messages-send-btn messages-send-btn-revamp"><i class="fas fa-paper-plane"></i> Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const roomName = Number('{{ property.pk }}');
+    const chatSocket = new WebSocket(
+        (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/chat/' + roomName + '/'
+    );
+
+    const messagesContainer = document.querySelector('#chat-messages');
+    const messageInput = document.querySelector('#message-input');
+    const sendButton = document.querySelector('#send-button');
+
+    const appendMessage = (sender, text) => {
+        const newMessage = document.createElement('div');
+        newMessage.className = 'chat-message incoming';
+        newMessage.innerHTML = `<div class="chat-bubble"><strong>${sender}:</strong><p class="mb-0">${text}</p></div>`;
+        messagesContainer.appendChild(newMessage);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    };
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        appendMessage(data.sender || 'Agent', data.message);
+    };
+
+    chatSocket.onclose = function() {
+        console.error('Chat socket closed unexpectedly');
+    };
+
+    sendButton.addEventListener('click', function() {
+        const message = messageInput.value.trim();
+        if (!message) return;
+        chatSocket.send(JSON.stringify({ message }));
+        messageInput.value = '';
+    });
+</script>
+{% endblock %}

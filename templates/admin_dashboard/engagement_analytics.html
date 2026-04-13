@@ -1,0 +1,38 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Engagement Analytics - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container text-center">
+        <h1>Engagement Analytics</h1>
+        <p>Measure conversation activity, favorites, and popular listings with clarity.</p>
+    </div>
+</section>
+
+<div class="container page-section">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h2>Engagement Metrics</h2>
+            <p class="text-secondary">Quickly see which properties and users are driving the most interest.</p>
+        </div>
+        <a href="{% url 'admin_dashboard:dashboard' %}" class="btn btn-outline-magical">Back to Dashboard</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-3"><div class="card-panel"><h5>Conversations</h5><p class="display-6 mb-0">{{ total_conversations }}</p></div></div>
+        <div class="col-md-3"><div class="card-panel"><h5>Messages</h5><p class="display-6 mb-0">{{ total_messages }}</p></div></div>
+        <div class="col-md-3"><div class="card-panel"><h5>Favorites</h5><p class="display-6 mb-0">{{ total_favorites }}</p></div></div>
+        <div class="col-md-3"><div class="card-panel"><h5>Avg Views</h5><p class="display-6 mb-0">{{ avg_views_per_property }}</p></div></div>
+    </div>
+
+    <div class="card-panel mt-4">
+        <h4>Most Favorited Properties</h4>
+        <ul class="magical-list mt-3">
+            {% for item in most_favorited_properties %}
+                <li>{{ item.title }} — {{ item.favorite_count }} favorites</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

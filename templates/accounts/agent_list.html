@@ -1,0 +1,44 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Agents - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container text-center">
+        <h1>Verified Agents</h1>
+        <p>Meet trusted agents and connect with experts near your favorite listings.</p>
+    </div>
+</section>
+
+<div class="container page-section">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="mb-1">Agent Network</h2>
+            <p class="text-secondary">Browse available agents and their top listings.</p>
+        </div>
+        <a href="{% url 'properties:search' %}" class="btn btn-magical">Browse Properties</a>
+    </div>
+
+    {% if agents %}
+        <div class="properties-grid">
+            {% for agent in agents %}
+                <article class="property-card card">
+                    <div class="property-content">
+                        <h3 class="property-title">{{ agent.user.get_full_name|default:agent.user.username }}</h3>
+                        <p class="text-secondary mb-2">{{ agent.user.email }}</p>
+                        <p class="mb-2"><strong>Rating:</strong> {{ agent.rating|floatformat:1 }}/5</p>
+                        {% if agent.phone %}<p class="mb-2"><strong>Phone:</strong> {{ agent.phone }}</p>{% endif %}
+                        {% if agent.bio %}<p class="text-secondary">{{ agent.bio|truncatechars:120 }}</p>{% endif %}
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state text-center">
+            <div class="empty-state-icon"><i class="fas fa-user-tie"></i></div>
+            <h3 class="empty-state-title">No agents available</h3>
+            <p class="empty-state-text">Please check back later or browse listings directly.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

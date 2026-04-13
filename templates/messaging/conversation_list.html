@@ -1,0 +1,67 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Conversations - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section messages-hero messages-hero-list">
+    <div class="container text-center">
+        <span class="messages-kicker"><i class="fas fa-sparkles"></i> Communication Hub</span>
+        <h1>Messages</h1>
+        <p>Track every buyer and agent thread in one modern, elegant inbox with live status cues.</p>
+        <div class="messages-hero-tags">
+            <span><i class="fas fa-wand-magic-sparkles"></i> Curated Inbox</span>
+            <span><i class="fas fa-bolt"></i> Instant Replies</span>
+            <span><i class="fas fa-shield-heart"></i> Private & Secure</span>
+        </div>
+    </div>
+</section>
+
+<div class="container page-section messages-shell">
+    {% if conversations %}
+        <div class="messages-inbox-layout messages-inbox-layout-revamp">
+            <aside class="card-panel messages-inbox-summary">
+                <p class="messages-thread-label mb-2">Inbox Overview</p>
+                <h3 class="mb-2">Your Message Center</h3>
+                <p class="text-secondary mb-3">Manage all property conversations with buyers and agents from one organized workspace.</p>
+                <div class="messages-thread-meta">
+                    <span><i class="fas fa-comments"></i> {{ conversations|length }} active thread{{ conversations|length|pluralize }}</span>
+                    <span><i class="fas fa-bolt"></i> Real-time delivery</span>
+                    <span><i class="fas fa-user-shield"></i> Secure private chat</span>
+                </div>
+            </aside>
+
+            <section class="messages-thread-stack">
+                {% for conversation in conversations %}
+                    <a href="{% url 'messaging:conversation_detail' conversation.id %}" class="card-panel text-decoration-none d-block messages-conversation-card messages-conversation-card-list">
+                        <div class="messages-card-glow" aria-hidden="true"></div>
+                        <div class="messages-thread-main">
+                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                                <p class="messages-thread-label mb-0">Property Thread</p>
+                                {% if conversation.unread_count > 0 %}
+                                    <span class="status-pill status-danger">{{ conversation.unread_count }} new</span>
+                                {% else %}
+                                    <span class="status-pill status-success">Up to date</span>
+                                {% endif %}
+                            </div>
+
+                            <h4 class="mb-1">{{ conversation.property.title }}</h4>
+                            <p class="text-secondary mb-0">With {% if request.user != conversation.initiator %}{{ conversation.initiator.username }}{% else %}{{ conversation.recipient.username }}{% endif %}</p>
+                        </div>
+
+                        <div class="messages-thread-footer">
+                            <span><i class="fas fa-comments"></i> Open conversation</span>
+                            <span><i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
+                {% endfor %}
+            </section>
+        </div>
+    {% else %}
+        <div class="empty-state text-center messages-empty-state">
+            <div class="empty-state-icon"><i class="fas fa-comments"></i></div>
+            <h3 class="empty-state-title">No conversations yet</h3>
+            <p class="empty-state-text">Start by contacting an agent from a property detail page.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,290 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}{% if property %}Edit Property{% else %}Add Property{% endif %} - LuxeEstate{% endblock %}
+
+{% block content %}
+<div class="container page-section create-property-revamp">
+    <div class="page-heading text-center mb-4 create-hero-block">
+        <div class="create-hero-chip"><i class="fas fa-wand-magic-sparkles"></i> Creative Listing Studio</div>
+        <h1>{% if property %}Edit Property{% else %}Add a New Property{% endif %}</h1>
+        <p class="text-secondary">Design a standout listing with rich details, smart highlights, and premium visuals.</p>
+    </div>
+    <form method="post" enctype="multipart/form-data" id="propertyForm">
+        {% csrf_token %}
+        <input type="hidden" name="latitude" id="id_latitude" value="{{ property.latitude|default_if_none:'' }}">
+        <input type="hidden" name="longitude" id="id_longitude" value="{{ property.longitude|default_if_none:'' }}">
+
+        <div class="token-card mb-4 create-section-card">
+            <h3 class="section-title mb-3">Basic Information</h3>
+            <div class="token-form-grid-2">
+                <div>
+                    <label class="form-label" for="{{ form.title.id_for_label }}">Property Title *</label>
+                    {{ form.title }}
+                    {% if form.title.errors %}<div class="text-danger mt-1">{{ form.title.errors.0 }}</div>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.property_type.id_for_label }}">Property Type *</label>
+                    {{ form.property_type }}
+                </div>
+            </div>
+            <div class="mt-4">
+                <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
+                {{ form.description }}
+                <button type="button" id="generateDescription" class="btn btn-accent mt-3"><i class="fas fa-brain"></i> Generate AI Description</button>
+            </div>
+            <div class="token-card mt-4" id="seoPreviewCard" style="display:none;">
+                <h5 class="mb-3">SEO Preview</h5>
+                <p><strong>SEO Title:</strong> <span id="seoTitlePreview" class="text-secondary"></span></p>
+                <p><strong>Meta Description:</strong> <span id="seoMetaPreview" class="text-secondary"></span></p>
+                <p><strong>Keywords:</strong> <span id="seoKeywordsPreview" class="text-secondary"></span></p>
+            </div>
+        </div>
+
+        <div class="token-card mb-4 create-section-card">
+            <h3 class="section-title mb-3">Location Details</h3>
+            <div class="token-form-grid-3">
+                <div>
+                    <label class="form-label" for="{{ form.city.id_for_label }}">City *</label>
+                    {{ form.city }}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.state.id_for_label }}">State *</label>
+                    {{ form.state }}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.pincode.id_for_label }}">Pincode</label>
+                    {{ form.pincode }}
+                </div>
+            </div>
+            <div class="mt-4">
+                <label class="form-label" for="{{ form.address.id_for_label }}">Complete Address *</label>
+                {{ form.address }}
+            </div>
+        </div>
+
+        <div class="token-card mb-4 create-section-card">
+            <h3 class="section-title mb-3">Property Details</h3>
+            <div class="token-form-grid-4">
+                <div>
+                    <label class="form-label" for="{{ form.price.id_for_label }}">Price (₹) *</label>
+                    {{ form.price }}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.bedrooms.id_for_label }}">Bedrooms</label>
+                    {{ form.bedrooms }}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.bathrooms.id_for_label }}">Bathrooms</label>
+                    {{ form.bathrooms }}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.area_sqft.id_for_label }}">Area (sq ft)</label>
+                    {{ form.area_sqft }}
+                </div>
+            </div>
+            <div class="token-form-grid-2 mt-4">
+                <div>
+                    <label class="form-label" for="{{ form.furnishing.id_for_label }}">Furnishing</label>
+                    {{ form.furnishing }}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>
+                    {{ form.status }}
+                </div>
+            </div>
+        </div>
+
+        <div class="token-card mb-4 nearby-attractions-revamp create-section-card">
+            <h3 class="section-title mb-3">Nearby Attractions</h3>
+            <p class="text-secondary nearby-attractions-note">Keep it crisp: add key places line by line for better listing highlights.</p>
+            <div class="nearby-attractions-grid">
+                <div class="nearby-field-card"><label class="form-label" for="nearby_hospital"><i class="fas fa-hospital-symbol"></i> Hospital</label><textarea id="nearby_hospital" name="nearby_hospital" class="form-control magical-input nearby-input" rows="2" placeholder="City Hospital, 1.2 km&#10;Apex Care, 2.1 km">{{ property.nearby_hospital|join:'\n' }}</textarea></div>
+                <div class="nearby-field-card"><label class="form-label" for="nearby_railway_station"><i class="fas fa-train-subway"></i> Railway Station</label><textarea id="nearby_railway_station" name="nearby_railway_station" class="form-control magical-input nearby-input" rows="2" placeholder="Central Junction, 3.8 km">{{ property.nearby_railway_station|join:'\n' }}</textarea></div>
+                <div class="nearby-field-card"><label class="form-label" for="nearby_shopping_mall"><i class="fas fa-store"></i> Shopping Mall</label><textarea id="nearby_shopping_mall" name="nearby_shopping_mall" class="form-control magical-input nearby-input" rows="2" placeholder="Skyline Mall, 1.6 km">{{ property.nearby_shopping_mall|join:'\n' }}</textarea></div>
+                <div class="nearby-field-card"><label class="form-label" for="nearby_bus_stand"><i class="fas fa-bus"></i> Bus Stand</label><textarea id="nearby_bus_stand" name="nearby_bus_stand" class="form-control magical-input nearby-input" rows="2" placeholder="Metro Bus Terminal, 900 m">{{ property.nearby_bus_stand|join:'\n' }}</textarea></div>
+                <div class="nearby-field-card"><label class="form-label" for="nearby_school"><i class="fas fa-school"></i> School</label><textarea id="nearby_school" name="nearby_school" class="form-control magical-input nearby-input" rows="2" placeholder="Green Valley School, 2 km">{{ property.nearby_school|join:'\n' }}</textarea></div>
+                <div class="nearby-field-card"><label class="form-label" for="nearby_airport"><i class="fas fa-plane-departure"></i> Airport</label><textarea id="nearby_airport" name="nearby_airport" class="form-control magical-input nearby-input" rows="2" placeholder="International Airport, 14 km">{{ property.nearby_airport|join:'\n' }}</textarea></div>
+                <div class="nearby-field-card"><label class="form-label" for="nearby_park"><i class="fas fa-tree-city"></i> Park</label><textarea id="nearby_park" name="nearby_park" class="form-control magical-input nearby-input" rows="2" placeholder="Riverfront Park, 1.4 km">{{ property.nearby_park|join:'\n' }}</textarea></div>
+                <div class="nearby-field-card"><label class="form-label" for="nearby_supermarket"><i class="fas fa-basket-shopping"></i> Supermarket</label><textarea id="nearby_supermarket" name="nearby_supermarket" class="form-control magical-input nearby-input" rows="2" placeholder="FreshMart, 650 m">{{ property.nearby_supermarket|join:'\n' }}</textarea></div>
+            </div>
+            <div class="nearby-attractions-grid mt-3">
+                <div class="nearby-field-card"><label class="form-label" for="nearby_restaurant"><i class="fas fa-utensils"></i> Restaurant</label><textarea id="nearby_restaurant" name="nearby_restaurant" class="form-control magical-input nearby-input" rows="2" placeholder="Olive Bistro, 1 km">{{ property.nearby_restaurant|join:'\n' }}</textarea></div>
+                <div class="nearby-field-card"><label class="form-label" for="nearby_other_places"><i class="fas fa-location-dot"></i> Other Places</label><textarea id="nearby_other_places" name="nearby_other_places" class="form-control magical-input nearby-input" rows="2" placeholder="Business district, 2.5 km">{{ property.nearby_other_places|join:'\n' }}</textarea></div>
+            </div>
+        </div>
+
+        <div class="token-card mb-4 create-section-card">
+            <h3 class="section-title mb-3">Property Images</h3>
+            <div class="mb-3">
+                <label class="form-label" for="images">Upload Images</label>
+                <div class="upload-card create-upload-card">
+                    <div class="upload-card-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <div class="upload-card-title">Click to upload or drag files here</div>
+                    <div class="upload-card-subtitle">PNG, JPG, GIF format accepted</div>
+                    <div class="upload-card-note">Select multiple photos; first one becomes the cover image.</div>
+                    <input type="file" name="images" id="images" multiple class="upload-card-input" accept="image/*">
+                </div>
+                <div class="form-text">Upload high-quality photos. The first selected image becomes the primary photo.</div>
+            </div>
+            <div class="row g-3" id="newImagesPreview"></div>
+            {% if property %}
+                <div class="row g-3" id="existingImages">
+                    {% for image in property.images.all %}
+                        <div class="col-6 col-md-4">
+                            <div class="position-relative rounded overflow-hidden image-preview-card">
+                                <img src="{{ image.image.url }}" class="img-fluid" style="height:150px; width:100%; object-fit:cover;" alt="Property image">
+                                <button type="button" class="btn btn-outline-magical btn-sm position-absolute top-0 end-0 m-2 delete-image-btn" data-image-id="{{ image.id }}" data-delete-url="{% url 'properties:delete_image' image.id %}"><i class="fas fa-trash"></i></button>
+                                {% if image.is_primary %}
+                                    <span class="badge bg-warning text-dark position-absolute bottom-0 start-0 m-2">Primary</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="text-center create-form-actions">
+            <button type="submit" class="btn btn-magical btn-lg me-3"><i class="fas fa-save"></i> {% if property %}Update Property{% else %}Publish Property{% endif %}</button>
+            <a href="{% url 'properties:my_properties' %}" class="btn btn-outline-magical btn-lg"><i class="fas fa-times"></i> Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle delete image buttons
+        document.querySelectorAll('.delete-image-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const imageId = this.getAttribute('data-image-id');
+                const imageCard = this.closest('.col-6');
+
+                if (confirm('Are you sure you want to delete this image?')) {
+                    const deleteUrl = this.dataset.deleteUrl || `/properties/image/${imageId}/delete/`;
+                    fetch(deleteUrl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken'),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            imageCard.remove();
+                            showNotification(data.message, 'success');
+                        } else {
+                            showNotification(data.message || 'Failed to delete image.', 'danger');
+                        }
+                    })
+                    .catch(() => {
+                        showNotification('Error deleting image.', 'danger');
+                    });
+                }
+            });
+        });
+
+        // Handle new image selection
+        const imagesInput = document.getElementById('images');
+        const newImagesPreview = document.getElementById('newImagesPreview');
+
+        imagesInput.addEventListener('change', function(e) {
+            newImagesPreview.innerHTML = '';
+            const files = Array.from(e.target.files);
+            
+            files.forEach((file, index) => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const col = document.createElement('div');
+                        col.className = 'col-6 col-md-4';
+                        col.innerHTML = `
+                            <div class="position-relative rounded overflow-hidden image-preview-card">
+                                <img src="${e.target.result}" class="img-fluid" style="height:150px; width:100%; object-fit:cover;" alt="New image">
+                                <span class="badge bg-success text-white position-absolute bottom-0 start-0 m-2">New</span>
+                                ${index === 0 ? '<span class="badge bg-warning text-dark position-absolute bottom-0 end-0 m-2">Primary</span>' : ''}
+                            </div>
+                        `;
+                        newImagesPreview.appendChild(col);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        });
+
+        const btn = document.getElementById('generateDescription');
+        if (!btn) return;
+
+        btn.addEventListener('click', function () {
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            btn.disabled = true;
+
+            const payload = {
+                property_type: document.getElementById('id_property_type')?.value || '',
+                city: document.getElementById('id_city')?.value || '',
+                address: document.getElementById('id_address')?.value || '',
+                price: document.getElementById('id_price')?.value || '',
+                bedrooms: document.getElementById('id_bedrooms')?.value || '',
+                bathrooms: document.getElementById('id_bathrooms')?.value || '',
+                area_sqft: document.getElementById('id_area_sqft')?.value || '',
+                furnishing: document.getElementById('id_furnishing')?.value || '',
+            };
+
+            fetch('{% url "properties:generate_ai_description" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.description) {
+                    document.getElementById('id_description').value = data.description;
+                    const seoCard = document.getElementById('seoPreviewCard');
+                    if (seoCard) {
+                        seoCard.style.display = 'block';
+                        document.getElementById('seoTitlePreview').textContent = data.seo_title || 'N/A';
+                        document.getElementById('seoMetaPreview').textContent = data.meta_description || 'N/A';
+                        document.getElementById('seoKeywordsPreview').textContent = (data.keywords || []).join(', ') || 'N/A';
+                    }
+                    showNotification('AI description generated successfully!', 'success');
+                } else {
+                    showNotification('Unable to generate description right now.', 'danger');
+                }
+            })
+            .catch(() => {
+                showNotification('Error generating AI description.', 'danger');
+            })
+            .finally(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
+        });
+    });
+</script>
+{% endblock %}
+
+

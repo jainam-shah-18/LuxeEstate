@@ -1,0 +1,148 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Compare Properties - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container text-center">
+        <h1>Compare Properties</h1>
+        <p>See pricing, features, and location highlights in a refreshed comparison view.</p>
+    </div>
+</section>
+
+<div class="container page-section">
+    <style>
+        .compare-chart-card { min-height: 360px; max-height: 420px; }
+        .compare-chart-card canvas { width: 100% !important; height: 100% !important; }
+        .compare-graph-grid { gap: 24px; }
+        .compare-graph-heading { margin-bottom: 1rem; }
+    </style>
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <h2>Comparison Overview</h2>
+            <p class="text-secondary">A clear side-by-side breakdown to help you choose with confidence.</p>
+        </div>
+        <a href="{% url 'properties:list' %}" class="btn btn-outline-magical">Back to Listings</a>
+    </div>
+
+    {% if summary %}
+        <div class="card-panel mb-4">
+            <h4 class="mb-3">{{ summary.headline }}</h4>
+            <ul class="magical-list mb-0">
+                {% for highlight in summary.highlights %}
+                    <li>{{ highlight }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <div class="row compare-graph-grid mb-4">
+        <div class="col-12">
+            <div class="card-panel compare-chart-card">
+                <h4 class="compare-graph-heading text-center">Property Comparison: Location & Neighborhood, Price, Layout & Size and Amenities</h4>
+                <canvas id="comparisonRadarChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive card-panel">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    {% for property in properties %}
+                        <th>{{ property.title }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in comparison_rows %}
+                    <tr>
+                        <td class="fw-semibold">{{ row.label }}</td>
+                        {% for value in row.values %}
+                            <td>{{ value }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="d-flex flex-wrap gap-3 mt-4">
+        {% for property in properties %}
+            <a href="{% url 'properties:detail' property.pk %}" class="btn btn-outline-magical">View {{ property.title }}</a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {{ chart_data.labels|json_script:"compare_labels" }}
+    {{ chart_data.location|json_script:"compare_location" }}
+    {{ chart_data.price|json_script:"compare_price" }}
+    {{ chart_data.layout|json_script:"compare_layout" }}
+    {{ chart_data.amenities|json_script:"compare_amenities" }}
+    <script>
+        const propertyLabels = JSON.parse(document.getElementById('compare_labels').textContent);
+        const locationScores = JSON.parse(document.getElementById('compare_location').textContent);
+        const priceScores = JSON.parse(document.getElementById('compare_price').textContent);
+        const layoutScores = JSON.parse(document.getElementById('compare_layout').textContent);
+        const amenitiesScores = JSON.parse(document.getElementById('compare_amenities').textContent);
+
+        const metricLabels = ['Location & Neighborhood', 'Price', 'Layout & Size', 'Amenities'];
+
+        const chartColors = [
+            { border: 'rgba(79, 70, 229, 1)', background: 'rgba(79, 70, 229, 0.24)' },
+            { border: 'rgba(16, 185, 129, 1)', background: 'rgba(16, 185, 129, 0.24)' },
+            { border: 'rgba(249, 115, 22, 1)', background: 'rgba(249, 115, 22, 0.24)' },
+            { border: 'rgba(14, 165, 233, 1)', background: 'rgba(14, 165, 233, 0.24)' }
+        ];
+
+        const datasets = propertyLabels.map((title, index) => {
+            const color = chartColors[index % chartColors.length];
+            return {
+                label: title,
+                data: [locationScores[index], priceScores[index], layoutScores[index], amenitiesScores[index]],
+                backgroundColor: color.background,
+                borderColor: color.border,
+                borderWidth: 2,
+                hoverBackgroundColor: color.border,
+                hoverBorderColor: color.border
+            };
+        });
+
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            elements: {
+                line: { borderWidth: 2, tension: 0.35 },
+                point: { radius: 4, hoverRadius: 6 }
+            },
+            plugins: {
+                legend: { position: 'top', labels: { boxWidth: 14, padding: 12 } },
+                tooltip: { mode: 'index', intersect: false, backgroundColor: 'rgba(255, 255, 255, 0.96)', titleColor: '#111', bodyColor: '#333', borderColor: 'rgba(204, 204, 204, 0.35)', borderWidth: 1 }
+            },
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: { color: 'rgba(220, 220, 220, 0.28)' },
+                    angleLines: { color: 'rgba(220, 220, 220, 0.4)' },
+                    pointLabels: { font: { size: 13, weight: '600' } },
+                    ticks: { stepSize: 20, backdropColor: 'rgba(255,255,255,0.8)' }
+                }
+            },
+            interaction: { mode: 'index', intersect: false }
+        };
+
+        new Chart(document.getElementById('comparisonRadarChart'), {
+            type: 'radar',
+            data: {
+                labels: metricLabels,
+                datasets
+            },
+            options: chartOptions
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,32 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Subscription - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section payments-hero">
+    <div class="container text-center">
+        <span class="payments-kicker"><i class="fas fa-satellite"></i> Subscription Control</span>
+        <h1>Subscription Details</h1>
+        <p>Keep track of your active promotional plan and renewal status.</p>
+    </div>
+</section>
+
+<div class="container page-section payments-shell">
+    <div class="card-panel payment-card payment-subscription-card mx-auto" style="max-width:680px;">
+        {% if subscription %}
+            <p class="payments-meta-label mb-2">Active Plan</p>
+            <h2 class="mb-3">{{ subscription.package.name }}</h2>
+            <p class="text-secondary mb-1"><strong>Status:</strong> {{ subscription.get_status_display }}</p>
+            <p class="text-secondary mb-1"><strong>Start:</strong> {{ subscription.start_date|date:'M d, Y' }}</p>
+            <p class="text-secondary mb-3"><strong>Expires:</strong> {{ subscription.end_date|date:'M d, Y' }}</p>
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-magical payment-secondary-btn"><i class="fas fa-ban"></i> Cancel Subscription</button>
+            </form>
+        {% else %}
+            <p class="text-secondary">You do not have an active subscription.</p>
+            <a href="{% url 'payments:pricing' %}" class="btn btn-magical payment-cta-btn"><i class="fas fa-compass"></i> View Packages</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

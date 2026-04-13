@@ -1,0 +1,40 @@
+﻿{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Continue with Google" %} - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container text-center">
+        <h1>{% trans "Connect Google" %}</h1>
+        <p class="text-secondary">Use your Google account to continue with LuxeEstate.</p>
+    </div>
+</section>
+
+<div class="container page-section">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card-panel text-center">
+                {% if process == "connect" %}
+                    <h2 class="mb-2">{% blocktrans with provider.name as provider %}Connect {{ provider }}{% endblocktrans %}</h2>
+                    <p class="text-secondary mb-4">{% blocktrans with provider.name as provider %}You are about to connect a new third party account from {{ provider }}.{% endblocktrans %}</p>
+                {% else %}
+                    <h2 class="mb-2">{% blocktrans with provider.name as provider %}Sign In Via {{ provider }}{% endblocktrans %}</h2>
+                    <p class="text-secondary mb-4">{% blocktrans with provider.name as provider %}You are about to sign in using a third party account from {{ provider }}.{% endblocktrans %}</p>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-magical w-100">
+                        <i class="fab fa-google me-2"></i> {% trans "Continue" %}
+                    </button>
+                </form>
+
+                <div class="mt-4">
+                    <a href="{% url 'account_login' %}" class="btn btn-outline-magical w-100">Back to sign in</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

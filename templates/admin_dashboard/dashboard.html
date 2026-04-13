@@ -1,0 +1,79 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard - LuxeEstate{% endblock %}
+
+{% block content %}
+<div class="phase2-dashboard-layout">
+<section class="hero-section dashboard-command-hero">
+    <div class="container text-center">
+        <h1>Admin Control Center</h1>
+        <p>Monitor platform performance, revenue, and engagement in a beautifully organized workspace.</p>
+    </div>
+</section>
+
+<div class="container page-section dashboard-density dashboard-layout-shell">
+    <div class="dashboard-command-row card-panel">
+        <div>
+            <p class="dashboard-kicker mb-1">Operations Console</p>
+            <h3 class="mb-0">Run platform checks from one place</h3>
+        </div>
+        <div class="dashboard-command-actions">
+            <a href="{% url 'admin_dashboard:users' %}" class="btn btn-outline-magical">Users</a>
+            <a href="{% url 'admin_dashboard:properties' %}" class="btn btn-outline-magical">Properties</a>
+            <a href="{% url 'admin_dashboard:revenue' %}" class="btn btn-outline-magical">Revenue</a>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h2>Summary</h2>
+            <p class="text-secondary">Fast insights, quick actions, and the most important metrics at a glance.</p>
+        </div>
+        <a href="{% url 'admin_dashboard:users' %}" class="btn btn-magical">Explore Analytics</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-3"><div class="card-panel"><h5>Total Users</h5><p class="display-6 mb-0">{{ stats.total_users }}</p></div></div>
+        <div class="col-md-3"><div class="card-panel"><h5>Total Properties</h5><p class="display-6 mb-0">{{ stats.total_properties }}</p></div></div>
+        <div class="col-md-3"><div class="card-panel"><h5>Active Properties</h5><p class="display-6 mb-0">{{ stats.active_properties }}</p></div></div>
+        <div class="col-md-3"><div class="card-panel"><h5>Total Revenue</h5><p class="display-6 mb-0">₹{{ stats.total_revenue|floatformat:2 }}</p></div></div>
+    </div>
+
+    <div class="row g-4 mt-4">
+        <div class="col-lg-8">
+            <div class="card-panel h-100">
+                <h3 class="mb-3">Recent Properties</h3>
+                {% if recent_properties %}
+                    <div class="row g-3">
+                        {% for property in recent_properties %}
+                        <div class="col-md-6">
+                            <div class="property-card card h-100">
+                                <div class="property-content">
+                                    <h5 class="property-title">{{ property.title }}</h5>
+                                    <p class="property-location"><i class="fas fa-map-marker-alt"></i> {{ property.city }}</p>
+                                    <p class="text-secondary mb-0">{{ property.status|capfirst }} • ₹{{ property.price|floatformat:0 }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-secondary">No recent properties found.</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card-panel h-100">
+                <h3 class="mb-3">Quick Links</h3>
+                <div class="d-grid gap-3">
+                    <a href="{% url 'admin_dashboard:users' %}" class="btn btn-outline-magical">User Analytics</a>
+                    <a href="{% url 'admin_dashboard:properties' %}" class="btn btn-outline-magical">Property Analytics</a>
+                    <a href="{% url 'admin_dashboard:revenue' %}" class="btn btn-outline-magical">Revenue Analytics</a>
+                    <a href="{% url 'admin_dashboard:engagement' %}" class="btn btn-outline-magical">Engagement Analytics</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    </div>
+{% endblock %}

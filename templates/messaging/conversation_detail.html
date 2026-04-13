@@ -1,0 +1,336 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Conversation - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section messages-hero">
+    <div class="container text-center">
+        <span class="messages-kicker"><i class="fas fa-bolt"></i> Real-Time Conversation</span>
+        <h1>Conversation</h1>
+        <p>Discuss this listing instantly with a sleek, immersive chat experience.</p>
+    </div>
+</section>
+
+<div class="container page-section messages-shell">
+    <div class="messages-thread-layout messages-thread-layout-revamp">
+        <aside class="card-panel messages-thread-sidebar">
+            <p class="messages-thread-label mb-2">Property Thread</p>
+            <h2 class="mb-2">{{ conversation.property.title }}</h2>
+            <p class="text-secondary mb-3">
+                Conversation with <strong>{% if request.user != conversation.initiator %}{{ conversation.initiator.username }}{% else %}{{ conversation.recipient.username }}{% endif %}</strong>
+            </p>
+            <div class="messages-thread-meta">
+                <span><i class="fas fa-home"></i> Listing discussion</span>
+                <span><i class="fas fa-shield-check"></i> Secure messages</span>
+                <span><i class="fas fa-clock"></i> Real-time updates</span>
+            </div>
+        </aside>
+
+        <div class="card-panel messages-chat-card messages-chat-card-revamp">
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+                <div>
+                    <p class="messages-thread-label mb-2">Live Channel</p>
+                    <h3 class="mb-1">Conversation</h3>
+                    <p class="text-secondary mb-0">Send and receive updates instantly.</p>
+                </div>
+                <div>
+                    <span id="connection-status" class="status-pill status-secondary">Connecting...</span>
+                </div>
+            </div>
+
+            <div id="chat-window" class="chat-window mb-4 messages-chat-window">
+                {% for message in messages %}
+                    <div class="chat-message {% if message.sender == user %}outgoing{% else %}incoming{% endif %}">
+                        <div class="chat-bubble">
+                            <strong>{{ message.sender.get_full_name|default:message.sender.username }}</strong>
+                            <p class="mb-1">{{ message.message }}</p>
+                            <small class="text-secondary">{{ message.created_at|date:'M d, Y H:i' }}</small>
+                            {% if message.sender == user %}
+                                <div><small class="text-secondary">{% if message.is_read %}Read{% else %}Sent{% endif %}</small></div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+                <div id="typing-indicator" class="d-none">
+                    <small class="text-secondary">Someone is typing...</small>
+                </div>
+            </div>
+
+            <form id="chat-form" method="post" class="messages-chat-form messages-chat-form-revamp">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <textarea id="message-input" name="message" class="form-control magical-input" rows="3" placeholder="Type your message..."></textarea>
+                </div>
+                <button id="send-button" type="submit" class="btn btn-magical messages-send-btn messages-send-btn-revamp">
+                    <i class="fas fa-paper-plane"></i> Send Message
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const conversationId = '{{ conversation.id }}';
+    const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const connectionStatus = document.querySelector('#connection-status');
+    const chatWindow = document.querySelector('#chat-window');
+    const messageInput = document.querySelector('#message-input');
+    const typingIndicator = document.querySelector('#typing-indicator');
+    const submitBtn = document.querySelector('#send-button');
+    const chatForm = document.querySelector('#chat-form');
+    const currentUserId = Number('{{ user.id }}');
+    let typingTimeout = null;
+    let chatSocket = null;
+    let reconnectAttempt = 0;
+    let wsConnected = false;
+
+    // Initialize lastMessageId from existing messages
+    function initLastMessageId() {
+        const messages = document.querySelectorAll('#chat-window .chat-message');
+        if (messages.length > 0) {
+            const lastMsg = messages[messages.length - 1];
+            const id = lastMsg.dataset.messageId;
+            if (id) lastMessageId = parseInt(id);
+        }
+    }
+
+    function escapeHtml(raw) {
+        return raw
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+
+    function setConnectionState(label, className) {
+        connectionStatus.textContent = label;
+        connectionStatus.className = `status-pill ${className}`;
+    }
+
+    function connectSocket() {
+        try {
+            chatSocket = new WebSocket(wsScheme + '://' + window.location.host + '/ws/chat/' + conversationId + '/');
+            setConnectionState('Connecting...', 'status-secondary');
+
+            chatSocket.onopen = function() {
+                wsConnected = true;
+                reconnectAttempt = 0;
+                setConnectionState('Connected', 'status-success');
+            };
+
+            chatSocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                if (data.type === 'chat_message') {
+                    const isOwn = Number(data.sender_id) === currentUserId;
+                    appendMessageToChat({
+                        message: data.message,
+                        sender: data.sender,
+                        sender_id: data.sender_id,
+                        timestamp: data.timestamp,
+                        is_own: isOwn
+                    });
+                    if (!isOwn && data.message_id) {
+                        sendSocketMessage({ type: 'delivered', message_id: data.message_id });
+                        sendReadReceipt([data.message_id]);
+                    }
+                }
+
+                if (data.type === 'typing_indicator') {
+                    if (data.is_typing) {
+                        typingIndicator?.classList.remove('d-none');
+                    } else {
+                        typingIndicator?.classList.add('d-none');
+                    }
+                }
+
+                if (data.type === 'delivery_receipt') {
+                    const ids = [];
+                    if (data.message_id) ids.push(data.message_id);
+                    if (Array.isArray(data.message_ids)) ids.push(...data.message_ids);
+                    ids.forEach((id) => updateReceiptLabel(id, data.status));
+                }
+            };
+
+            chatSocket.onclose = function() {
+                wsConnected = false;
+                setConnectionState('Offline (using fallback)', 'status-warning');
+                const timeout = Math.min(5000, 1000 * (reconnectAttempt + 1));
+                reconnectAttempt += 1;
+                // Only retry if reconnectAttempt < 10 to avoid infinite loops
+                if (reconnectAttempt < 10) {
+                    setTimeout(connectSocket, timeout);
+                }
+            };
+
+            chatSocket.onerror = function() {
+                wsConnected = false;
+                setConnectionState('Connection error (using fallback)', 'status-danger');
+            };
+        } catch (error) {
+            wsConnected = false;
+            setConnectionState('WebSocket unavailable (using fallback)', 'status-warning');
+        }
+    }
+
+    // Fallback polling for messages when WebSocket is not connected
+    function pollForNewMessages() {
+        if (wsConnected) return; // Don't poll if WebSocket is connected
+        
+        fetch(window.location.href, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        }).then(response => response.json())
+        .then(data => {
+            if (data.messages) {
+                const existingIds = new Set(
+                    Array.from(document.querySelectorAll('#chat-window .chat-message')).map(el => el.dataset.messageId)
+                );
+                
+                data.messages.forEach(msg => {
+                    if (!existingIds.has(msg.id.toString())) {
+                        appendMessageToChat({
+                            message: msg.message,
+                            sender: msg.sender,
+                            sender_id: msg.sender_id,
+                            timestamp: msg.created_at,
+                            is_own: msg.sender_id === currentUserId
+                        });
+                    }
+                });
+            }
+        }).catch(err => console.log('Poll error:', err));
+    }
+
+    // Start polling every 2 seconds if WebSocket is not working
+    setInterval(pollForNewMessages, 2000);
+
+    // Only attempt WebSocket once on load
+    setTimeout(connectSocket, 100);
+
+    function sendSocketMessage(message) {
+        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(JSON.stringify(message));
+        } else {
+            console.warn('WebSocket not connected');
+            if (message.type === 'chat_message') {
+                sendMessageViaHttp(message.message);
+            }
+        }
+    }
+
+    function appendMessageToChat(data) {
+        const messageBlock = document.createElement('div');
+        const isMine = data.is_own || Number(data.sender_id) === currentUserId;
+        messageBlock.classList.add('chat-message', isMine ? 'outgoing' : 'incoming');
+        if (data.message_id) {
+            messageBlock.dataset.messageId = data.message_id;
+        }
+        
+        const timestamp = new Date(data.timestamp).toLocaleString();
+        messageBlock.innerHTML = `
+            <div class="chat-bubble">
+                <strong>${escapeHtml(data.sender)}</strong>
+                <p class="mb-1">${escapeHtml(data.message)}</p>
+                <small class="text-secondary">${timestamp}</small>
+                ${isMine ? `<div><small class="text-secondary">Sent</small></div>` : ''}
+            </div>
+        `;
+        chatWindow.appendChild(messageBlock);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function sendMessageViaHttp(message) {
+        const formData = new FormData();
+        formData.append('message', message);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        }).then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error('Failed to send message - Status: ' + response.status);
+            }
+        }).then(data => {
+            console.log('HTTP response:', data);
+            if (data.success) {
+                console.log('Message sent successfully via HTTP');
+            }
+        }).catch(error => {
+            console.error('Message send error:', error);
+        });
+    }
+
+    function updateReceiptLabel(messageId, status) {
+        const label = document.querySelector(`.message-receipt[data-message-id="${messageId}"]`);
+        if (!label) return;
+        if (status === 'read') {
+            label.textContent = 'Read';
+        } else if (status === 'delivered' && label.textContent !== 'Read') {
+            label.textContent = 'Delivered';
+        }
+    }
+
+    function sendReadReceipt(messageIds) {
+        if (!messageIds || !messageIds.length) return;
+        sendSocketMessage({ type: 'read', message_ids: messageIds });
+    }
+
+    // Form submission with WebSocket primary, HTTP fallback
+    chatForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const message = messageInput.value.trim();
+        if (!message) return;
+
+        // Show message in chat immediately (optimistic update)
+        appendMessageToChat({
+            message: message,
+            sender: '{{ user.get_full_name|default:user.username }}',
+            sender_id: currentUserId,
+            timestamp: new Date().toISOString(),
+            is_own: true
+        });
+
+        // Clear input immediately
+        messageInput.value = '';
+
+        // Try to send via WebSocket first
+        if (wsConnected && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            sendSocketMessage({ type: 'chat_message', message: message });
+        } else {
+            // Fallback to HTTP POST
+            sendMessageViaHttp(message);
+        }
+    });
+
+    messageInput.addEventListener('input', function() {
+        if (wsConnected) {
+            sendSocketMessage({ type: 'typing', is_typing: true });
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                sendSocketMessage({ type: 'typing', is_typing: false });
+            }, 1200);
+        }
+    });
+
+    window.addEventListener('load', function() {
+        const incomingIds = Array.from(document.querySelectorAll('#chat-window .chat-bubble[data-message-id]'))
+            .filter((el) => !el.querySelector('.message-receipt'))
+            .map((el) => Number(el.dataset.messageId))
+            .filter(Boolean);
+        if (incomingIds.length) {
+            sendReadReceipt(incomingIds);
+        }
+    });
+</script>
+{% endblock %}

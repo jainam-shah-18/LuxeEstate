@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}About Us - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container text-center">
+        <h1>About LuxeEstate</h1>
+        <p>Discover the story behind India's premier luxury real estate marketplace</p>
+    </div>
+</section>
+
+<div class="container page-section">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card-panel">
+                <h2>Our Mission</h2>
+                <p class="lead">LuxeEstate is India's premier luxury real estate marketplace, connecting discerning buyers with exceptional properties and trusted real estate professionals. We believe that finding your dream home should be an effortless and enjoyable experience.</p>
+
+                <h3>What Sets Us Apart</h3>
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="feature-card mb-4">
+                            <div class="feature-icon">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <h4>Advanced Search</h4>
+                            <p>Find properties using our intelligent search with AI-powered recommendations and image-based search capabilities.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="feature-card mb-4">
+                            <div class="feature-icon">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <h4>Verified Listings</h4>
+                            <p>All properties are verified by our team to ensure authenticity and accuracy of information.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="feature-card mb-4">
+                            <div class="feature-icon">
+                                <i class="fas fa-comments"></i>
+                            </div>
+                            <h4>Direct Communication</h4>
+                            <p>Connect directly with agents through our secure messaging system for personalized assistance.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="feature-card mb-4">
+                            <div class="feature-icon">
+                                <i class="fas fa-star"></i>
+                            </div>
+                            <h4>Premium Experience</h4>
+                            <p>Enjoy a luxury browsing experience with high-quality images, detailed property information, and expert insights.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Our Story</h3>
+                <p>Founded in 2026, LuxeEstate emerged from a simple observation: the luxury real estate market lacked a platform that truly understood the needs of discerning buyers and sellers. Traditional real estate websites were cluttered, impersonal, and lacked the sophistication that high-end properties deserve.</p>
+
+                <p>We set out to create a marketplace that combines cutting-edge technology with the personal touch that luxury transactions require. Our platform features AI-powered property matching, secure messaging, advanced search filters, and a user experience designed for those who expect nothing but the best.</p>
+
+                <h3>Our Commitment</h3>
+                <p>At LuxeEstate, we're committed to:</p>
+                <ul>
+                    <li>Providing accurate, up-to-date property information</li>
+                    <li>Ensuring secure and transparent transactions</li>
+                    <li>Offering exceptional customer service</li>
+                    <li>Continuously innovating to improve the real estate experience</li>
+                    <li>Supporting both buyers and sellers in their property journey</li>
+                </ul>
+
+                <h3>Join Our Community</h3>
+                <p>Whether you're searching for your dream home, selling a premium property, or working as a real estate professional, LuxeEstate welcomes you to our community. We're here to make every real estate transaction memorable for all the right reasons.</p>
+
+                <div class="text-center mt-5">
+                    <a href="{% url 'properties:home' %}" class="btn btn-magical btn-lg">Explore Properties</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

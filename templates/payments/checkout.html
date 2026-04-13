@@ -1,0 +1,141 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Checkout - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section payments-hero">
+    <div class="container text-center">
+        <span class="payments-kicker"><i class="fas fa-shield-heart"></i> Protected Transaction</span>
+        <h1>Secure Checkout</h1>
+        <p>Finish your promotion purchase with a polished payment experience.</p>
+    </div>
+</section>
+
+<div class="container page-section payments-shell">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card-panel payment-card payment-checkout-card text-center">
+                <h2 class="mb-3">{% if package %}{{ package.name }}{% else %}{{ property.title }}{% endif %}</h2>
+                <p class="text-secondary">
+                    {% if package %}
+                        {{ package.description }}
+                    {% else %}
+                        Pay the full property amount for this listing.
+                    {% endif %}
+                </p>
+                <p class="property-price mb-0 payment-total">Total payable: ₹{{ payment.amount|floatformat:2 }}</p>
+                <form id="payment-form" method="post" action="{% url 'payments:verify_payment' %}" class="mt-4 payment-form-shell">
+                    {% csrf_token %}
+                    <input type="hidden" name="razorpay_order_id" value="{{ razorpay_order_id }}">
+                    <input type="hidden" name="razorpay_payment_id" id="razorpay_payment_id">
+                    <input type="hidden" name="razorpay_signature" id="razorpay_signature">
+                    <button id="pay-button" type="button" class="btn btn-magical w-100 payment-cta-btn" onclick="handlePayment()"><i class="fas fa-credit-card"></i> Pay with Razorpay</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+    // Pass Django variables to JavaScript safely
+    const TEST_MODE = {% if test_mode %}true{% else %}false{% endif %};
+    const RAZORPAY_KEY = '{{ razorpay_key|escapejs }}';
+    const ORDER_ID = '{{ razorpay_order_id|escapejs }}';
+    const AMOUNT = '{{ payment.amount|floatformat:2 }}';
+    const PACKAGE_NAME = '{% if package %}{{ package.name|escapejs }}{% else %}{{ property.title|escapejs }}{% endif %}';
+    const PACKAGE_DESC = '{% if package %}{{ package.description|escapejs }}{% else %}Pay the full property amount for this listing.{% endif %}';
+    const USER_NAME = '{{ user_name|escapejs }}';
+    const USER_EMAIL = '{{ user_email|escapejs }}';
+    const USER_PHONE = '{{ user_phone|escapejs }}';
+    const PAYMENT_ID = {{ payment.id }};
+    
+    console.log('Checkout page loaded, test mode:', TEST_MODE);
+    
+    // Global function for onclick backup
+    function handlePayment() {
+        console.log('handlePayment() called from onclick');
+        
+        const paymentForm = document.getElementById('payment-form');
+        if (!paymentForm) {
+            console.error('Payment form not found');
+            alert('Payment form not found. Please refresh the page.');
+            return;
+        }
+        
+        console.log('Opening Razorpay modal...');
+        
+        const amountPaise = Math.round(parseFloat(AMOUNT) * 100);
+        const activeTheme = document.documentElement.getAttribute('data-theme');
+        const razorpayThemeColor = activeTheme === 'cosmic' ? '#312E81' : '#B4238A';
+        const options = {
+            key: RAZORPAY_KEY,
+            amount: amountPaise,
+            currency: 'INR',
+            name: PACKAGE_NAME,
+            description: PACKAGE_DESC,
+            handler: function (response) {
+                console.log('Payment successful:', response);
+                document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id;
+                document.getElementById('razorpay_signature').value = response.razorpay_signature;
+                paymentForm.submit();
+            },
+            modal: {
+                ondismiss: function () {
+                    console.log('Payment modal dismissed');
+                    window.location.href = '/payments/failed/' + PAYMENT_ID + '/';
+                }
+            },
+            prefill: {
+                name: USER_NAME,
+                email: USER_EMAIL,
+                contact: USER_PHONE
+            },
+            theme: {
+                color: razorpayThemeColor
+            }
+        };
+        
+        if (!TEST_MODE) {
+            options.order_id = ORDER_ID;
+        }
+        
+        try {
+            const razorpay = new Razorpay(options);
+            razorpay.on('payment.failed', function (response) {
+                console.log('Payment failed:', response);
+                window.location.href = '/payments/failed/' + PAYMENT_ID + '/';
+            });
+            razorpay.open();
+        } catch (error) {
+            console.error('Error opening Razorpay:', error);
+            alert('Error initializing payment. Please try again.');
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded, attaching event listeners');
+        
+        const payButton = document.getElementById('pay-button');
+        const paymentForm = document.getElementById('payment-form');
+        
+        if (payButton && paymentForm) {
+            console.log('Found pay button and form, attaching click handler');
+            
+            payButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Pay button clicked via event listener');
+                handlePayment();
+            });
+            
+        } else {
+            console.error('Pay button or payment form not found', {
+                payButton: !!payButton,
+                paymentForm: !!paymentForm
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,52 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}User Analytics - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container text-center">
+        <h1>User Analytics</h1>
+        <p>Understand user behavior, role breakdowns, and the most engaged accounts.</p>
+    </div>
+</section>
+
+<div class="container page-section">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h2>Audience Insights</h2>
+            <p class="text-secondary">A clear overview of how users are engaging with the platform.</p>
+        </div>
+        <a href="{% url 'admin_dashboard:dashboard' %}" class="btn btn-outline-magical">Back to Dashboard</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-3"><div class="card-panel"><h5>Total Users</h5><p class="display-6 mb-0">{{ total_users }}</p></div></div>
+        <div class="col-md-3"><div class="card-panel"><h5>Verified Users</h5><p class="display-6 mb-0">{{ verified_users }}</p></div></div>
+        <div class="col-md-3"><div class="card-panel"><h5>Unverified Users</h5><p class="display-6 mb-0">{{ unverified_users }}</p></div></div>
+        <div class="col-md-3"><div class="card-panel"><h5>New in 30 days</h5><p class="display-6 mb-0">{{ new_users_30days }}</p></div></div>
+    </div>
+
+    <div class="row g-4 mt-4">
+        <div class="col-lg-6">
+            <div class="card-panel h-100">
+                <h4>Users by Role</h4>
+                <ul class="magical-list mt-3">
+                    {% for role in users_by_role %}
+                        <li>{{ role.role }}: {{ role.count }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card-panel h-100">
+                <h4>Top Active Users</h4>
+                <ul class="magical-list mt-3">
+                    {% for user in top_users %}
+                        <li>{{ user.username }} — {{ user.views_count }} views</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

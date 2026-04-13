@@ -1,0 +1,183 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Search Properties - LuxeEstate{% endblock %}
+
+{% block content %}
+<div class="phase2-search-layout">
+<section class="hero-section search-command-hero">
+    <div class="container text-center">
+        <h1>Search the Enchanted Realm</h1>
+        <p>Use filters, location search, and AI image search to find listings quickly.</p>
+    </div>
+</section>
+
+<div class="container page-section search-layout-shell">
+    <div class="search-layout-header card-panel">
+        <div>
+            <p class="search-layout-kicker mb-1">Discovery Workspace</p>
+            <h3 class="mb-0">Filter, compare, and shortlist from a single canvas</h3>
+        </div>
+        <span class="text-secondary">{{ properties.paginator.count }} total listings in current query</span>
+    </div>
+
+    <div class="row g-4 search-main-grid">
+        <aside class="col-lg-4">
+            <div class="card-panel search-filter-column">
+                <h3 class="mb-4">Search Filters</h3>
+                <form method="get" action="{% url 'properties:search' %}" class="magical-form">
+                    <div class="mb-4">
+                        <label class="form-label">AI Image Search</label>
+                        <input id="searchImageInput" type="file" class="form-control magical-input mb-3" accept="image/*" multiple>
+                        <button type="button" id="searchByImageBtn" class="btn btn-magical w-100">Search by Image</button>
+                        <small class="text-secondary d-block mt-2" id="imageSearchStatus">Upload image(s) to detect features like swimming pool, modular/open kitchen, garden, etc.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Search</label>
+                        <input id="searchQuery" list="searchSuggestions" type="text" class="form-control magical-input" name="q" placeholder="Apartment, villa..." value="{{ request.GET.q }}">
+                        <datalist id="searchSuggestions"></datalist>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Location</label>
+                        <input id="searchCity" list="citySuggestions" type="text" class="form-control magical-input" name="city" placeholder="Enter city or region" value="{{ request.GET.city }}">
+                        <datalist id="citySuggestions"></datalist>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Budget</label>
+                        <input id="min_price" type="number" class="form-control magical-input mb-2" name="min_price" placeholder="Min price" value="{{ request.GET.min_price }}">
+                        <input id="max_price" type="number" class="form-control magical-input" name="max_price" placeholder="Max price" value="{{ request.GET.max_price }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Property Type</label>
+                        <select id="property_type" class="form-control magical-input" name="property_type">
+                            <option value="">All types</option>
+                            <option value="apartment" {% if request.GET.property_type == 'apartment' %}selected{% endif %}>Apartment</option>
+                            <option value="house" {% if request.GET.property_type == 'house' %}selected{% endif %}>House</option>
+                            <option value="villa" {% if request.GET.property_type == 'villa' %}selected{% endif %}>Villa</option>
+                            <option value="plot" {% if request.GET.property_type == 'plot' %}selected{% endif %}>Plot</option>
+                            <option value="commercial" {% if request.GET.property_type == 'commercial' %}selected{% endif %}>Commercial</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Rooms</label>
+                        <input type="number" class="form-control magical-input mb-2" name="bedrooms" placeholder="Bedrooms" value="{{ request.GET.bedrooms }}">
+                        <input type="number" class="form-control magical-input" name="bathrooms" placeholder="Bathrooms" value="{{ request.GET.bathrooms }}">
+                    </div>
+                    <button type="submit" class="btn btn-magical w-100">Apply Filters</button>
+                </form>
+            </div>
+        </aside>
+        <div class="col-lg-8">
+            {% if not image_search_active %}
+                <div class="card-panel mb-4 search-recommendation-rail">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <h3 class="mb-0"><i class="fas fa-brain"></i> Personalized Recommendations</h3>
+                        <span class="text-secondary">Based on behavior, location history, and budget</span>
+                    </div>
+                    {% if user.is_authenticated and recommended_properties %}
+                        <div class="row g-3">
+                            {% for property in recommended_properties %}
+                                <div class="col-md-6">
+                                    <article class="property-card card">
+                                        <div class="property-content">
+                                            <h4 class="property-title">{{ property.title }}</h4>
+                                            <p class="property-location"><i class="fas fa-map-marker-alt"></i> {{ property.city }}</p>
+                                            <p class="property-price">₹{{ property.price|floatformat:0 }}</p>
+                                            <span class="badge badge-magical mb-2">Match {{ property.recommendation_score_pct }}%</span>
+                                            <ul class="recommendation-why-list mb-3">
+                                                {% for reason in property.recommendation_highlights %}
+                                                    <li>{{ reason }}</li>
+                                                {% empty %}
+                                                    <li>Matched from your recent activity</li>
+                                                {% endfor %}
+                                            </ul>
+                                            <a href="{% url 'properties:detail' property.id %}" class="btn btn-magical btn-sm w-100">View Recommended Property</a>
+                                        </div>
+                                    </article>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% elif user.is_authenticated %}
+                        <p class="text-secondary mb-0">{{ recommendation_prefill_hint|default:"Open a few listings and use search filters to unlock recommendations." }}</p>
+                    {% else %}
+                        <p class="text-secondary mb-2">Login to see recommendations tailored to your location and budget preferences.</p>
+                        <a href="{% url 'accounts:login' %}" class="btn btn-outline-magical btn-sm">Login</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if image_features %}
+                <div class="magnetic-info-strip mb-4">
+                    <strong>AI visual mode:</strong>
+                    <span class="text-secondary">Matched using features: {{ image_features }}</span>
+                </div>
+            {% endif %}
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 search-result-head">
+                <h3 class="mb-0">Search Results</h3>
+                <span class="text-secondary">{{ properties.paginator.count }} listings found</span>
+            </div>
+            <div class="row g-4">
+                {% for property in properties %}
+                    <div class="col-md-6">
+                        <article class="property-card card">
+                            <div class="property-image-wrapper">
+                                {% if property.images.first %}
+                                    <img src="{{ property.images.first.image.url }}" alt="{{ property.title }}">
+                                {% else %}
+                                    <img src="https://via.placeholder.com/480x300?text=No+Image" alt="No image">
+                                {% endif %}
+                                <span class="property-badge">Enchanted</span>
+                            </div>
+                            <div class="property-content">
+                                <h4 class="property-title">{{ property.title }}</h4>
+                                <p class="property-location"><i class="fas fa-map-marker-alt"></i> {{ property.city }}</p>
+                                <p class="property-price">₹{{ property.price|floatformat:0 }}</p>
+                                <div class="property-features">
+                                    <span><i class="fas fa-bed"></i> {{ property.bedrooms }} beds</span>
+                                    <span><i class="fas fa-bath"></i> {{ property.bathrooms }} baths</span>
+                                </div>
+                                <div class="property-actions property-actions-stack mt-3">
+                                    <a href="{% url 'properties:detail' property.pk %}" class="btn btn-magical btn-sm w-100">View Details</a>
+                                    {% if user.is_authenticated %}
+                                        <button class="btn btn-outline-magical btn-sm w-100 btn-favorite" data-property-id="{{ property.id }}" type="button"><i class="fas fa-heart"></i> {% if property.id in favorite_ids %}Saved{% else %}Save{% endif %}</button>
+                                    {% else %}
+                                        <a href="{% url 'accounts:login' %}" class="btn btn-outline-magical btn-sm w-100"><i class="fas fa-heart"></i> Save</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                {% empty %}
+                    <div class="col-12">
+                        <div class="empty-state text-center">
+                            <div class="empty-state-icon"><i class="fas fa-search"></i></div>
+                            <h3 class="empty-state-title">No matching properties</h3>
+                            <p class="empty-state-text">Try broadening your filters or changing the location.</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% if properties.paginator.num_pages > 1 %}
+        <nav aria-label="Search pagination" class="mt-5">
+            <ul class="pagination justify-content-center pagination-magical">
+                {% if properties.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ properties.previous_page_number }}">Previous</a></li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                {% endif %}
+                {% for num in properties.paginator.page_range %}
+                    <li class="page-item {% if properties.number == num %}active{% endif %}"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                {% endfor %}
+                {% if properties.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ properties.next_page_number }}">Next</a></li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Next</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+</div>
+    </div>
+{% endblock %}

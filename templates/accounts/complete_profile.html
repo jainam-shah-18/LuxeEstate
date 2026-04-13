@@ -1,0 +1,21 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Complete Profile - LuxeEstate{% endblock %}
+
+{% block content %}
+<div class="container page-section">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card-panel">
+                <h1 class="mb-3">Complete Your Profile</h1>
+                <p class="text-secondary mb-4">Finish your account setup and unlock agent features.</p>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-magical w-100">Save Profile</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

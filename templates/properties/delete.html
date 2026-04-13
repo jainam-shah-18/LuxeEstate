@@ -1,0 +1,24 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Delete Property - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container text-center">
+        <h1>Delete Listing</h1>
+        <p>Confirm this deletion before removing the property permanently.</p>
+    </div>
+</section>
+
+<div class="container page-section">
+    <div class="card-panel mx-auto" style="max-width:720px;">
+        <h2 class="mb-2">{{ property.title }}</h2>
+        <p class="text-secondary mb-4">This action cannot be undone. All related images and details will be removed.</p>
+        <form method="post" class="d-flex flex-column flex-md-row gap-3">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-magical">Delete Property</button>
+            <a href="{% url 'properties:detail' property.pk %}" class="btn btn-outline-magical">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

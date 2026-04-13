@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sitemap - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container text-center">
+        <h1>Sitemap</h1>
+        <p>Navigate through all pages on LuxeEstate</p>
+    </div>
+</section>
+
+<div class="container page-section">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card-panel">
+                <h2>Website Sitemap</h2>
+
+                <h3>Main Pages</h3>
+                <ul>
+                    <li><a href="{% url 'properties:home' %}">Home</a></li>
+                    <li><a href="{% url 'properties:list' %}">Browse Properties</a></li>
+                    <li><a href="{% url 'properties:search' %}">Search Properties</a></li>
+                </ul>
+
+                <h3>Account & Authentication</h3>
+                <ul>
+                    <li><a href="{% url 'accounts:login' %}">Login</a></li>
+                    <li><a href="{% url 'accounts:register' %}">Register</a></li>
+                    <li><a href="{% url 'accounts:profile' %}">Profile</a></li>
+                    <li><a href="{% url 'account_change_password' %}">Change Password</a></li>
+                </ul>
+
+                <h3>Property Management</h3>
+                <ul>
+                    <li><a href="{% url 'properties:add_property' %}">Add Property</a></li>
+                    <li><a href="{% url 'properties:my_properties' %}">My Properties</a></li>
+                    <li><a href="{% url 'properties:comparison_list' %}">Compare Properties</a></li>
+                </ul>
+
+                <h3>Features</h3>
+                <ul>
+                    <li><a href="{% url 'favorites:favorite_list' %}">Favorites</a></li>
+                    <li><a href="{% url 'messaging:contact_list' %}">Messages</a></li>
+                    <li><a href="{% url 'accounts:dashboard' %}">Agent Dashboard</a></li>
+                </ul>
+
+                <h3>Payments & Pricing</h3>
+                <ul>
+                    <li><a href="{% url 'payments:pricing' %}">Pricing Plans</a></li>
+                    <li><a href="{% url 'payments:history' %}">Payment History</a></li>
+                </ul>
+
+                <h3>Legal & Support</h3>
+                <ul>
+                    <li><a href="{% url 'terms' %}">Terms of Service</a></li>
+                    <li><a href="{% url 'privacy' %}">Privacy Policy</a></li>
+                    <li><a href="{% url 'cookies' %}">Cookie Policy</a></li>
+                    <li><a href="{% url 'properties:agents' %}">Find Agents</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Unauthorized - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container text-center">
+        <h1>Access Denied</h1>
+        <p>You do not have permission to view this page.</p>
+    </div>
+</section>
+
+<div class="container page-section">
+    <div class="empty-state text-center">
+        <div class="empty-state-icon"><i class="fas fa-lock"></i></div>
+        <h3 class="empty-state-title">Unauthorized Access</h3>
+        <p class="empty-state-text">Please sign in with an account that has admin access.</p>
+        <a href="{% url 'accounts:login' %}" class="btn btn-magical">Sign In</a>
+    </div>
+</div>
+{% endblock %}

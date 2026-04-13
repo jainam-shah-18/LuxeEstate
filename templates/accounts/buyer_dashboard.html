@@ -1,0 +1,51 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Buyer Dashboard - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container text-center">
+        <h1>Buyer Dashboard</h1>
+        <p>Track saved listings, recent views, and the next properties you want to tour.</p>
+    </div>
+</section>
+
+<div class="container page-section dashboard-density">
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card-panel h-100">
+                <h3>Favorites</h3>
+                {% if favorites %}
+                    <ul class="list-unstyled mt-3">
+                        {% for favorite in favorites %}
+                            <li class="mb-3">
+                                <a href="{% url 'properties:detail' favorite.property.pk %}" class="fw-semibold">{{ favorite.property.title }}</a>
+                                <p class="text-secondary mb-0">{{ favorite.property.city }}</p>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-secondary">No favorites yet. Save listings from search results to build your shortlist.</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card-panel h-100">
+                <h3>Recently Viewed</h3>
+                {% if recent_views %}
+                    <ul class="list-unstyled mt-3">
+                        {% for view in recent_views %}
+                            <li class="mb-3">
+                                <a href="{% url 'properties:detail' view.property.pk %}" class="fw-semibold">{{ view.property.title }}</a>
+                                <p class="text-secondary mb-0">{{ view.property.city }}</p>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-secondary">Browse properties to see them here.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

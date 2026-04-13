@@ -1,0 +1,87 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}All Properties - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container text-center">
+        <h1>Explore Listings with a Clean, Modern View</h1>
+        <p>Browse verified properties, save favorites, and compare all in one seamless experience.</p>
+    </div>
+</section>
+
+<div class="container page-section">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="mb-1">Property Listings</h2>
+            <p class="text-secondary">Find homes, villas, plots, and commercial spaces made easy.</p>
+        </div>
+        <a href="{% url 'properties:search' %}" class="btn btn-magical">Advanced Search</a>
+    </div>
+
+    {% if properties %}
+        <div class="properties-grid">
+            {% for property in properties %}
+                <article class="property-card card">
+                    <div class="property-image-wrapper">
+                        {% if property.images.first %}
+                            <img src="{{ property.images.first.image.url }}" alt="{{ property.title }}">
+                        {% else %}
+                            <img src="https://via.placeholder.com/480x300?text=No+Image" alt="No image">
+                        {% endif %}
+                        {% if property.is_featured %}
+                            <span class="property-badge">Featured</span>
+                        {% endif %}
+                    </div>
+                    <div class="property-content">
+                        <h3 class="property-title">{{ property.title }}</h3>
+                        <div class="property-location"><i class="fas fa-map-marker-alt"></i> {{ property.city }} · {{ property.address|truncatewords:5 }}</div>
+                        <div class="property-features">
+                            <span><i class="fas fa-building"></i> {{ property.get_property_type_display }}</span>
+                            <span><i class="fas fa-eye"></i> {{ property.views_count }} views</span>
+                        </div>
+                        <div class="property-price">₹{{ property.price|floatformat:0 }}</div>
+                        <div class="property-actions">
+                            <a href="{% url 'properties:detail' property.pk %}" class="btn btn-magical btn-sm">View Details</a>
+                            {% if user.is_authenticated %}
+                                <button type="button" class="btn btn-outline-magical btn-sm btn-favorite" data-property-id="{{ property.id }}">
+                                    <i class="fas fa-heart"></i> {% if property.id in favorite_ids %}Saved{% else %}Save{% endif %}
+                                </button>
+                            {% else %}
+                                <a href="{% url 'accounts:login' %}" class="btn btn-outline-magical btn-sm">Save</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state text-center">
+            <div class="empty-state-icon"><i class="fas fa-search"></i></div>
+            <h3 class="empty-state-title">No properties found</h3>
+            <p class="empty-state-text">Try changing your search criteria or browse featured offers below.</p>
+            <a href="{% url 'properties:search' %}" class="btn btn-magical">Refine Search</a>
+        </div>
+    {% endif %}
+
+    {% if properties.paginator.num_pages > 1 %}
+        <nav aria-label="Property pagination" class="mt-5">
+            <ul class="pagination justify-content-center pagination-magical">
+                {% if properties.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ properties.previous_page_number }}">Previous</a></li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                {% endif %}
+                {% for num in properties.paginator.page_range %}
+                    <li class="page-item {% if properties.number == num %}active{% endif %}"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                {% endfor %}
+                {% if properties.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ properties.next_page_number }}">Next</a></li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Next</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+</div>
+{% endblock %}

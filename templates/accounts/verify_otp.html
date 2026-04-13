@@ -1,0 +1,66 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Verify OTP - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="auth-future-wrap">
+    <div class="container">
+        <div class="auth-future-shell auth-future-shell-sm">
+            <div class="auth-future-card otp-future-card">
+                <div class="auth-header text-center">
+                    <h2>Verify Your Email</h2>
+                    <p>An OTP was sent to <strong>{{ email }}</strong>.</p>
+                </div>
+                <form method="post" class="auth-future-form">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.otp_code.id_for_label }}">Enter 6-digit OTP</label>
+                        {{ form.otp_code }}
+                    </div>
+                    <button type="submit" class="btn btn-magical w-100 auth-submit-btn">Verify OTP</button>
+                </form>
+                <div class="auth-link mt-3 text-center">
+                    <a id="resendOtpLink" href="{% url 'accounts:request_otp' %}">Resend OTP</a>
+                    <small id="resendOtpTimer" class="d-block mt-2 text-secondary"></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        const cooldownSeconds = 30;
+        const storageKey = 'otpResendCooldownUntil';
+        const link = document.getElementById('resendOtpLink');
+        const timer = document.getElementById('resendOtpTimer');
+        if (!link || !timer) return;
+
+        function renderCountdown() {
+            const now = Date.now();
+            const until = Number(localStorage.getItem(storageKey) || 0);
+            const remaining = Math.ceil((until - now) / 1000);
+
+            if (remaining > 0) {
+                link.classList.add('disabled');
+                link.style.pointerEvents = 'none';
+                timer.textContent = `Resend available in ${remaining}s`;
+            } else {
+                link.classList.remove('disabled');
+                link.style.pointerEvents = 'auto';
+                timer.textContent = '';
+            }
+        }
+
+        link.addEventListener('click', function () {
+            localStorage.setItem(storageKey, String(Date.now() + cooldownSeconds * 1000));
+            renderCountdown();
+        });
+
+        renderCountdown();
+        setInterval(renderCountdown, 1000);
+    })();
+</script>
+{% endblock %}

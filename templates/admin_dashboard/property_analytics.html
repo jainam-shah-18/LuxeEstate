@@ -1,0 +1,52 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Property Analytics - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container text-center">
+        <h1>Property Analytics</h1>
+        <p>Track the portfolio by type, city, and availability with refined metrics.</p>
+    </div>
+</section>
+
+<div class="container page-section">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h2>Property Metrics</h2>
+            <p class="text-secondary">Use these insights to optimize listings and manage inventory.</p>
+        </div>
+        <a href="{% url 'admin_dashboard:dashboard' %}" class="btn btn-outline-magical">Back to Dashboard</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-3"><div class="card-panel"><h5>Total Properties</h5><p class="display-6 mb-0">{{ total_properties }}</p></div></div>
+        <div class="col-md-3"><div class="card-panel"><h5>Active Properties</h5><p class="display-6 mb-0">{{ active_properties }}</p></div></div>
+        <div class="col-md-3"><div class="card-panel"><h5>Inactive Properties</h5><p class="display-6 mb-0">{{ inactive_properties }}</p></div></div>
+        <div class="col-md-3"><div class="card-panel"><h5>Featured</h5><p class="display-6 mb-0">{{ featured_properties }}</p></div></div>
+    </div>
+
+    <div class="row g-4 mt-4">
+        <div class="col-lg-6">
+            <div class="card-panel h-100">
+                <h4>Properties by Type</h4>
+                <ul class="magical-list mt-3">
+                    {% for group in properties_by_type %}
+                        <li>{{ group.property_type }}: {{ group.count }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card-panel h-100">
+                <h4>Properties by City</h4>
+                <ul class="magical-list mt-3">
+                    {% for group in properties_by_city %}
+                        <li>{{ group.city }}: {{ group.count }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

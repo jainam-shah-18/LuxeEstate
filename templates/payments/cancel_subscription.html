@@ -1,0 +1,26 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Cancel Subscription - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section payments-hero">
+    <div class="container text-center">
+        <span class="payments-kicker"><i class="fas fa-triangle-exclamation"></i> Confirmation Required</span>
+        <h1>Cancel Subscription</h1>
+        <p>Confirm cancellation and preserve your account access while turning off promotions.</p>
+    </div>
+</section>
+
+<div class="container page-section payments-shell">
+    <div class="card-panel payment-card payment-cancel-card mx-auto" style="max-width:680px;">
+        <p class="payments-meta-label mb-2">Action Center</p>
+        <h2 class="mb-3">Cancel {{ subscription.package.name }}</h2>
+        <p class="text-secondary mb-4">Once cancelled, the package benefits will end at the next renewal cycle.</p>
+        <form method="post" class="d-flex flex-column flex-md-row gap-3">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-magical payment-cta-btn"><i class="fas fa-xmark"></i> Yes, cancel subscription</button>
+            <a href="{% url 'payments:subscription_detail' %}" class="btn btn-outline-magical payment-secondary-btn"><i class="fas fa-heart"></i> No, keep it</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

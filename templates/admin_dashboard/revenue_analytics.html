@@ -1,0 +1,38 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Revenue Analytics - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container text-center">
+        <h1>Revenue Analytics</h1>
+        <p>Review payment performance across packages and transaction status.</p>
+    </div>
+</section>
+
+<div class="container page-section">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h2>Financial Overview</h2>
+            <p class="text-secondary">Monitor income, completed payments, and revenue trends.</p>
+        </div>
+        <a href="{% url 'admin_dashboard:dashboard' %}" class="btn btn-outline-magical">Back to Dashboard</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-3"><div class="card-panel"><h5>Total Revenue</h5><p class="display-6 mb-0">{{ total_revenue }}</p></div></div>
+        <div class="col-md-3"><div class="card-panel"><h5>Completed Payments</h5><p class="display-6 mb-0">{{ completed_payments }}</p></div></div>
+        <div class="col-md-3"><div class="card-panel"><h5>Failed Payments</h5><p class="display-6 mb-0">{{ failed_payments }}</p></div></div>
+        <div class="col-md-3"><div class="card-panel"><h5>Pending Payments</h5><p class="display-6 mb-0">{{ pending_payments }}</p></div></div>
+    </div>
+
+    <div class="card-panel mt-4">
+        <h4>Revenue by Package</h4>
+        <ul class="magical-list mt-3">
+            {% for group in revenue_by_package %}
+                <li>{{ group.package__name }}: ₹{{ group.revenuet|floatformat:2 }} ({{ group.count }} orders)</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

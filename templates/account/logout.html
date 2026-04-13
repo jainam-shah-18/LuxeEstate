@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Sign Out" %} - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section auth-hero">
+    <div class="container text-center">
+        <span class="messages-kicker"><i class="fas fa-door-open"></i> Session Control</span>
+        <h1>{% trans "Sign Out" %}</h1>
+        <p>End your session securely with a clean, elegant confirmation view.</p>
+    </div>
+</section>
+
+<section class="container page-section auth-revamp-shell">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card-panel auth-revamp-card text-center">
+                <h2 class="mb-2">{% trans "Ready to leave?" %}</h2>
+                <p class="text-secondary mb-4">{% trans "You can sign back in anytime to continue your property journey." %}</p>
+                <form method="post" action="{% url 'account_logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-magical w-100 auth-submit-btn">
+                        <i class="fas fa-sign-out-alt"></i> {% trans "Confirm Logout" %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

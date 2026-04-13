@@ -1,0 +1,51 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}My Properties - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container text-center">
+        <h1>My Listed Properties</h1>
+        <p>Manage your listings, update details, and keep each card polished for buyers.</p>
+    </div>
+</section>
+
+<div class="container page-section">
+    {% if properties %}
+        <div class="properties-grid">
+            {% for property in properties %}
+                <article class="property-card card">
+                    <div class="property-image-wrapper">
+                        {% if property.images.first %}
+                            <img src="{{ property.images.first.image.url }}" alt="{{ property.title }}">
+                        {% else %}
+                            <img src="https://via.placeholder.com/480x300?text=No+Image" alt="No image">
+                        {% endif %}
+                    </div>
+                    <div class="property-content">
+                        <h3 class="property-title">{{ property.title }}</h3>
+                        <div class="property-location"><i class="fas fa-map-marker-alt"></i> {{ property.city }}</div>
+                        <div class="property-features">
+                            <span><i class="fas fa-image"></i> {{ property.images.count }} photos</span>
+                            <span><i class="fas fa-eye"></i> {{ property.views_count }} views</span>
+                        </div>
+                        <div class="property-price">₹{{ property.price|floatformat:0 }}</div>
+                        <div class="property-actions">
+                            <a href="{% url 'properties:detail' property.pk %}" class="btn btn-magical btn-sm">View</a>
+                            <a href="{% url 'properties:edit_property' property.pk %}" class="btn btn-outline-magical btn-sm">Edit</a>
+                            <a href="{% url 'properties:delete_property' property.pk %}" class="btn btn-outline-magical btn-sm">Delete</a>
+                        </div>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state text-center">
+            <div class="empty-state-icon"><i class="fas fa-house-circle-exclamation"></i></div>
+            <h3 class="empty-state-title">No properties listed yet</h3>
+            <p class="empty-state-text">Create your first listing and start showcasing it today.</p>
+            <a href="{% url 'properties:add_property' %}" class="btn btn-magical">Add Property</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

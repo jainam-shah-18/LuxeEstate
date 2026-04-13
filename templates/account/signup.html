@@ -1,0 +1,80 @@
+﻿{% extends "base.html" %}
+{% load socialaccount %}
+{% load social_helpers %}
+
+{% block title %}Create Account - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section auth-hero">
+    <div class="container text-center">
+        <span class="messages-kicker"><i class="fas fa-user-plus"></i> Create Account</span>
+        <h1>Sign Up</h1>
+        <p>Start with a fresh account in a premium, elegant signup flow.</p>
+    </div>
+</section>
+
+<section class="auth-future-wrap auth-revamp-shell">
+    <div class="container">
+        <div class="auth-future-shell">
+            <div class="auth-future-card auth-future-shell-sm auth-revamp-card">
+                <div class="text-center mb-4">
+                    <h2>Create Your Account</h2>
+                    <p class="text-secondary">Start exploring premium homes and managing your next move.</p>
+                </div>
+
+                {% safe_provider_login_url 'google' process='signup' as google_signup_url %}
+                {% if google_signup_url %}
+                    <a href="{{ google_signup_url }}" class="btn btn-magical w-100 mb-3">
+                        <i class="fab fa-google me-2"></i> Continue with Google
+                    </a>
+                    <div class="text-center text-secondary mb-3">or sign up with email</div>
+                {% endif %}
+
+                <form method="post" action="{% url 'account_signup' %}" class="auth-future-form">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    {% for field in form %}
+                        <div class="mb-3 text-start">
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            <div class="field-icon">
+                                <i class="field-icon-icon fas {% if field.field.widget.input_type == 'email' %}fa-envelope{% elif field.field.widget.input_type == 'password' %}fa-lock{% elif field.field.widget.input_type == 'text' %}fa-user{% else %}fa-pencil-alt{% endif %}"></i>
+                                <input
+                                    type="{{ field.field.widget.input_type|default:'text' }}"
+                                    name="{{ field.name }}"
+                                    id="{{ field.id_for_label }}"
+                                    class="form-control magical-input"
+                                    {% if field.value %}value="{{ field.value }}"{% endif %}
+                                    {% if field.field.required %}required{% endif %}
+                                >
+                            </div>
+                            {% if field.help_text %}
+                                <div class="form-text">{{ field.help_text|safe }}</div>
+                            {% endif %}
+                            {% if field.errors %}
+                                <div class="text-danger small mt-1">{{ field.errors }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+
+                    {% if redirect_field_value %}
+                        <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-magical w-100">
+                        <i class="fas fa-user-plus me-1"></i> Sign Up
+                    </button>
+                </form>
+
+                <div class="text-center mt-4">
+                    <span class="text-secondary">Already have an account?</span>
+                    <a href="{% url 'account_login' %}" class="ms-1">Sign in</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

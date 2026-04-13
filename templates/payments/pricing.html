@@ -1,0 +1,41 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Pricing - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section payments-hero">
+    <div class="container text-center">
+        <span class="payments-kicker"><i class="fas fa-sparkles"></i> Luxe Promotion Studio</span>
+        <h1>Listing Promotion Plans</h1>
+        <p>Choose a simple real estate promotion plan to increase your property listing exposure.</p>
+        <p class="text-secondary">No hotel-style bundles – just straightforward listing boost options for sellers and agents.</p>
+    </div>
+</section>
+
+<div class="container page-section payments-shell">
+    <div class="row g-4">
+        {% for package in packages %}
+            <div class="col-md-4">
+                <div class="card-panel payment-card payment-plan-card h-100 d-flex flex-column justify-content-between">
+                    <div>
+                        <p class="payments-meta-label mb-2">Promotion Package</p>
+                        <h3>{{ package.name }}</h3>
+                        <p class="text-secondary">{{ package.description }}</p>
+                        <p class="property-price mt-3">₹{{ package.price|floatformat:2 }}</p>
+                        <p class="text-secondary">Duration: {{ package.duration_days }} days</p>
+                    </div>
+                    <a href="{% url 'payments:create_payment' package.pk %}?property_id={{ request.GET.property_id }}" class="btn btn-magical mt-4 payment-cta-btn"><i class="fas fa-bolt"></i> Buy Now</a>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="empty-state text-center">
+                    <div class="empty-state-icon"><i class="fas fa-info-circle"></i></div>
+                    <h3 class="empty-state-title">No packages available</h3>
+                    <p class="empty-state-text">Please check back later or contact support for assistance.</p>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

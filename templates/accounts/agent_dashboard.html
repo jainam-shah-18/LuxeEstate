@@ -1,0 +1,53 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Agent Dashboard - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container text-center">
+        <h1>Agent Dashboard</h1>
+        <p>Manage your listings with clean cards, quick actions, and performance summaries.</p>
+    </div>
+</section>
+
+<div class="container page-section dashboard-density">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="mb-1">Your Listings</h2>
+            <p class="text-secondary">Quickly edit the properties you manage.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'properties:add_property' %}" class="btn btn-magical">Add Property</a>
+        </div>
+    </div>
+
+    {% if properties %}
+        <div class="properties-grid">
+            {% for property in properties %}
+                <article class="property-card card">
+                    <div class="property-image-wrapper">
+                        {% if property.images.first %}
+                            <img src="{{ property.images.first.image.url }}" alt="{{ property.title }}">
+                        {% endif %}
+                    </div>
+                    <div class="property-content">
+                        <h3 class="property-title">{{ property.title }}</h3>
+                        <div class="property-location"><i class="fas fa-map-marker-alt"></i> {{ property.city }}</div>
+                        <div class="property-actions mt-3">
+                            <a href="{% url 'properties:detail' property.pk %}" class="btn btn-magical btn-sm">View</a>
+                            <a href="{% url 'properties:edit_property' property.pk %}" class="btn btn-outline-magical btn-sm">Edit</a>
+                        </div>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state text-center">
+            <div class="empty-state-icon"><i class="fas fa-clipboard-list"></i></div>
+            <h3 class="empty-state-title">You have no listings yet</h3>
+            <p class="empty-state-text">Add a property to start generating leads and managing details.</p>
+            <a href="{% url 'properties:add_property' %}" class="btn btn-magical">Create Listing</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

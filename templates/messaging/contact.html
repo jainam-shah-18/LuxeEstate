@@ -1,0 +1,33 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Contact Agent - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section messages-hero">
+    <div class="container text-center">
+        <span class="messages-kicker"><i class="fas fa-envelope-open-text"></i> Premium Inquiry</span>
+        <h1>Contact Agent</h1>
+        <p>Send a polished, direct inquiry and start your conversation faster.</p>
+    </div>
+</section>
+
+<div class="container page-section messages-shell">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card-panel messages-contact-card messages-contact-card-revamp">
+                <p class="messages-thread-label mb-2">Inquiry Composer</p>
+                <h2 class="mb-3">Contact Agent</h2>
+                <p class="text-secondary mb-4">Send a direct inquiry for <strong>{{ property.title }}</strong>.</p>
+                <form method="post" class="messages-contact-form">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label for="message" class="form-label">Message</label>
+                        <textarea name="message" id="message" class="form-control magical-input" rows="6" placeholder="Share your requirements, preferred visit time, and any questions..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-magical messages-send-btn"><i class="fas fa-paper-plane"></i> Send Message</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

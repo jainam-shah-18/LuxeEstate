@@ -1,0 +1,29 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Payment Success - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section payments-hero">
+    <div class="container text-center">
+        <span class="payments-kicker"><i class="fas fa-party-horn"></i> Transaction Complete</span>
+        <h1>Payment Successful</h1>
+        <p>{% if payment.package %}Your promotion package has been activated successfully.{% elif payment.property %}Your property payment was completed successfully.{% else %}Your payment was completed successfully.{% endif %}</p>
+    </div>
+</section>
+
+<div class="container page-section payments-shell">
+    <div class="card-panel payment-card payment-success-card text-center">
+        <div class="status-badge status-success mb-3">Success</div>
+        <h2 class="mb-2">{% if payment.package %}{{ payment.package.name }}{% elif payment.property %}{{ payment.property.title }}{% else %}Payment Completed{% endif %}</h2>
+        <p class="text-secondary mb-3">{% if payment.package %}Your promotion package has been activated successfully.{% elif payment.property %}Your property payment was completed successfully.{% else %}Your payment was completed successfully.{% endif %}</p>
+        {% if invoice %}
+            <p><strong>Invoice #:</strong> {{ invoice.invoice_number }}</p>
+            <div class="d-flex flex-column gap-2 justify-content-center align-items-center">
+                <a href="{% url 'payments:invoice' invoice.id %}" target="_blank" class="btn btn-outline-magical payment-secondary-btn mt-3">View Invoice</a>
+                <a href="{% url 'payments:invoice' invoice.id %}" target="_blank" class="btn btn-magical payment-cta-btn mt-3">Download Invoice</a>
+            </div>
+        {% endif %}
+        <a href="{% if payment.property %}{% url 'properties:detail' payment.property.pk %}{% else %}{% url 'payments:pricing' %}{% endif %}" class="btn btn-magical payment-cta-btn mt-3"><i class="fas fa-arrow-right"></i> Continue</a>
+    </div>
+</div>
+{% endblock %}

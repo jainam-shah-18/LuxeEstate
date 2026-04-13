@@ -1,0 +1,63 @@
+﻿{% extends 'base.html' %}
+{% load social_helpers %}
+
+{% block title %}Login - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="auth-future-wrap phase2-auth-layout">
+    <div class="container">
+        <div class="auth-page-grid auth-page-grid-login">
+            <aside class="auth-benefits-column card-panel auth-benefits-column-revamp">
+                <p class="auth-kicker">Member Access</p>
+                <h3>Continue your property journey</h3>
+                <ul class="auth-benefits-list">
+                    <li><i class="fas fa-heart"></i> Resume saved listings instantly</li>
+                    <li><i class="fas fa-comments"></i> Open your latest conversations with agents</li>
+                    <li><i class="fas fa-chart-line"></i> Keep AI recommendations personalized</li>
+                </ul>
+                <div class="auth-benefit-tags">
+                    <span><i class="fas fa-bolt"></i> Fast Login</span>
+                    <span><i class="fas fa-shield"></i> Protected Session</span>
+                    <span><i class="fas fa-stars"></i> Premium UX</span>
+                </div>
+            </aside>
+
+            <div class="auth-future-card auth-form-column auth-form-column-revamp">
+                <div class="auth-header text-center">
+                    <h2>Welcome Back</h2>
+                    <p>Sign in to manage favorites, messages, and listings.</p>
+                </div>
+                <form method="post" class="auth-future-form">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <div class="field-icon">
+                            <i class="field-icon-icon fas fa-envelope"></i>
+                            <input type="email" name="email" id="email" class="form-control magical-input" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <div class="field-icon">
+                            <i class="field-icon-icon fas fa-lock"></i>
+                            <input type="password" name="password" id="password" class="form-control magical-input" required>
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="remember" name="remember" value="1">
+                        <label class="form-check-label" for="remember">Remember me</label>
+                    </div>
+                    <button type="submit" class="btn btn-magical w-100 auth-submit-btn">Login</button>
+                </form>
+                {% safe_provider_login_url 'google' process='login' as google_login_url %}
+                {% if google_login_url %}
+                    <div class="text-center mt-3">
+                        <a href="{{ google_login_url }}" class="btn btn-outline-magical w-100"><i class="fab fa-google"></i> Continue with Google</a>
+                    </div>
+                {% endif %}
+                <p class="auth-link mb-0">Don’t have an account? <a href="{% url 'accounts:register' %}">Create one</a></p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

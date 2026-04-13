@@ -1,0 +1,84 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Saved Properties - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="favorites-revamp-shell">
+    <div class="container">
+        <header class="favorites-revamp-hero card">
+            <div class="favorites-revamp-hero-content">
+                <span class="favorites-revamp-kicker"><i class="fas fa-star"></i> Curated Collection</span>
+                <h1>Saved Properties</h1>
+                <p>Every listing here is part of your shortlist. Revisit, compare vibes, and move fast when your perfect match appears.</p>
+                <div class="favorites-revamp-actions">
+                    <a href="{% url 'properties:search' %}" class="btn btn-magical">
+                        <i class="fas fa-compass"></i> Discover More Homes
+                    </a>
+                    <a href="{% url 'properties:comparison_list' %}" class="btn btn-outline-magical">
+                        <i class="fas fa-balance-scale"></i> Open Comparison
+                    </a>
+                </div>
+            </div>
+            <div class="favorites-revamp-stats">
+                <div class="favorites-revamp-stat">
+                    <span>Saved Listings</span>
+                    <strong>{{ favorites|length }}</strong>
+                </div>
+                <div class="favorites-revamp-stat">
+                    <span>Ready For Review</span>
+                    <strong>Today</strong>
+                </div>
+                <div class="favorites-revamp-stat">
+                    <span>Status</span>
+                    <strong>Actively Curating</strong>
+                </div>
+            </div>
+        </header>
+
+        {% if favorites %}
+            <section class="favorites-revamp-grid">
+                {% for favorite in favorites %}
+                    <article class="favorites-revamp-card card">
+                        <a href="{% url 'properties:detail' favorite.property.pk %}" class="favorites-revamp-media">
+                            {% if favorite.property.images.first %}
+                                <img src="{{ favorite.property.images.first.image.url }}" alt="{{ favorite.property.title }}">
+                            {% else %}
+                                <img src="https://via.placeholder.com/680x420?text=No+Image" alt="No image">
+                            {% endif %}
+                            <span class="favorites-revamp-chip"><i class="fas fa-heart"></i> Saved</span>
+                        </a>
+                        <div class="favorites-revamp-body">
+                            <div class="favorites-revamp-topline">
+                                <h2>{{ favorite.property.title }}</h2>
+                                <span class="favorites-revamp-price">₹{{ favorite.property.price|floatformat:0 }}</span>
+                            </div>
+                            <p class="favorites-revamp-location"><i class="fas fa-location-dot"></i> {{ favorite.property.city }}</p>
+                            <p class="favorites-revamp-desc">{{ favorite.property.description|truncatechars:120 }}</p>
+                            <div class="favorites-revamp-cta">
+                                <a href="{% url 'properties:detail' favorite.property.pk %}" class="btn btn-magical btn-sm">
+                                    <i class="fas fa-arrow-up-right-from-square"></i> View Details
+                                </a>
+                                <form method="post" action="{% url 'favorites:remove_favorite' favorite.property.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-magical btn-sm">
+                                        <i class="fas fa-trash-can"></i> Remove
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            </section>
+        {% else %}
+            <section class="favorites-revamp-empty card text-center">
+                <div class="empty-state-icon"><i class="fas fa-heart-crack"></i></div>
+                <h3 class="empty-state-title">No favorites yet</h3>
+                <p class="empty-state-text">Start exploring and save the homes that spark your imagination.</p>
+                <a href="{% url 'properties:search' %}" class="btn btn-magical">
+                    <i class="fas fa-magic"></i> Explore Properties
+                </a>
+            </section>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load social_helpers %}
+
+{% block title %}Enter the Magical Realm - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section auth-hero">
+    <div class="container text-center">
+        <span class="messages-kicker"><i class="fas fa-wand-magic-sparkles"></i> Sign In Portal</span>
+        <h1>Sign In</h1>
+        <p>Enter your account through a sleek magical-cosmic gateway.</p>
+    </div>
+</section>
+
+<div class="container page-section magical-auth-page auth-revamp-shell">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-5">
+            <div class="magical-auth-card card floating auth-revamp-card">
+                <div class="card-body p-4">
+                    <h2 class="h4 mb-2 text-center magical-title">Welcome Back, Wizard</h2>
+                    <p class="text-muted text-center mb-4 magical-subtitle">Enter the enchanted realm of LuxeEstate</p>
+
+                    {% safe_provider_login_url 'google' process='login' as google_login_url %}
+                    {% if google_login_url %}
+                    <a href="{{ google_login_url }}" class="btn-magical-social btn-magical-google mb-3">
+                        <i class="fab fa-google"></i> Continue with Google Magic
+                    </a>
+                    <div class="magical-auth-divider"><span>or use ancient runes</span></div>
+                    {% endif %}
+
+                    <form method="post" action="{% url 'account_login' %}" class="magical-form">
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-magical alert-danger">
+                                <i class="fas fa-exclamation-triangle"></i> {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        {% for field in form %}
+                            {% if field.field.widget.input_type == 'checkbox' %}
+                                <div class="form-check mb-3 magical-check">
+                                    <input
+                                        type="checkbox"
+                                        name="{{ field.name }}"
+                                        id="{{ field.id_for_label }}"
+                                        class="form-check-input magical-checkbox"
+                                        {% if field.value %}checked{% endif %}
+                                    >
+                                    <label class="form-check-label magical-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                </div>
+                            {% else %}
+                                <div class="mb-3">
+                                    <label class="magical-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    <div class="field-icon">
+                                        <i class="field-icon-icon fas {% if field.field.widget.input_type == 'email' %}fa-envelope{% elif field.field.widget.input_type == 'password' %}fa-lock{% else %}fa-user{% endif %}"></i>
+                                        <input
+                                            type="{{ field.field.widget.input_type|default:'text' }}"
+                                            name="{{ field.name }}"
+                                            id="{{ field.id_for_label }}"
+                                            class="form-control magical-input"
+                                            {% if field.value %}value="{{ field.value }}"{% endif %}
+                                            {% if field.field.required %}required{% endif %}
+                                        >
+                                    </div>
+                                    {% if field.errors %}
+                                        <div class="text-danger small mt-1 magical-error">{{ field.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if redirect_field_value %}
+                            <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+                        {% endif %}
+
+                        <button type="submit" class="btn btn-magical w-100 magical-submit-btn">
+                            <i class="fas fa-wand-magic-sparkles me-1"></i> Cast Login Spell
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-4 magical-links">
+                        <a href="{% url 'account_reset_password' %}" class="d-block mb-2 magical-link">Forgot your magic words?</a>
+                        <span class="text-muted">New to the realm?</span>
+                        <a href="{% url 'account_signup' %}" class="magical-link">Join the Enchantment</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

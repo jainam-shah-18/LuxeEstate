@@ -1,0 +1,31 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Invoice - LuxeEstate{% endblock %}
+
+{% block content %}
+<section class="hero-section payments-hero">
+    <div class="container text-center">
+        <span class="payments-kicker"><i class="fas fa-receipt"></i> Verified Billing</span>
+        <h1>Invoice</h1>
+        <p>Review your transaction details with clean billing layout.</p>
+    </div>
+</section>
+
+<div class="container page-section payments-shell">
+    <div class="card-panel payment-card payment-invoice-card mx-auto" style="max-width:720px;">
+        <p class="payments-meta-label mb-2">Invoice Record</p>
+        <h2 class="mb-3">Invoice {{ invoice.invoice_number }}</h2>
+        <div class="row g-3 mb-3">
+            <div class="col-6"><strong>Date:</strong> {{ invoice.invoice_date|date:'M d, Y' }}</div>
+            <div class="col-6"><strong>Due Date:</strong> {{ invoice.due_date|date:'M d, Y' }}</div>
+        </div>
+        <hr>
+        <p><strong>Payment Amount:</strong> ₹{{ invoice.total|floatformat:2 }}</p>
+        <p><strong>Payment Status:</strong> {{ invoice.is_paid|yesno:'Paid,Unpaid' }}</p>
+        <div class="d-flex flex-column gap-3 mt-4 text-center">
+            <button type="button" class="btn btn-magical payment-cta-btn" onclick="window.print();"><i class="fas fa-file-arrow-down"></i> Download / Print Invoice</button>
+            <a href="{% url 'payments:history' %}" class="btn btn-outline-magical payment-secondary-btn"><i class="fas fa-arrow-left"></i> Back to History</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
