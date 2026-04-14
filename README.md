@@ -217,3 +217,7 @@ Set these values in `.env`:
 
 This repository is currently intended for educational and development use.  
 Add a dedicated `LICENSE` file for production or public distribution.
+
+---
+
+_Last updated: April 2026_
