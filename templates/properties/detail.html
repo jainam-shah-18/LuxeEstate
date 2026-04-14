@@ -694,6 +694,91 @@ html:not([data-theme="cosmic"]) .property-detail-skin {
     color: var(--text-muted);
     line-height: 1.6;
 }
+
+.property-detail-skin .leaflet-popup-content-wrapper,
+.property-detail-skin .leaflet-popup-tip {
+    background: var(--theme-panel-bg, rgba(20, 26, 44, 0.96));
+    color: var(--text-primary, #f8fafc);
+    border: 1px solid var(--theme-panel-border, rgba(255, 255, 255, 0.14));
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
+}
+
+.property-detail-skin .property-map-popup {
+    width: 280px;
+    font-family: 'Poppins', Arial, sans-serif;
+}
+
+.property-detail-skin .property-map-popup-inner {
+    display: grid;
+    gap: 10px;
+}
+
+.property-detail-skin .property-map-popup-image {
+    border-radius: 14px;
+    overflow: hidden;
+    width: 100%;
+    height: 140px;
+    background: var(--theme-field-bg, rgba(255, 255, 255, 0.08));
+}
+
+.property-detail-skin .property-map-popup-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.property-detail-skin .property-map-popup-title {
+    margin: 0 0 6px 0;
+    font-size: 15px;
+    line-height: 1.2;
+    color: var(--text-primary);
+}
+
+.property-detail-skin .property-map-popup-address {
+    margin: 0 0 6px 0;
+    font-size: 13px;
+    color: var(--theme-muted-text, var(--text-secondary));
+}
+
+.property-detail-skin .property-map-popup-distance {
+    margin: 0;
+    font-size: 12px;
+    color: var(--accent);
+}
+
+.property-detail-skin .property-map-popup-actions {
+    display: grid;
+    gap: 8px;
+}
+
+.property-detail-skin .property-map-popup-btn {
+    display: block;
+    text-align: center;
+    text-decoration: none;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.property-detail-skin .property-map-popup-btn--outline {
+    background: var(--theme-panel-bg, rgba(255, 255, 255, 0.1));
+    color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--theme-panel-border, rgba(255, 255, 255, 0.2)));
+}
+
+.property-detail-skin .property-map-popup-btn--primary {
+    background: linear-gradient(130deg, color-mix(in srgb, var(--accent) 80%, #ec4899), color-mix(in srgb, var(--accent-dark) 82%, #4f46e5));
+    color: #ffffff;
+    border: 1px solid transparent;
+}
+
+.property-detail-skin .property-map-popup-btn--muted {
+    background: var(--theme-field-bg, rgba(255, 255, 255, 0.08));
+    color: var(--text-primary);
+    border: 1px solid var(--theme-panel-border, rgba(255, 255, 255, 0.16));
+}
 @media (max-width: 991px) {
     .property-detail-skin .detail-hero-grid {
         grid-template-columns: 1fr;
@@ -823,20 +908,20 @@ html:not([data-theme="cosmic"]) .property-detail-skin {
 
                 function buildPopupHtml(distanceText) {
                     return `
-                    <div style="width: 280px; font-family: Arial, sans-serif;">
-                        <div style="display: grid; gap: 10px;">
-                            <div style="border-radius: 14px; overflow: hidden; width: 100%; height: 140px; background: #f7f9fc;">
-                                <img src="${propertyImageUrl}" alt="${propertyTitle}" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                    <div class="property-map-popup">
+                        <div class="property-map-popup-inner">
+                            <div class="property-map-popup-image">
+                                <img src="${propertyImageUrl}" alt="${propertyTitle}">
                             </div>
                             <div>
-                                <h6 style="margin: 0 0 6px 0; font-size: 15px; line-height: 1.2; color: #1f2937;">${propertyTitle}</h6>
-                                <p style="margin: 0 0 6px 0; font-size: 13px; color: #4b5563;">${propertyAddress}</p>
-                                <p style="margin: 0; font-size: 12px; color: #2563eb;"><strong>${distanceText}</strong></p>
+                                <h6 class="property-map-popup-title">${propertyTitle}</h6>
+                                <p class="property-map-popup-address">${propertyAddress}</p>
+                                <p class="property-map-popup-distance"><strong>${distanceText}</strong></p>
                             </div>
-                            <div style="display: grid; gap: 8px;">
-                                <a href="${detailUrl}" style="display: block; text-align: center; text-decoration: none; padding: 10px 12px; border-radius: 12px; background: #fff; color: #2563eb; border: 1px solid #2563eb; font-size: 13px; font-weight: 600;">View property details</a>
-                                ${!isPropertyOwner ? `<a href="${payUrl}" style="display: block; text-align: center; text-decoration: none; padding: 10px 12px; border-radius: 12px; background: #2563eb; color: #fff; font-size: 13px; font-weight: 600;">Pay property price</a>` : ''}
-                                <a href="${routeUrl}?mode=driving" style="display: block; text-align: center; text-decoration: none; padding: 10px 12px; border-radius: 12px; background: #f8fafc; color: #1f2937; border: 1px solid #cbd5e1; font-size: 13px; font-weight: 600;">Show distance</a>
+                            <div class="property-map-popup-actions">
+                                <a href="${detailUrl}" class="property-map-popup-btn property-map-popup-btn--outline">View property details</a>
+                                ${!isPropertyOwner ? `<a href="${payUrl}" class="property-map-popup-btn property-map-popup-btn--primary">Pay property price</a>` : ''}
+                                <a href="${routeUrl}?mode=driving" class="property-map-popup-btn property-map-popup-btn--muted">Show distance</a>
                             </div>
                         </div>
                     </div>

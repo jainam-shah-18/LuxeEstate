@@ -47,9 +47,9 @@
     const messageInput = document.querySelector('#message-input');
     const sendButton = document.querySelector('#send-button');
 
-    const appendMessage = (sender, text) => {
+    const appendMessage = (sender, text, type = 'incoming') => {
         const newMessage = document.createElement('div');
-        newMessage.className = 'chat-message incoming';
+        newMessage.className = `chat-message ${type}`;
         newMessage.innerHTML = `<div class="chat-bubble"><strong>${sender}:</strong><p class="mb-0">${text}</p></div>`;
         messagesContainer.appendChild(newMessage);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -57,7 +57,7 @@
 
     chatSocket.onmessage = function(e) {
         const data = JSON.parse(e.data);
-        appendMessage(data.sender || 'Agent', data.message);
+        appendMessage(data.sender || 'Agent', data.message, 'incoming');
     };
 
     chatSocket.onclose = function() {
@@ -67,6 +67,7 @@
     sendButton.addEventListener('click', function() {
         const message = messageInput.value.trim();
         if (!message) return;
+        appendMessage('You', message, 'outgoing');
         chatSocket.send(JSON.stringify({ message }));
         messageInput.value = '';
     });

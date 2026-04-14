@@ -445,6 +445,10 @@
         let userLocation = null;
         let directionsService = null;
         let directionsRenderer = null;
+        const themeStyles = getComputedStyle(document.documentElement);
+        const routeStrokeColor = (themeStyles.getPropertyValue('--accent') || '#2563eb').trim() || '#2563eb';
+        const routeUserStrokeColor = (themeStyles.getPropertyValue('--accent-dark') || '#10b981').trim() || '#10b981';
+        const routeUserFillColor = (themeStyles.getPropertyValue('--accent-gold') || '#34d399').trim() || '#34d399';
 
         function displayModeLabel(mode) {
             if (mode === 'bike') return 'Bike';
@@ -573,9 +577,9 @@
                 // Use the driving route geometry for all modes (most reliable)
                 const coordinates = baseRoute.geometry.coordinates.map(c => [c[1], c[0]]);
                 if (routeLine) {
-                    routeLine.setLatLngs(coordinates);
+                    routeLine.setLatLngs(coordinates).redraw();
                 } else {
-                    routeLine = L.polyline(coordinates, { color: '#2563eb', weight: 5, opacity: 0.85 }).addTo(map);
+                    routeLine = L.polyline(coordinates, { color: routeStrokeColor, weight: 5, opacity: 0.85 }).addTo(map);
                 }
 
                 if (userMarker) {
@@ -583,13 +587,16 @@
                 } else {
                     userMarker = L.circleMarker(userLocation, {
                         radius: 7,
-                        color: '#10b981',
-                        fillColor: '#34d399',
+                        color: routeUserStrokeColor,
+                        fillColor: routeUserFillColor,
                         fillOpacity: 0.9
                     }).addTo(map);
                 }
 
-                const bounds = L.latLngBounds([userLocation, [propertyLatitude, propertyLongitude]]).extend(coordinates);
+                // Build bounds from route geometry (Leaflet can throw if extending with a raw array-of-arrays)
+                const bounds = L.latLngBounds(coordinates);
+                bounds.extend(userLocation);
+                bounds.extend([propertyLatitude, propertyLongitude]);
                 map.fitBounds(bounds, { padding: [40, 40] });
             } catch (error) {
                 routeMessage.textContent = 'Route calculation failed. Showing property marker only.';

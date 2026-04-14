@@ -22,6 +22,7 @@
 - [Quick Start](#quick-start-)
 - [Required Environment Variables](#required-environment-variables-)
 - [Development Notes](#development-notes-)
+- [Latest Updates (April 2026)](#latest-updates-april-2026-)
 - [License](#license-)
 
 ---
@@ -209,7 +210,16 @@ Set these values in `.env`:
 - Do not commit `.env` files or private credentials.
 - Runtime/generated directories (`media`, `staticfiles`, `logs`, `__pycache__`) are intentionally ignored.
 - For Redis-backed Channels, configure `CHANNEL_LAYERS_HOST` and `CHANNEL_LAYERS_PORT`.
-- Recent updates include improvements to property search, image-driven lookup flow, and listing comparison UX.
+
+---
+
+## Latest Updates (April 2026)
+
+- Refined AI-powered property assistance and recommendation handling in core property flows.
+- Enhanced property detail and route-map pages for a smoother map and location experience.
+- Improved add/edit property and chat interfaces for cleaner form and conversation UX.
+- Updated global frontend behavior and styling for better responsiveness and consistency.
+- Refreshed project dependencies and template structure for ongoing feature stability.
 
 ---
 
@@ -220,4 +230,4 @@ Add a dedicated `LICENSE` file for production or public distribution.
 
 ---
 
-_Last updated: April 2026_
+_Last updated: April 14, 2026_

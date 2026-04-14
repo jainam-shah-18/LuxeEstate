@@ -23,6 +23,7 @@ from .ai_utils import (
     market_analysis_engine,
     normalize_feature_set,
     normalize_visual_feature,
+    recommendation_engine,
     search_suggestion_engine,
     visual_search_engine,
 )
@@ -504,10 +505,29 @@ def _user_favorite_ids(request):
 
 
 def _get_recommended_properties(user, city=None, count=4):
-    recommendations = Property.objects.filter(is_active=True)
+    # Prefer ML recommendations (behavior + location history + budget).
+    # Hard rule: never recommend the current user's own listings.
+    recommended = list(recommendation_engine.get_recommendations(user, count=count, city=city))
+    if recommended:
+        # Ensure template-safe fields exist.
+        for prop in recommended:
+            if not hasattr(prop, 'recommendation_score_pct'):
+                score = float(getattr(prop, 'recommendation_score', 0) or 0)
+                prop.recommendation_score_pct = int(round(max(min(score, 1.0), 0.0) * 100))
+            if not hasattr(prop, 'recommendation_highlights'):
+                prop.recommendation_highlights = ['Selected from your recent activity.']
+        return recommended
+
+    # Cold-start fallback: show fresh listings from other users (latest first).
+    qs = Property.objects.filter(is_active=True).exclude(agent=user)
     if city:
-        recommendations = recommendations.filter(city__icontains=city)
-    return recommendations.order_by('-views_count', '-rating', '-created_at')[:count]
+        qs = qs.filter(city__icontains=city)
+    fallback = list(qs.order_by('-created_at')[:count])
+    for prop in fallback:
+        prop.recommendation_score_pct = 0
+        prop.recommendation_highlights = ['Fresh listing from another seller.']
+        prop.recommendation_reason = 'Fresh listing from another seller.'
+    return fallback
 
 
 @ensure_csrf_cookie
@@ -516,18 +536,25 @@ def home(request):
     latest_properties = Property.objects.filter(is_active=True).order_by('-created_at')[:8]
     recommended_properties = []
     recommendation_prefill_hint = None
+    show_recommendations = False
 
     if request.user.is_authenticated:
         recommended_properties = list(_get_recommended_properties(request.user, count=6))
         if not recommended_properties:
-            recommended_properties = list(Property.objects.filter(is_active=True).order_by('-views_count', '-rating')[:6])
+            recommended_properties = list(
+                Property.objects.filter(is_active=True)
+                .exclude(agent=request.user)
+                .order_by('-created_at')[:6]
+            )
         recommendation_prefill_hint = 'These properties are popular with users on LuxeEstate.'
+        show_recommendations = bool(recommended_properties)
 
     context = {
         'featured_properties': featured_properties,
         'latest_properties': latest_properties,
         'recommended_properties': recommended_properties,
         'recommendation_prefill_hint': recommendation_prefill_hint,
+        'show_recommendations': show_recommendations,
         'total_properties': Property.objects.filter(is_active=True).count(),
     }
     return render(request, 'properties/home.html', context)
@@ -907,7 +934,6 @@ def retry_property_geocode(request, pk):
 
 
 @require_POST
-@require_POST
 def generate_ai_description(request):
     try:
         payload = json.loads(request.body or '{}')
@@ -916,16 +942,53 @@ def generate_ai_description(request):
         return JsonResponse({'error': 'Invalid JSON payload.'}, status=400)
 
     try:
+        title = (payload.get('title') or '').strip()
+        property_type = (payload.get('property_type') or '').strip()
+        city = (payload.get('city') or '').strip()
+        address = (payload.get('address') or '').strip()
+        furnishing = (payload.get('furnishing') or '').strip()
+        state = (payload.get('state') or '').strip()
+        amenities = payload.get('amenities') or []
+
+        # Guardrail: don't generate nonsense from an empty listing.
+        has_any_meaningful_input = any([
+            bool(title),
+            bool(property_type),
+            bool(city),
+            bool(address),
+            bool(payload.get('price')),
+            bool(payload.get('bedrooms')),
+            bool(payload.get('bathrooms')),
+            bool(payload.get('area_sqft')),
+            bool(furnishing),
+            bool(state),
+            bool(amenities),
+        ])
+        if not has_any_meaningful_input:
+            return JsonResponse(
+                {'error': 'Please fill in at least Property Type and City (or any basic details) before generating an AI description.'},
+                status=400,
+            )
+
+        # Stronger minimum for good output quality.
+        if not property_type or not city:
+            return JsonResponse(
+                {'error': 'Please enter Property Type and City to generate an AI description.'},
+                status=400,
+            )
+
         data = {
-            'title': payload.get('title', ''),
-            'city': payload.get('city', ''),
-            'address': payload.get('address', ''),
+            'title': title or 'Property',
+            'property_type': property_type,
+            'city': city,
+            'state': state,
+            'address': address,
             'price': payload.get('price'),
             'bedrooms': payload.get('bedrooms'),
             'bathrooms': payload.get('bathrooms'),
             'area_sqft': payload.get('area_sqft'),
-            'furnishing': payload.get('furnishing', ''),
-            'amenities': payload.get('amenities') or [],
+            'furnishing': furnishing,
+            'amenities': amenities,
         }
 
         description = _generate_property_description(data)

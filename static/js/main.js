@@ -607,7 +607,9 @@ function initializeAiConcierge() {
     const openAiPanel = () => {
         panel.classList.add('open');
         toggle.classList.add('active');
+        adjustPanelPosition();
         // Force visible state inline to defeat any conflicting CSS layer.
+        panel.style.setProperty('position', 'fixed', 'important');
         panel.style.setProperty('display', 'flex', 'important');
         panel.style.setProperty('opacity', '1', 'important');
         panel.style.setProperty('visibility', 'visible', 'important');
@@ -615,7 +617,6 @@ function initializeAiConcierge() {
         panel.style.setProperty('transform', 'translateY(0)', 'important');
         panel.style.setProperty('z-index', '2147483647', 'important');
         setTimeout(() => input.focus(), 180);
-        adjustPanelPosition();
     };
 
     const closeAiPanel = () => {

@@ -743,7 +743,7 @@ class PropertyRecommendationEngine:
         score = 1.0 - min(distance_ratio, 1.0)
         return max(score, 0.0)
     
-    def get_recommendations(self, user, count=10):
+    def get_recommendations(self, user, count=10, city: str = None):
         """
         Get personalized property recommendations for a user
         """
@@ -751,9 +751,15 @@ class PropertyRecommendationEngine:
             from properties.models import Property
             
             preferences = self.get_user_preferences(user)
-            properties_qs = Property.objects.filter(is_active=True).exclude(
-                id__in=preferences['viewed_properties']
+            properties_qs = (
+                Property.objects.filter(is_active=True)
+                # Never recommend the current user's own listings
+                .exclude(agent=user)
+                # Avoid repeating properties the user already opened
+                .exclude(id__in=preferences['viewed_properties'])
             )
+            if city:
+                properties_qs = properties_qs.filter(city__icontains=city)
             properties = list(properties_qs[:220])
             if not properties:
                 return []
@@ -787,15 +793,42 @@ class PropertyRecommendationEngine:
                 popularity_score = min((float(prop.views_count or 0) / 250.0), 1.0)
                 rating_score = min((float(prop.rating or 0) / 5.0), 1.0)
                 semantic_score = float(similarities[idx]) if idx < len(similarities) else 0.0
+                # Prefer fresher listings, but don't overpower preference fit.
+                recency_score = 0.5
+                try:
+                    created_at = getattr(prop, 'created_at', None)
+                    if created_at:
+                        age_days = max((datetime.now(created_at.tzinfo) - created_at).days, 0)
+                        recency_score = max(1.0 - (age_days / 45.0), 0.0)
+                except Exception:
+                    recency_score = 0.5
+
                 final_score = (
-                    0.34 * semantic_score
+                    0.30 * semantic_score
                     + 0.22 * budget_score
                     + 0.16 * city_score
                     + 0.10 * type_score
                     + 0.10 * popularity_score
-                    + 0.08 * rating_score
+                    + 0.06 * rating_score
+                    + 0.06 * recency_score
                 )
                 prop.recommendation_score = round(final_score, 4)
+                prop.recommendation_score_pct = int(round(max(min(final_score, 1.0), 0.0) * 100))
+
+                highlights = []
+                if city_score >= 0.75 and city_clean:
+                    highlights.append(f"Matches your location interest in {prop.city}.")
+                if type_score >= 1.0:
+                    highlights.append(f"Matches your preferred type: {prop.get_property_type_display}.")
+                if budget_score >= 0.75 and preferred_price:
+                    highlights.append("Fits closely within your typical budget range.")
+                if semantic_score >= 0.25:
+                    highlights.append("Similar to listings you recently explored.")
+                if recency_score >= 0.8:
+                    highlights.append("Recently listed (fresh inventory).")
+                if not highlights:
+                    highlights.append("Selected from your recent browsing behavior.")
+                prop.recommendation_highlights = highlights[:4]
                 scored.append((final_score, prop))
             
             scored.sort(key=lambda item: item[0], reverse=True)

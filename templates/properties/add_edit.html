@@ -322,9 +322,24 @@
             const amenitiesText = document.getElementById('id_amenities')?.value || '';
             const amenities = amenitiesText.split('\n').map(a => a.trim()).filter(a => a.length > 0);
 
+            const title = document.getElementById('id_title')?.value?.trim() || '';
+            const propertyType = document.getElementById('id_property_type')?.value?.trim() || '';
+            const city = document.getElementById('id_city')?.value?.trim() || '';
+            const state = document.getElementById('id_state')?.value?.trim() || '';
+
+            // Minimum inputs for a useful description.
+            if (!propertyType || !city) {
+                showNotification('Please enter Property Type and City before generating an AI description.', 'warning');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                return;
+            }
+
             const payload = {
-                property_type: document.getElementById('id_property_type')?.value || '',
-                city: document.getElementById('id_city')?.value || '',
+                title: title,
+                property_type: propertyType,
+                city: city,
+                state: state,
                 address: document.getElementById('id_address')?.value || '',
                 price: document.getElementById('id_price')?.value || '',
                 bedrooms: document.getElementById('id_bedrooms')?.value || '',
