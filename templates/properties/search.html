@@ -29,7 +29,7 @@
                         <label class="form-label">AI Image Search</label>
                         <input id="searchImageInput" type="file" class="form-control magical-input mb-3" accept="image/*" multiple>
                         <button type="button" id="searchByImageBtn" class="btn btn-magical w-100">Search by Image</button>
-                        <small class="text-secondary d-block mt-2" id="imageSearchStatus">Upload image(s) to detect features like swimming pool, modular/open kitchen, garden, etc.</small>
+                        <small class="text-secondary d-block mt-2" id="imageSearchStatus">Upload an amenity photo. We match listings whose <strong>analysed photos</strong> show the same feature (kitchen, pool, gym, etc.), then rank using amenities and tags.</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Search</label>
@@ -107,8 +107,8 @@
 
             {% if image_features %}
                 <div class="magnetic-info-strip mb-4">
-                    <strong>AI visual mode:</strong>
-                    <span class="text-secondary">Matched using features: {{ image_features }}</span>
+                    <strong>AI amenity match (photo evidence):</strong>
+                    <span class="text-secondary">Tags from your upload — {{ image_features }}. Listings shown have these features visible in their listing images.</span>
                 </div>
             {% endif %}
             <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 search-result-head">

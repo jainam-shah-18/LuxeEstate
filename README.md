@@ -209,6 +209,7 @@ Set these values in `.env`:
 - Do not commit `.env` files or private credentials.
 - Runtime/generated directories (`media`, `staticfiles`, `logs`, `__pycache__`) are intentionally ignored.
 - For Redis-backed Channels, configure `CHANNEL_LAYERS_HOST` and `CHANNEL_LAYERS_PORT`.
+- Recent updates include improvements to property search, image-driven lookup flow, and listing comparison UX.
 
 ---
 

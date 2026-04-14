@@ -14,22 +14,52 @@
         <input type="hidden" name="latitude" id="id_latitude" value="{{ property.latitude|default_if_none:'' }}">
         <input type="hidden" name="longitude" id="id_longitude" value="{{ property.longitude|default_if_none:'' }}">
 
+        {% if form.non_field_errors or form.errors %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong><i class="fas fa-exclamation-circle"></i> Attention Required:</strong>
+                {% if form.non_field_errors %}
+                    <ul class="mb-2">
+                        {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                {% if form.errors %}
+                    {% if form.non_field_errors %}
+                        <strong>Field Errors:</strong>
+                    {% endif %}
+                    <ul class="mb-0">
+                        {% for field, errors in form.errors.items %}
+                            {% if field != "__all__" %}
+                                {% for error in errors %}
+                                    <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endif %}
+
         <div class="token-card mb-4 create-section-card">
             <h3 class="section-title mb-3">Basic Information</h3>
             <div class="token-form-grid-2">
                 <div>
                     <label class="form-label" for="{{ form.title.id_for_label }}">Property Title *</label>
                     {{ form.title }}
-                    {% if form.title.errors %}<div class="text-danger mt-1">{{ form.title.errors.0 }}</div>{% endif %}
+                    {% if form.title.errors %}<div class="text-danger mt-1"><small>{{ form.title.errors.0 }}</small></div>{% endif %}
                 </div>
                 <div>
                     <label class="form-label" for="{{ form.property_type.id_for_label }}">Property Type *</label>
                     {{ form.property_type }}
+                    {% if form.property_type.errors %}<div class="text-danger mt-1"><small>{{ form.property_type.errors.0 }}</small></div>{% endif %}
                 </div>
             </div>
             <div class="mt-4">
                 <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
                 {{ form.description }}
+                {% if form.description.errors %}<div class="text-danger mt-1"><small>{{ form.description.errors.0 }}</small></div>{% endif %}
                 <button type="button" id="generateDescription" class="btn btn-accent mt-3"><i class="fas fa-brain"></i> Generate AI Description</button>
             </div>
             <div class="token-card mt-4" id="seoPreviewCard" style="display:none;">
@@ -46,19 +76,23 @@
                 <div>
                     <label class="form-label" for="{{ form.city.id_for_label }}">City *</label>
                     {{ form.city }}
+                    {% if form.city.errors %}<div class="text-danger mt-1"><small>{{ form.city.errors.0 }}</small></div>{% endif %}
                 </div>
                 <div>
                     <label class="form-label" for="{{ form.state.id_for_label }}">State *</label>
                     {{ form.state }}
+                    {% if form.state.errors %}<div class="text-danger mt-1"><small>{{ form.state.errors.0 }}</small></div>{% endif %}
                 </div>
                 <div>
                     <label class="form-label" for="{{ form.pincode.id_for_label }}">Pincode</label>
                     {{ form.pincode }}
+                    {% if form.pincode.errors %}<div class="text-danger mt-1"><small>{{ form.pincode.errors.0 }}</small></div>{% endif %}
                 </div>
             </div>
             <div class="mt-4">
                 <label class="form-label" for="{{ form.address.id_for_label }}">Complete Address *</label>
                 {{ form.address }}
+                {% if form.address.errors %}<div class="text-danger mt-1"><small>{{ form.address.errors.0 }}</small></div>{% endif %}
             </div>
         </div>
 
@@ -68,29 +102,41 @@
                 <div>
                     <label class="form-label" for="{{ form.price.id_for_label }}">Price (₹) *</label>
                     {{ form.price }}
+                    {% if form.price.errors %}<div class="text-danger mt-1"><small>{{ form.price.errors.0 }}</small></div>{% endif %}
                 </div>
                 <div>
                     <label class="form-label" for="{{ form.bedrooms.id_for_label }}">Bedrooms</label>
                     {{ form.bedrooms }}
+                    {% if form.bedrooms.errors %}<div class="text-danger mt-1"><small>{{ form.bedrooms.errors.0 }}</small></div>{% endif %}
                 </div>
                 <div>
                     <label class="form-label" for="{{ form.bathrooms.id_for_label }}">Bathrooms</label>
                     {{ form.bathrooms }}
+                    {% if form.bathrooms.errors %}<div class="text-danger mt-1"><small>{{ form.bathrooms.errors.0 }}</small></div>{% endif %}
                 </div>
                 <div>
                     <label class="form-label" for="{{ form.area_sqft.id_for_label }}">Area (sq ft)</label>
                     {{ form.area_sqft }}
+                    {% if form.area_sqft.errors %}<div class="text-danger mt-1"><small>{{ form.area_sqft.errors.0 }}</small></div>{% endif %}
                 </div>
             </div>
             <div class="token-form-grid-2 mt-4">
                 <div>
                     <label class="form-label" for="{{ form.furnishing.id_for_label }}">Furnishing</label>
                     {{ form.furnishing }}
+                    {% if form.furnishing.errors %}<div class="text-danger mt-1"><small>{{ form.furnishing.errors.0 }}</small></div>{% endif %}
                 </div>
                 <div>
                     <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>
                     {{ form.status }}
+                    {% if form.status.errors %}<div class="text-danger mt-1"><small>{{ form.status.errors.0 }}</small></div>{% endif %}
                 </div>
+            </div>
+            <div class="mt-4">
+                <label class="form-label" for="{{ form.amenities.id_for_label }}">Amenities</label>
+                {{ form.amenities }}
+                {% if form.amenities.errors %}<div class="text-danger mt-1"><small>{{ form.amenities.errors.0 }}</small></div>{% endif %}
+                <small class="text-secondary d-block mt-2">List each amenity on a new line (e.g., Swimming Pool, Gym, Parking, Garden, Security, etc.)</small>
             </div>
         </div>
 
@@ -147,7 +193,7 @@
         </div>
 
         <div class="text-center create-form-actions">
-            <button type="submit" class="btn btn-magical btn-lg me-3"><i class="fas fa-save"></i> {% if property %}Update Property{% else %}Publish Property{% endif %}</button>
+            <button type="submit" class="btn btn-magical btn-lg me-3" id="submitBtn"><i class="fas fa-save"></i> {% if property %}Update Property{% else %}Publish Property{% endif %}</button>
             <a href="{% url 'properties:my_properties' %}" class="btn btn-outline-magical btn-lg"><i class="fas fa-times"></i> Cancel</a>
         </div>
     </form>
@@ -172,6 +218,38 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        const propertyForm = document.getElementById('propertyForm');
+        const submitBtn = document.getElementById('submitBtn');
+        
+        // Handle form submission - ensure data is properly prepared
+        propertyForm.addEventListener('submit', function(e) {
+            // Don't prevent default - allow form to submit normally
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            
+            // Optional: Add validation before submit
+            if (!document.getElementById('id_title').value.trim()) {
+                e.preventDefault();
+                alert('Please enter a property title.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save"></i> {% if property %}Update Property{% else %}Publish Property{% endif %}';
+                return false;
+            }
+            
+            if (!document.getElementById('id_city').value.trim()) {
+                e.preventDefault();
+                alert('Please enter a city.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save"></i> {% if property %}Update Property{% else %}Publish Property{% endif %}';
+                return false;
+            }
+        });
+        
+        // Re-enable button if user navigates away
+        window.addEventListener('beforeunload', function() {
+            submitBtn.disabled = false;
+        });
+
         // Handle delete image buttons
         document.querySelectorAll('.delete-image-btn').forEach(button => {
             button.addEventListener('click', function() {
@@ -240,6 +318,10 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
             btn.disabled = true;
 
+            // Get amenities from textarea (split by newlines)
+            const amenitiesText = document.getElementById('id_amenities')?.value || '';
+            const amenities = amenitiesText.split('\n').map(a => a.trim()).filter(a => a.length > 0);
+
             const payload = {
                 property_type: document.getElementById('id_property_type')?.value || '',
                 city: document.getElementById('id_city')?.value || '',
@@ -249,6 +331,7 @@
                 bathrooms: document.getElementById('id_bathrooms')?.value || '',
                 area_sqft: document.getElementById('id_area_sqft')?.value || '',
                 furnishing: document.getElementById('id_furnishing')?.value || '',
+                amenities: amenities
             };
 
             fetch('{% url "properties:generate_ai_description" %}', {
@@ -259,7 +342,14 @@
                 },
                 body: JSON.stringify(payload)
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.description) {
                     document.getElementById('id_description').value = data.description;
@@ -271,12 +361,15 @@
                         document.getElementById('seoKeywordsPreview').textContent = (data.keywords || []).join(', ') || 'N/A';
                     }
                     showNotification('AI description generated successfully!', 'success');
+                } else if (data.error) {
+                    showNotification(`Error: ${data.error}`, 'danger');
                 } else {
                     showNotification('Unable to generate description right now.', 'danger');
                 }
             })
-            .catch(() => {
-                showNotification('Error generating AI description.', 'danger');
+            .catch(error => {
+                console.error('Description generation error:', error);
+                showNotification(`Error generating AI description: ${error.message}`, 'danger');
             })
             .finally(() => {
                 btn.innerHTML = originalText;

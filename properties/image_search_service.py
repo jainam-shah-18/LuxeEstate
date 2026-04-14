@@ -60,6 +60,29 @@ FEATURE_CATEGORIES = {
 
 ALL_KNOWN_FEATURES: Set[str] = {f for cat in FEATURE_CATEGORIES.values() for f in cat}
 
+# Same-category hints so a query label matches listing photo tags (e.g. modular vs open kitchen).
+KITCHEN_FAMILY: Set[str] = set(FEATURE_CATEGORIES["kitchen"]) | {"kitchen"}
+POOL_FAMILY: Set[str] = {"swimming pool", "infinity pool"}
+GYM_FAMILY: Set[str] = {"gym", "yoga studio"}
+PARKING_FAMILY: Set[str] = {"parking garage", "ev charging"}
+GARDEN_FAMILY: Set[str] = {"garden", "lawn", "courtyard"}
+SPA_WATER_FAMILY: Set[str] = {"jacuzzi", "hot tub"}
+SECURITY_FAMILY: Set[str] = {"security cabin", "cctv", "concierge"}
+WORKSPACE_FAMILY: Set[str] = {"co working space", "library"}
+ENTERTAINMENT_FAMILY: Set[str] = {"home theatre", "game room", "wine cellar"}
+
+FEATURE_MATCH_FAMILIES: Tuple[Set[str], ...] = (
+    KITCHEN_FAMILY,
+    POOL_FAMILY,
+    GYM_FAMILY,
+    PARKING_FAMILY,
+    GARDEN_FAMILY,
+    SPA_WATER_FAMILY,
+    SECURITY_FAMILY,
+    WORKSPACE_FAMILY,
+    ENTERTAINMENT_FAMILY,
+)
+
 # Features grouped for fuzzy matching (alias → canonical)
 FEATURE_ALIASES: Dict[str, str] = {
     "pool": "swimming pool",
@@ -89,17 +112,39 @@ FEATURE_ALIASES: Dict[str, str] = {
     "elevator": "lift elevator",
     "lift": "lift elevator",
     "cctv camera": "cctv",
+    "fitness": "gym",
+    "fitness center": "gym",
+    "fitness centre": "gym",
+    "workout": "gym",
+    "yoga": "yoga studio",
+    "car parking": "parking garage",
+    "covered parking": "parking garage",
+    "garage parking": "parking garage",
     "water feature": "swimming pool",
     "pool area": "swimming pool",
     "poolside": "swimming pool",
     "outdoor area": "garden",
     "patio": "garden",
+    "grass": "lawn",
+    "green lawn": "lawn",
+    "co-working": "co working space",
+    "coworking": "co working space",
+    "shared workspace": "co working space",
+    "workspace": "co working space",
+    "movie room": "home theatre",
+    "theatre": "home theatre",
+    "cinema room": "home theatre",
+    "security": "security cabin",
+    "security guard": "security cabin",
+    "camera surveillance": "cctv",
+    "surveillance": "cctv",
     "bright space": "open plan living",
     "indoor space": "open plan living",
     "room interior": "open plan living",
     "interior room": "open plan living",
     "bright interior": "open plan living",
     "open space": "open plan living",
+    "wide layout": "open plan living",
 }
 
 
@@ -252,6 +297,14 @@ class AIImageSearchService:
                 seen.add(resolved)
                 out.append(resolved)
         return out
+
+    def resolve_features(self, raw_list: List[str]) -> List[str]:
+        """Public alias for normalising AI or form input feature strings."""
+        return self._resolve_features(raw_list or [])
+
+    def property_features_for_match(self, property_obj) -> Set[str]:
+        """Features used when matching listings to an image query (amenities, tags, text, images)."""
+        return self._get_property_features(property_obj)
 
     def _tokenize_text(self, text: str) -> Set[str]:
         return {token for token in re.findall(r"[a-z0-9]+", text.lower())}
@@ -602,6 +655,164 @@ class AIImageSearchService:
 
         return features
 
+    def _get_image_level_feature_union(self, property_obj) -> Set[str]:
+        """
+        Union of resolved AI tags from all listing photos only (no amenities JSON / description).
+        """
+        raw: Set[str] = set()
+
+        def collect_from_image(img) -> None:
+            image_features = getattr(img, "ai_detected_features", None)
+            if image_features:
+                if isinstance(image_features, list):
+                    for feat in image_features:
+                        raw.add(str(feat))
+                elif isinstance(image_features, str):
+                    try:
+                        parsed = json.loads(image_features)
+                        if isinstance(parsed, list):
+                            for feat in parsed:
+                                raw.add(str(feat))
+                    except (json.JSONDecodeError, ValueError):
+                        for feat in image_features.split(","):
+                            raw.add(feat.strip())
+
+            sig = getattr(img, "ai_visual_signature", None)
+            if sig:
+                if isinstance(sig, str):
+                    try:
+                        sig = json.loads(sig)
+                    except (json.JSONDecodeError, ValueError):
+                        sig = {}
+                if isinstance(sig, dict):
+                    for feat in sig.get("detected_features", []) or []:
+                        raw.add(str(feat))
+
+        try:
+            for img in property_obj.images.all():
+                collect_from_image(img)
+        except Exception:
+            pass
+
+        return {self._resolve_feature(x) for x in raw if x and self._resolve_feature(x)}
+
+    def _get_property_text_features_only(self, property_obj) -> Set[str]:
+        """Amenities, tags, description — excludes tags inferred only from listing photos."""
+        features: Set[str] = set()
+
+        def add_feature(raw_feature: str):
+            if not raw_feature:
+                return
+            resolved = self._resolve_feature(str(raw_feature))
+            if resolved:
+                features.add(resolved)
+
+        amenities = getattr(property_obj, "amenities", None)
+        if amenities:
+            if isinstance(amenities, list):
+                for a in amenities:
+                    add_feature(a)
+            elif isinstance(amenities, str):
+                try:
+                    parsed = json.loads(amenities)
+                    if isinstance(parsed, list):
+                        for a in parsed:
+                            add_feature(a)
+                except (json.JSONDecodeError, ValueError):
+                    for a in amenities.split(","):
+                        add_feature(a)
+
+        ai_tags = getattr(property_obj, "ai_tags", None)
+        if ai_tags:
+            if isinstance(ai_tags, list):
+                for t in ai_tags:
+                    add_feature(t)
+            elif isinstance(ai_tags, str):
+                try:
+                    tags = json.loads(ai_tags)
+                    if isinstance(tags, list):
+                        for t in tags:
+                            add_feature(t)
+                except (json.JSONDecodeError, ValueError):
+                    for t in ai_tags.split(","):
+                        add_feature(t)
+
+        description = getattr(property_obj, "description", "") or ""
+        desc_lower = description.lower()
+        for feature in ALL_KNOWN_FEATURES:
+            if feature in desc_lower:
+                add_feature(feature)
+
+        furnishing = getattr(property_obj, "furnishing", "") or ""
+        if furnishing:
+            add_feature(furnishing.strip().lower())
+
+        ptype = getattr(property_obj, "property_type", "") or ""
+        if ptype:
+            add_feature(ptype.strip().lower())
+
+        return features
+
+    def _query_matches_listing_image_features(
+        self, query_set: Set[str], listing_image_features: Set[str]
+    ) -> bool:
+        """
+        True if the uploaded query is evidenced by listing photos: exact tag overlap
+        or same-family match (kitchen / pool / gym / parking).
+        """
+        if not query_set or not listing_image_features:
+            return False
+        img = listing_image_features
+        if query_set & img:
+            return True
+        for family in FEATURE_MATCH_FAMILIES:
+            if (query_set & family) and (img & family):
+                return True
+        return False
+
+    def _matched_query_features(
+        self, query_set: Set[str], candidate_features: Set[str]
+    ) -> Set[str]:
+        """
+        Return query features evidenced by candidate features using exact/family match.
+        """
+        if not query_set or not candidate_features:
+            return set()
+
+        matched: Set[str] = set()
+        for q in query_set:
+            if self._query_matches_listing_image_features({q}, candidate_features):
+                matched.add(q)
+        return matched
+
+    def _each_query_dimension_evident_in_listing_photos(
+        self, query_set: Set[str], listing_image_union: Set[str]
+    ) -> bool:
+        """
+        Every resolved query tag must be supported by at least one listing photo
+        (union across photos, with family matching).
+        """
+        for q in query_set:
+            if self._query_matches_listing_image_features({q}, listing_image_union):
+                continue
+            return False
+        return True
+
+    def _each_query_dimension_listed_in_text_features(
+        self, query_set: Set[str], text_features: Set[str]
+    ) -> bool:
+        """
+        Every resolved query tag must also be listed on the property's textual
+        metadata (amenities / ai_tags / description), with family matching.
+        """
+        if not query_set or not text_features:
+            return False
+        for q in query_set:
+            if self._query_matches_listing_image_features({q}, text_features):
+                continue
+            return False
+        return True
+
     # ------------------------------------------------------------------
     # Ranking
     # ------------------------------------------------------------------
@@ -665,6 +876,89 @@ class AIImageSearchService:
 
         results.sort(key=lambda m: m.score, reverse=True)
         return results
+
+    def rank_properties_requiring_listing_photos(
+        self,
+        query_features: List[str],
+        properties,
+        min_score: float = 0.01,
+    ) -> List[PropertyMatch]:
+        """
+        Like rank_properties, but only includes listings where analysed *listing photos*
+        show the same amenity as the user's upload (kitchen, pool, gym, etc.).
+        AND the amenity is listed in the property's amenities / ai_tags / description.
+        Text-only or image-only matches are excluded.
+        """
+        query_set = set(self._resolve_features(query_features))
+        if not query_set:
+            return []
+        # Require at least one strongly corroborated amenity match (photo + text).
+        # Requiring two often over-filters real-world uploads where vision detects
+        # one dominant amenity plus several noisy secondary tags.
+        required_dual_matches = 1
+
+        results: List[PropertyMatch] = []
+        for prop in properties:
+            img_union = self._get_image_level_feature_union(prop)
+            if not img_union:
+                continue
+
+            text_features = self._get_property_text_features_only(prop)
+            if not text_features:
+                continue
+
+            image_matched = self._matched_query_features(query_set, img_union)
+            if not image_matched:
+                continue
+
+            text_matched = self._matched_query_features(query_set, text_features)
+            if not text_matched:
+                continue
+
+            # Keep only query features that are supported by BOTH listing images and metadata.
+            matched = sorted(image_matched & text_matched)
+            if not matched:
+                continue
+            if len(matched) < required_dual_matches:
+                continue
+
+            recall = len(matched) / len(query_set)
+            evidence_union = image_matched | text_matched
+            consistency = len(matched) / len(evidence_union) if evidence_union else 0.0
+            score = round((recall * 0.8) + (consistency * 0.2), 4)
+
+            if score >= min_score:
+                results.append(
+                    PropertyMatch(
+                        property_id=prop.id,
+                        title=prop.title or f"Property #{prop.id}",
+                        score=score,
+                        matched_features=matched,
+                        total_property_features=len(text_features),
+                    )
+                )
+
+        results.sort(key=lambda m: m.score, reverse=True)
+        return results
+
+    def listing_photos_evidence_match(
+        self, property_obj, query_features: List[str]
+    ) -> bool:
+        """True only when at least one query feature is evidenced in both photos and property metadata."""
+        qset = set(self._resolve_features(query_features))
+        if not qset:
+            return False
+        img_union = self._get_image_level_feature_union(property_obj)
+        if not img_union:
+            return False
+
+        text_features = self._get_property_text_features_only(property_obj)
+        if not text_features:
+            return False
+
+        image_matched = self._matched_query_features(qset, img_union)
+        text_matched = self._matched_query_features(qset, text_features)
+        return bool(image_matched & text_matched)
 
     # ------------------------------------------------------------------
     # High-level entry point

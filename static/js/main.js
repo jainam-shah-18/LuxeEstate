@@ -157,8 +157,8 @@ function initializeImageSearch() {
             }
 
             if (data.success) {
-                const detected = Array.isArray(data.detected_features) ? data.detected_features : [];
-                const detail = detected.length ? ` Detected: ${detected.slice(0, 5).join(', ')}` : '';
+                const tags = Array.isArray(data.amenity_tags) ? data.amenity_tags : (Array.isArray(data.detected_features) ? data.detected_features : []);
+                const detail = tags.length ? ` Tags: ${tags.slice(0, 8).join(', ')}` : '';
                 setStatus(`${data.message || 'Image search complete.'}${detail}`, 'success');
                 showNotification(data.message || 'Image search complete.', 'success');
                 if (data.redirect_url) {

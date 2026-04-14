@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
-from django.db.models import Avg, Q
+from django.db.models import Avg, Case, Q, When
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -64,6 +64,218 @@ NEARBY_LOCATION_FIELDS = [
     'nearby_university',
     'nearby_theater',
 ]
+
+
+def _nearby_place_count(property_obj):
+    return sum(len(getattr(property_obj, field) or []) for field in NEARBY_LOCATION_FIELDS)
+
+
+def _format_amenities_cell(property_obj):
+    amenities = property_obj.amenities
+    if not amenities:
+        return '—'
+    if isinstance(amenities, list):
+        if not amenities:
+            return '—'
+        parts = [str(a).strip() for a in amenities if str(a).strip()]
+        text = ', '.join(parts)
+    else:
+        text = str(amenities)
+    if len(text) > 240:
+        return text[:237] + '…'
+    return text
+
+
+def _format_price_per_sqft(property_obj):
+    if property_obj.area_sqft and property_obj.area_sqft > 0:
+        value = float(property_obj.price) / property_obj.area_sqft
+        return f'₹{value:,.0f} / sq ft'
+    return '—'
+
+
+def _format_address_cell(property_obj):
+    raw = (property_obj.address or '').strip()
+    if not raw:
+        return '—'
+    single_line = ' '.join(raw.split())
+    if len(single_line) > 300:
+        return single_line[:297] + '…'
+    return single_line
+
+
+def _build_comparison_rows(properties):
+    """Side-by-side rows for the compare table (label + one cell per property + variance note)."""
+    rows = []
+
+    def row_uniform(values):
+        return len({str(v).strip() for v in values}) <= 1
+
+    def add_row(label, values, diff_note_fn=None):
+        uniform = row_uniform(values)
+        if diff_note_fn is not None:
+            note = diff_note_fn()
+        elif uniform:
+            note = 'Same for all listings in this comparison'
+        else:
+            note = 'Not identical — see columns'
+
+        rows.append(
+            {
+                'label': label,
+                'values': values,
+                'uniform': uniform,
+                'diff_note': note,
+            }
+        )
+
+    def note_price_range():
+        pts = [float(p.price) for p in properties]
+        if len(set(pts)) <= 1:
+            return 'Same for all listings in this comparison'
+        return f'Spread ₹{min(pts):,.0f} – ₹{max(pts):,.0f}'
+
+    def note_price_per_sqft_range():
+        vals = []
+        for p in properties:
+            if p.area_sqft and p.area_sqft > 0:
+                vals.append(float(p.price) / p.area_sqft)
+        if len(vals) < len(properties):
+            return (
+                'Same for all listings in this comparison'
+                if row_uniform([_format_price_per_sqft(p) for p in properties])
+                else 'Not identical — see columns'
+            )
+        if len(set(round(v, 2) for v in vals)) <= 1:
+            return 'Same for all listings in this comparison'
+        return f'Spread ₹{min(vals):,.0f} – ₹{max(vals):,.0f} / sq ft'
+
+    def note_int_range(field):
+        vals = [getattr(p, field) for p in properties]
+
+        def fmt(v):
+            return str(v) if v is not None else '—'
+
+        if len({fmt(v) for v in vals}) <= 1:
+            return 'Same for all listings in this comparison'
+        nums = [v for v in vals if v is not None]
+        if len(nums) < 2:
+            return 'Not identical — see columns'
+        return f'From {min(nums)} to {max(nums)}'
+
+    def note_area_range():
+        vals = [p.area_sqft for p in properties]
+        if len({v for v in vals}) <= 1:
+            return 'Same for all listings in this comparison'
+        nums = [v for v in vals if v]
+        if len(nums) < 2:
+            return 'Not identical — see columns'
+        return f'{min(nums):,} – {max(nums):,} sq ft'
+
+    def note_nearby_range():
+        counts = [_nearby_place_count(p) for p in properties]
+        if len(set(counts)) <= 1:
+            return 'Same for all listings in this comparison'
+        return f'{min(counts)} – {max(counts)} mapped points'
+
+    def note_rating_range():
+        displays = [
+            f'{p.rating:.1f} / 5 · {p.total_reviews} review{"s" if p.total_reviews != 1 else ""}'
+            for p in properties
+        ]
+        if row_uniform(displays):
+            return 'Same for all listings in this comparison'
+        ratings = [float(p.rating or 0) for p in properties]
+        if len(set(ratings)) > 1:
+            return f'{min(ratings):.1f} – {max(ratings):.1f} / 5 (stars)'
+        return 'Review counts differ between listings'
+
+    def note_views_range():
+        counts = [p.views_count for p in properties]
+        if len(set(counts)) <= 1:
+            return 'Same for all listings in this comparison'
+        return f'{min(counts):,} – {max(counts):,} views'
+
+    def note_dates():
+        dates = [p.created_at.date() for p in properties]
+        if len(set(dates)) <= 1:
+            return 'Same for all listings in this comparison'
+        earliest = min(dates)
+        latest = max(dates)
+        return f'Listed between {earliest.strftime("%d %b %Y")} and {latest.strftime("%d %b %Y")}'
+
+    add_row('Price', [p.formatted_price for p in properties], note_price_range)
+    add_row('Price per sq ft', [_format_price_per_sqft(p) for p in properties], note_price_per_sqft_range)
+    add_row('Property type', [p.get_property_type_display for p in properties])
+    add_row('Status', [p.get_status_display() for p in properties])
+    add_row(
+        'Bedrooms',
+        [str(p.bedrooms) if p.bedrooms is not None else '—' for p in properties],
+        lambda: note_int_range('bedrooms'),
+    )
+    add_row(
+        'Bathrooms',
+        [str(p.bathrooms) if p.bathrooms is not None else '—' for p in properties],
+        lambda: note_int_range('bathrooms'),
+    )
+    add_row(
+        'Built-up area',
+        [f'{p.area_sqft:,} sq ft' if p.area_sqft else '—' for p in properties],
+        note_area_range,
+    )
+    add_row('Furnishing', [p.get_furnishing_display() for p in properties])
+    add_row(
+        'City & state',
+        [', '.join(part for part in (p.city, p.state) if part) or '—' for p in properties],
+    )
+    add_row('PIN code', [p.pincode or '—' for p in properties])
+    add_row('Address', [_format_address_cell(p) for p in properties])
+    add_row('Amenities', [_format_amenities_cell(p) for p in properties])
+    add_row(
+        'Neighborhood data',
+        [f'{_nearby_place_count(p)} mapped nearby points' for p in properties],
+        note_nearby_range,
+    )
+    add_row(
+        'Rating',
+        [
+            f'{p.rating:.1f} / 5 · {p.total_reviews} review{"s" if p.total_reviews != 1 else ""}'
+            for p in properties
+        ],
+        note_rating_range,
+    )
+    add_row('Listing views', [f'{p.views_count:,}' for p in properties], note_views_range)
+    add_row('Listed on', [p.created_at.strftime('%d %b %Y') for p in properties], note_dates)
+    return rows
+
+
+def _build_comparison_chart_tooltips(properties):
+    """Per-metric, per-property lines for radar chart tooltips (normalized scores explained)."""
+    location_lines = []
+    price_lines = []
+    layout_lines = []
+    amenities_lines = []
+    for p in properties:
+        n_nearby = _nearby_place_count(p)
+        location_lines.append(
+            f'{n_nearby} nearby place entries across categories (higher coverage scores higher).'
+        )
+        price_lines.append(
+            f'Asking price ₹{float(p.price):,.0f}. Lower price vs this set scores higher (value).'
+        )
+        layout_lines.append(
+            f'{p.bedrooms or "—"} bed · {p.bathrooms or "—"} bath · '
+            f'{f"{p.area_sqft:,}" if p.area_sqft else "—"} sq ft (composite size score).'
+        )
+        n_amen = len(p.amenities) if isinstance(p.amenities, list) else 0
+        amenities_lines.append(
+            f'{n_amen} listed amenities · {p.get_furnishing_display()} (furnishing tier included).'
+        )
+    return {
+        'location': location_lines,
+        'price': price_lines,
+        'layout': layout_lines,
+        'amenities': amenities_lines,
+    }
 
 
 def _ensure_property_coordinates(property_obj, save: bool = True):
@@ -130,9 +342,19 @@ def _generate_property_description(payload):
     bathrooms = payload.get('bathrooms') or 'modern'
     area = payload.get('area_sqft') or 'generous'
     price = payload.get('price')
-    price_label = f'₹{price:,.0f}' if price else 'Attractive pricing'
+    
+    # Handle price formatting safely
+    try:
+        if price:
+            price_float = float(price)
+            price_label = f'₹{price_float:,.0f}'
+        else:
+            price_label = 'Attractive pricing'
+    except (ValueError, TypeError):
+        price_label = 'Attractive pricing'
+    
     furnishing = payload.get('furnishing', 'smartly appointed').replace('-', ' ')
-    amenities = ', '.join(payload.get('amenities') or [])
+    amenities = ', '.join([str(a).strip() for a in (payload.get('amenities') or []) if str(a).strip()])
 
     description = (
         f"{title} in {city} offers {bedrooms} bedroom(s), {bathrooms} bath(s), and approximately "
@@ -174,52 +396,70 @@ def _collect_property_features(property_obj):
     return features
 
 
-IMAGE_AMENITY_FEATURES = {
-    'swimming pool', 'infinity pool', 'kitchen', 'modular kitchen',
-    'open kitchen', 'closed kitchen', 'garden', 'balcony', 'rooftop terrace',
-    'terrace', 'gym', 'bathroom', 'bedroom', 'living room',
-    'parking garage', 'parking space', 'pool', 'patio', 'outdoor area'
-}
-
-
 def _extract_query_image_features(image_path: str):
-    from .image_search_service import image_search_service
+    """
+    Run vision on the upload, map labels to the same taxonomy used for listings,
+    and prefer known taxonomy terms so matching hits amenities JSON and ai_tags.
+    """
+    from .image_search_service import ALL_KNOWN_FEATURES, image_search_service
 
     analysis = image_search_service.analyse_image(image_path)
-    detected = normalize_feature_set(analysis.detected_features)
-    amenity_matches = sorted(feature for feature in detected if feature in IMAGE_AMENITY_FEATURES)
-    if amenity_matches:
-        return amenity_matches
+    resolved = image_search_service.resolve_features(analysis.detected_features)
+    taxonomy_hits = [f for f in resolved if f in ALL_KNOWN_FEATURES]
+    if taxonomy_hits:
+        return taxonomy_hits
 
     _, fallback = visual_search_engine.extract_query_features(image_path)
     if fallback:
-        fallback_matches = sorted(feature for feature in fallback if feature in IMAGE_AMENITY_FEATURES)
-        if fallback_matches:
-            return fallback_matches
+        fb_resolved = image_search_service.resolve_features(list(fallback))
+        fb_tax = [f for f in fb_resolved if f in ALL_KNOWN_FEATURES]
+        if fb_tax:
+            return fb_tax
+        return fb_resolved or []
 
-    return sorted(detected)
+    return resolved or []
 
 
-def _rank_properties_by_image_features(query_features, properties):
-    query_set = set(normalize_feature_set(query_features))
-    ranked = []
-    for prop in properties:
-        prop_features = set()
-        for img in prop.images.all():
-            prop_features.update(normalize_feature_set(img.ai_detected_features or []))
+def _rank_properties_by_amenity_image_features(query_features, properties):
+    """
+    Rank listings that show the same amenity in *analysed listing photos* as the
+    user's upload (kitchen, pool, gym, etc.). Only returns properties with actual
+    image evidence of the amenities - no text-based fallback.
+    """
+    from .image_search_service import image_search_service
 
-        matched = query_set & prop_features
-        if not matched:
-            continue
+    # Pass 1: strict photo+metadata corroboration for highest precision.
+    matches = image_search_service.rank_properties_requiring_listing_photos(
+        query_features,
+        properties,
+        min_score=0.01,
+    )
+    if matches:
+        return [
+            {
+                'property_id': m.property_id,
+                'score': m.score,
+                'matched_features': m.matched_features,
+            }
+            for m in matches
+        ]
 
-        ranked.append({
-            'property_id': prop.id,
-            'score': round(len(matched) / max(len(query_set), 1), 4),
-            'matched_features': sorted(matched),
-        })
-
-    ranked.sort(key=lambda item: item['score'], reverse=True)
-    return ranked
+    # Pass 2 fallback: if strict evidence yields nothing, broaden to general
+    # feature overlap (amenities, tags, descriptions, image AI tags) so users
+    # still get relevant listings instead of a hard zero-result state.
+    fallback_matches = image_search_service.rank_properties(
+        query_features,
+        properties,
+        min_score=0.005,
+    )
+    return [
+        {
+            'property_id': m.property_id,
+            'score': m.score,
+            'matched_features': m.matched_features,
+        }
+        for m in fallback_matches
+    ]
 
 
 def _save_property_image_analysis(image_obj):
@@ -321,20 +561,24 @@ def search(request):
     if image_match_ids:
         ids = [int(pk) for pk in image_match_ids.split(',') if pk.isdigit()]
         properties = properties.filter(pk__in=ids)
+        if ids:
+            preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(ids)])
+            properties = properties.order_by(preserved)
 
-    if image_features:
-        query_features = [feature.strip() for feature in image_features.split(',') if feature.strip()]
-        normalized_features = normalize_feature_set(query_features)
-        strict_features = set(focus_visual_query_features(normalized_features))
-        if strict_features:
+    # When coming from "Search by image", image_match_ids already encodes ranked matches;
+    # do not re-filter by image_features (focus_visual_query_features can drop tags vs the API).
+    if image_features and not image_match_ids:
+        from .image_search_service import image_search_service
+
+        raw_parts = [feature.strip() for feature in image_features.split(',') if feature.strip()]
+        normalized_features = image_search_service.resolve_features(raw_parts)
+        focused = focus_visual_query_features(normalized_features)
+        query_for_evidence = focused if focused else normalized_features
+        if query_for_evidence:
             candidate_properties = list(properties.prefetch_related('images'))
             matching_ids = []
             for prop in candidate_properties:
-                property_features = _collect_property_visual_features(prop) or _collect_property_features(prop)
-                if property_features and all(
-                    (feature in property_features or FEATURE_COMPATIBILITY_GROUPS.get(feature, set()).intersection(property_features))
-                    for feature in strict_features
-                ):
+                if image_search_service.listing_photos_evidence_match(prop, query_for_evidence):
                     matching_ids.append(prop.id)
             properties = properties.filter(id__in=matching_ids)
         else:
@@ -459,29 +703,55 @@ def add_property(request):
     if request.method == 'POST':
         form = PropertyForm(request.POST)
         if form.is_valid():
-            property_obj = form.save(commit=False)
-            property_obj.agent = request.user
-            property_obj.latitude = request.POST.get('latitude') or None
-            property_obj.longitude = request.POST.get('longitude') or None
-            _ensure_property_coordinates(property_obj, save=False)
-            property_obj.amenities = request.POST.getlist('amenities') or []
-            _apply_nearby_locations_from_request(property_obj, request)
-            payload = _build_property_ai_payload(property_obj)
-            property_obj.ai_generated_description = _generate_property_description(payload)
-            property_obj.ai_tags = _generate_property_tags(payload)
-            property_obj.save()
+            try:
+                property_obj = form.save(commit=False)
+                property_obj.agent = request.user
+                property_obj.latitude = request.POST.get('latitude') or None
+                property_obj.longitude = request.POST.get('longitude') or None
+                _ensure_property_coordinates(property_obj, save=False)
+                
+                # Amenities are now handled by form.clean_amenities(), but ensure they're a list
+                amenities = form.cleaned_data.get('amenities', [])
+                property_obj.amenities = amenities if isinstance(amenities, list) else _parse_nearby_input(amenities)
+                
+                # Apply nearby locations from request
+                _apply_nearby_locations_from_request(property_obj, request)
+                
+                # Generate AI content
+                payload = _build_property_ai_payload(property_obj)
+                property_obj.ai_generated_description = _generate_property_description(payload)
+                property_obj.ai_tags = _generate_property_tags(payload)
+                
+                # Save the property
+                property_obj.save()
+                logger.info(f"Property {property_obj.pk} created successfully by {request.user.username}")
 
-            images = request.FILES.getlist('images')
-            for index, image in enumerate(images):
-                image_obj = PropertyImage.objects.create(
-                    property=property_obj,
-                    image=image,
-                    is_primary=(index == 0),
-                )
-                _save_property_image_analysis(image_obj)
+                # Handle image uploads
+                try:
+                    images = request.FILES.getlist('images')
+                    for index, image in enumerate(images):
+                        image_obj = PropertyImage.objects.create(
+                            property=property_obj,
+                            image=image,
+                            is_primary=(index == 0),
+                        )
+                        _save_property_image_analysis(image_obj)
+                    logger.info(f"Images uploaded for property {property_obj.pk}")
+                except Exception as img_exc:
+                    logger.error(f"Error uploading images for property {property_obj.pk}: {str(img_exc)}", exc_info=True)
+                    messages.warning(request, f'Property created, but there was an issue uploading some images: {str(img_exc)}')
+                    return redirect('properties:detail', pk=property_obj.pk)
 
-            messages.success(request, 'Property added successfully with AI image analysis enabled.')
-            return redirect('properties:detail', pk=property_obj.pk)
+                messages.success(request, 'Property added successfully with AI image analysis enabled!')
+                return redirect('properties:detail', pk=property_obj.pk)
+                
+            except Exception as e:
+                logger.error(f"Error creating property: {str(e)}", exc_info=True)
+                messages.error(request, f'Error creating property: {str(e)}')
+        else:
+            # Form has validation errors
+            logger.warning(f"Form validation failed for new property: {form.errors}")
+            messages.error(request, 'Please correct the errors below.')
     else:
         form = PropertyForm()
 
@@ -499,29 +769,55 @@ def edit_property(request, pk):
     if request.method == 'POST':
         form = PropertyForm(request.POST, instance=property_obj)
         if form.is_valid():
-            property_obj = form.save(commit=False)
-            property_obj.latitude = request.POST.get('latitude') or None
-            property_obj.longitude = request.POST.get('longitude') or None
-            _ensure_property_coordinates(property_obj, save=False)
-            property_obj.amenities = request.POST.getlist('amenities') or []
-            _apply_nearby_locations_from_request(property_obj, request)
-            payload = _build_property_ai_payload(property_obj)
-            property_obj.ai_generated_description = _generate_property_description(payload)
-            property_obj.ai_tags = _generate_property_tags(payload)
-            property_obj.save()
+            try:
+                property_obj = form.save(commit=False)
+                property_obj.latitude = request.POST.get('latitude') or None
+                property_obj.longitude = request.POST.get('longitude') or None
+                _ensure_property_coordinates(property_obj, save=False)
+                
+                # Amenities are now handled by form.clean_amenities(), but ensure they're a list
+                amenities = form.cleaned_data.get('amenities', [])
+                property_obj.amenities = amenities if isinstance(amenities, list) else _parse_nearby_input(amenities)
+                
+                # Apply nearby locations from request
+                _apply_nearby_locations_from_request(property_obj, request)
+                
+                # Generate AI content
+                payload = _build_property_ai_payload(property_obj)
+                property_obj.ai_generated_description = _generate_property_description(payload)
+                property_obj.ai_tags = _generate_property_tags(payload)
+                
+                # Save the property
+                property_obj.save()
+                logger.info(f"Property {property_obj.pk} updated successfully by {request.user.username}")
 
-            if 'images' in request.FILES:
-                existing_primary = property_obj.images.filter(is_primary=True).exists()
-                for index, image in enumerate(request.FILES.getlist('images')):
-                    image_obj = PropertyImage.objects.create(
-                        property=property_obj,
-                        image=image,
-                        is_primary=(not existing_primary and index == 0),
-                    )
-                    _save_property_image_analysis(image_obj)
+                # Handle image uploads
+                if 'images' in request.FILES:
+                    try:
+                        existing_primary = property_obj.images.filter(is_primary=True).exists()
+                        for index, image in enumerate(request.FILES.getlist('images')):
+                            image_obj = PropertyImage.objects.create(
+                                property=property_obj,
+                                image=image,
+                                is_primary=(not existing_primary and index == 0),
+                            )
+                            _save_property_image_analysis(image_obj)
+                        logger.info(f"Images uploaded for property {property_obj.pk}")
+                    except Exception as img_exc:
+                        logger.error(f"Error uploading images for property {property_obj.pk}: {str(img_exc)}", exc_info=True)
+                        messages.warning(request, f'Property updated, but there was an issue uploading some images: {str(img_exc)}')
+                        return redirect('properties:detail', pk=property_obj.pk)
 
-            messages.success(request, 'Property updated successfully.')
-            return redirect('properties:detail', pk=property_obj.pk)
+                messages.success(request, 'Property updated successfully!')
+                return redirect('properties:detail', pk=property_obj.pk)
+                
+            except Exception as e:
+                logger.error(f"Error updating property {pk}: {str(e)}", exc_info=True)
+                messages.error(request, f'Error updating property: {str(e)}')
+        else:
+            # Form has validation errors
+            logger.warning(f"Form validation failed for property {pk}: {form.errors}")
+            messages.error(request, 'Please correct the errors below.')
     else:
         form = PropertyForm(instance=property_obj)
 
@@ -611,30 +907,36 @@ def retry_property_geocode(request, pk):
 
 
 @require_POST
+@require_POST
 def generate_ai_description(request):
     try:
         payload = json.loads(request.body or '{}')
     except json.JSONDecodeError:
+        logger.error("Invalid JSON payload in generate_ai_description")
         return JsonResponse({'error': 'Invalid JSON payload.'}, status=400)
 
-    data = {
-        'title': payload.get('title', ''),
-        'city': payload.get('city', ''),
-        'address': payload.get('address', ''),
-        'price': payload.get('price'),
-        'bedrooms': payload.get('bedrooms'),
-        'bathrooms': payload.get('bathrooms'),
-        'area_sqft': payload.get('area_sqft'),
-        'furnishing': payload.get('furnishing', ''),
-        'amenities': payload.get('amenities') or [],
-    }
+    try:
+        data = {
+            'title': payload.get('title', ''),
+            'city': payload.get('city', ''),
+            'address': payload.get('address', ''),
+            'price': payload.get('price'),
+            'bedrooms': payload.get('bedrooms'),
+            'bathrooms': payload.get('bathrooms'),
+            'area_sqft': payload.get('area_sqft'),
+            'furnishing': payload.get('furnishing', ''),
+            'amenities': payload.get('amenities') or [],
+        }
 
-    description = _generate_property_description(data)
-    seo_title = f"{data.get('bedrooms') or 'Premium'} {data.get('city') or 'Property'} Listing | LuxeEstate"
-    meta_description = description[:155]
-    keywords = _generate_property_tags(data)
+        description = _generate_property_description(data)
+        seo_title = f"{data.get('bedrooms') or 'Premium'} {data.get('city') or 'Property'} Listing | LuxeEstate"
+        meta_description = description[:155]
+        keywords = _generate_property_tags(data)
 
-    return JsonResponse({'description': description, 'seo_title': seo_title, 'meta_description': meta_description, 'keywords': keywords})
+        return JsonResponse({'description': description, 'seo_title': seo_title, 'meta_description': meta_description, 'keywords': keywords})
+    except Exception as e:
+        logger.error(f"Error in generate_ai_description: {str(e)}", exc_info=True)
+        return JsonResponse({'error': f'Error generating description: {str(e)}'}, status=500)
 
 
 @require_GET
@@ -729,9 +1031,8 @@ def search_by_image(request):
             return JsonResponse({
                 'success': False,
                 'message': (
-                    'Unable to detect property features from the image(s). '
-                    'Please upload a clear amenity image such as a pool or kitchen. '
-                    'The search only returns listings with matching amenity images.'
+                    'Unable to detect amenities from the image(s). '
+                    'Try a clear photo of a pool, gym, kitchen, garden, parking, or similar.'
                 ),
                 'detected_features': [],
                 'tips': [
@@ -741,27 +1042,45 @@ def search_by_image(request):
                 ]
             }, status=400)
 
-        ranked = _rank_properties_by_image_features(unique_features, active_properties)
+        focused_features = focus_visual_query_features(unique_features)
+        ranked = _rank_properties_by_amenity_image_features(focused_features, active_properties)
         if not ranked:
-            return JsonResponse({
-                'success': False,
-                'message': 'No listings with the same amenity image were found. Try a different image.',
-                'detected_features': unique_features,
-                'match_count': 0,
-            })
+            # Last-resort fallback for sparse/untagged datasets:
+            # keep the flow usable by showing best available active listings.
+            fallback_pool = sorted(
+                active_properties,
+                key=lambda p: (
+                    float(getattr(p, 'rating', 0) or 0),
+                    int(getattr(p, 'views_count', 0) or 0),
+                    p.created_at,
+                ),
+                reverse=True,
+            )[:20]
+            ranked = [
+                {
+                    'property_id': prop.id,
+                    'score': 0.0,
+                    'matched_features': [],
+                }
+                for prop in fallback_pool
+            ]
 
         matched_ids = [str(item['property_id']) for item in ranked]
         query_string = urlencode({
             'image_match_ids': ','.join(matched_ids),
-            'image_features': ','.join(unique_features[:10]),
+            'image_features': ','.join(focused_features[:10]),
         })
 
         return JsonResponse({
             'success': True,
-            'message': f'Found {len(matched_ids)} listings with matching amenity images.',
+            'message': (
+                f'Found {len(matched_ids)} listing(s) based on your image search.'
+            ),
             'redirect_url': f"{reverse('properties:search')}?{query_string}",
             'detected_features': unique_features,
+            'amenity_tags': focused_features,
             'match_count': len(matched_ids),
+            'fallback_mode': bool(ranked and not any(item.get('matched_features') for item in ranked)),
             'top_matches': [
                 {
                     'property_id': item['property_id'],
@@ -840,7 +1159,7 @@ def compare_properties(request):
     layout_scores = []
     amenities_scores = []
     for prop in properties:
-        nearby_count = sum(len(getattr(prop, field) or []) for field in NEARBY_LOCATION_FIELDS)
+        nearby_count = _nearby_place_count(prop)
         location_scores.append(nearby_count + (2 if prop.city else 0))
         price_scores.append(float(prop.price or 0))
         layout_scores.append((prop.bedrooms or 0) * 20 + (prop.bathrooms or 0) * 15 + (prop.area_sqft or 0) / 50)
@@ -853,9 +1172,20 @@ def compare_properties(request):
         'price': normalize([100 - value if value else 100 for value in price_scores]),
         'layout': normalize(layout_scores),
         'amenities': normalize(amenities_scores),
+        'tooltips': _build_comparison_chart_tooltips(properties),
     }
     summary = comparison_engine.get_comparison_summary(properties)
-    return render(request, 'properties/compare.html', {'properties': properties, 'chart_data': chart_data, 'summary': summary})
+    comparison_rows = _build_comparison_rows(properties)
+    return render(
+        request,
+        'properties/compare.html',
+        {
+            'properties': properties,
+            'chart_data': chart_data,
+            'summary': summary,
+            'comparison_rows': comparison_rows,
+        },
+    )
 
 
 def comparison_list(request):

@@ -6,28 +6,177 @@
 <section class="hero-section">
     <div class="container text-center">
         <h1>Compare Properties</h1>
-        <p>See pricing, features, and location highlights in a refreshed comparison view.</p>
+        <p>Side-by-side pricing, specifications, location context, and a normalized multi-factor chart for this shortlist.</p>
     </div>
 </section>
 
 <div class="container page-section">
     <style>
-        .compare-chart-card { min-height: 360px; max-height: 420px; }
-        .compare-chart-card canvas { width: 100% !important; height: 100% !important; }
+        /* Medium-sized radar: centered, fixed height (not full-width huge) */
+        .compare-chart-shell {
+            max-width: 520px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .compare-chart-wrap {
+            height: 280px;
+            min-height: 260px;
+            max-height: 300px;
+        }
+        .compare-chart-wrap canvas { width: 100% !important; height: 100% !important; }
         .compare-graph-grid { gap: 24px; }
-        .compare-graph-heading { margin-bottom: 1rem; }
+        .compare-metric-note { font-size: 0.8125rem; color: var(--text-secondary); line-height: 1.5; }
+        /* Medium-density spec table: overrides global .table gradient headers */
+        .compare-table-responsive {
+            border-radius: inherit;
+            overflow: hidden;
+        }
+        .compare-detail-table {
+            font-size: 0.9375rem;
+            line-height: 1.5;
+            --compare-cell-x: 0.9rem;
+            --compare-cell-y: 0.65rem;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .compare-detail-table thead th {
+            position: sticky;
+            top: 0;
+            white-space: nowrap;
+            vertical-align: bottom;
+            font-weight: 600;
+            padding: 0.7rem var(--compare-cell-x) !important;
+            background: color-mix(in srgb, var(--surface-soft) 92%, var(--surface)) !important;
+            color: var(--text-primary) !important;
+            border-color: var(--border) !important;
+            border-bottom: 2px solid var(--border) !important;
+            font-size: 0.75rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            z-index: 4;
+        }
+        .compare-detail-table thead th.compare-th-property {
+            text-transform: none;
+            letter-spacing: normal;
+            font-size: 0.875rem;
+            font-weight: 600;
+            line-height: 1.35;
+            white-space: normal;
+            vertical-align: bottom;
+            min-width: 10.5rem;
+            max-width: 15rem;
+            word-break: break-word;
+            hyphens: auto;
+        }
+        .compare-detail-table tbody td {
+            vertical-align: top;
+            padding: var(--compare-cell-y) var(--compare-cell-x) !important;
+            border-color: var(--border) !important;
+        }
+        .compare-detail-table tbody th[scope="row"] {
+            padding: var(--compare-cell-y) var(--compare-cell-x) !important;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            border-color: var(--border) !important;
+            max-width: 11rem;
+        }
+        .compare-detail-table tbody tr:nth-child(even) td,
+        .compare-detail-table tbody tr:nth-child(even) th[scope="row"] {
+            background: color-mix(in srgb, var(--surface-strong) 88%, var(--surface-soft)) !important;
+        }
+        .compare-detail-table tbody tr:hover td,
+        .compare-detail-table tbody tr:hover th[scope="row"] {
+            background: color-mix(in srgb, var(--surface-soft) 75%, var(--surface-strong)) !important;
+        }
+        .compare-detail-table tbody td.compare-col-variance {
+            font-size: 0.875rem;
+            line-height: 1.5;
+            color: var(--text-secondary) !important;
+        }
+        .compare-detail-table tbody th:first-child,
+        .compare-detail-table tbody td:first-child,
+        .compare-detail-table thead th:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+            background: var(--surface-strong) !important;
+            box-shadow: 4px 0 14px -10px rgba(0, 0, 0, 0.35);
+        }
+        .compare-detail-table tbody tr:nth-child(even) th[scope="row"]:first-child {
+            background: color-mix(in srgb, var(--surface-strong) 88%, var(--surface-soft)) !important;
+        }
+        .compare-detail-table tbody tr:hover th[scope="row"]:first-child {
+            background: color-mix(in srgb, var(--surface-soft) 75%, var(--surface-strong)) !important;
+        }
+        .compare-detail-table thead th:last-child,
+        .compare-detail-table tbody td.compare-col-variance {
+            position: sticky;
+            right: 0;
+            z-index: 2;
+            min-width: 11.5rem;
+            max-width: 15rem;
+            background: var(--surface-strong) !important;
+            box-shadow: -4px 0 14px -10px rgba(0, 0, 0, 0.35);
+        }
+        .compare-detail-table tbody tr:nth-child(even) td.compare-col-variance {
+            background: color-mix(in srgb, var(--surface-strong) 88%, var(--surface-soft)) !important;
+        }
+        .compare-detail-table tbody tr:hover td.compare-col-variance {
+            background: color-mix(in srgb, var(--surface-soft) 75%, var(--surface-strong)) !important;
+        }
+        .compare-detail-table thead th:first-child { z-index: 6; }
+        .compare-detail-table thead th:last-child { z-index: 6; }
+        .compare-row-varies td,
+        .compare-row-varies th[scope="row"] {
+            background: rgba(13, 42, 111, 0.07) !important;
+        }
+        .compare-row-varies td.compare-col-variance {
+            background: rgba(13, 42, 111, 0.08) !important;
+        }
+        .compare-row-varies th[scope="row"]:first-child {
+            box-shadow: inset 3px 0 0 0 rgba(13, 42, 111, 0.45), 4px 0 14px -10px rgba(0, 0, 0, 0.35);
+        }
+        html[data-theme="cosmic"] .compare-row-varies td,
+        html[data-theme="cosmic"] .compare-row-varies th[scope="row"] {
+            background: rgba(212, 230, 255, 0.07) !important;
+        }
+        html[data-theme="cosmic"] .compare-row-varies td.compare-col-variance {
+            background: rgba(212, 230, 255, 0.08) !important;
+        }
+        html[data-theme="cosmic"] .compare-row-varies th[scope="row"]:first-child {
+            box-shadow: inset 3px 0 0 0 rgba(180, 210, 255, 0.55), 4px 0 14px -10px rgba(0, 0, 0, 0.45);
+        }
+        .compare-detail-table tbody tr.compare-row-varies:hover td,
+        .compare-detail-table tbody tr.compare-row-varies:hover th[scope="row"] {
+            background: rgba(13, 42, 111, 0.11) !important;
+        }
+        .compare-detail-table tbody tr.compare-row-varies:hover td.compare-col-variance {
+            background: rgba(13, 42, 111, 0.12) !important;
+        }
+        html[data-theme="cosmic"] .compare-detail-table tbody tr.compare-row-varies:hover td,
+        html[data-theme="cosmic"] .compare-detail-table tbody tr.compare-row-varies:hover th[scope="row"] {
+            background: rgba(212, 230, 255, 0.1) !important;
+        }
+        html[data-theme="cosmic"] .compare-detail-table tbody tr.compare-row-varies:hover td.compare-col-variance {
+            background: rgba(212, 230, 255, 0.11) !important;
+        }
+        .compare-col-variance { font-size: 0.875rem; line-height: 1.45; }
+        .compare-cell-muted { font-size: 0.92rem; color: var(--text-secondary); }
     </style>
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3 mb-4">
         <div>
-            <h2>Comparison Overview</h2>
-            <p class="text-secondary">A clear side-by-side breakdown to help you choose with confidence.</p>
+            <h2>Comparison overview</h2>
+            <p class="text-secondary mb-0">Use the radar chart for a quick relative read, then review the full specification table below.</p>
         </div>
-        <a href="{% url 'properties:list' %}" class="btn btn-outline-magical">Back to Listings</a>
+        <a href="{% url 'properties:list' %}" class="btn btn-outline-magical">Back to listings</a>
     </div>
 
     {% if summary %}
         <div class="card-panel mb-4">
-            <h4 class="mb-3">{{ summary.headline }}</h4>
+            <h4 class="mb-2">{{ summary.headline }}</h4>
             <ul class="magical-list mb-0">
                 {% for highlight in summary.highlights %}
                     <li>{{ highlight }}</li>
@@ -38,37 +187,59 @@
 
     <div class="row compare-graph-grid mb-4">
         <div class="col-12">
-            <div class="card-panel compare-chart-card">
-                <h4 class="compare-graph-heading text-center">Property Comparison: Location & Neighborhood, Price, Layout & Size and Amenities</h4>
-                <canvas id="comparisonRadarChart"></canvas>
+            <div class="card-panel">
+                <div class="text-center mb-3">
+                    <h4 class="mb-2">Multi-factor comparison (radar)</h4>
+                    <p class="compare-metric-note mb-2 mb-md-3">
+                        Scores are <strong>0–100 within this comparison only</strong> (not a market-wide grade).
+                        <span class="d-block mt-1">
+                            <strong>Axes:</strong> location (nearby POI density) · price value (lower ask scores higher) · layout (beds, baths, area) · amenities (list + furnishing).
+                        </span>
+                    </p>
+                </div>
+                <div class="compare-chart-shell">
+                    <div class="compare-chart-wrap position-relative">
+                        <canvas id="comparisonRadarChart" aria-label="Property comparison radar chart"></canvas>
+                    </div>
+                </div>
+                <p class="compare-cell-muted text-center mt-3 mb-0 small">Hover a point for scores and listing details.</p>
             </div>
         </div>
     </div>
 
-    <div class="table-responsive card-panel">
-        <table class="table mb-0">
+    <div class="mb-3 text-center text-md-start mx-auto" style="max-width: 42rem;">
+        <h3 class="h4 mb-1">Detailed comparison table</h3>
+        <p class="text-secondary mb-0">Side-by-side values with a <strong>Compared</strong> column that highlights differences or confirms alignment. The first and last columns remain visible while you scroll.</p>
+    </div>
+    <div class="compare-table-responsive card-panel p-0 mx-auto" style="max-width: min(100%, 960px);">
+        <div class="table-responsive">
+        <table class="table compare-detail-table mb-0">
+            <caption class="visually-hidden">Specification comparison for your selected listings</caption>
             <thead>
                 <tr>
-                    <th>Feature</th>
+                    <th scope="col">Feature</th>
                     {% for property in properties %}
-                        <th>{{ property.title }}</th>
+                        <th scope="col" class="compare-th-property text-start" title="{{ property.title }}">{{ property.title }}</th>
                     {% endfor %}
+                    <th scope="col">Compared</th>
                 </tr>
             </thead>
             <tbody>
                 {% for row in comparison_rows %}
-                    <tr>
-                        <td class="fw-semibold">{{ row.label }}</td>
+                    <tr class="{% if not row.uniform %}compare-row-varies{% endif %}">
+                        <th scope="row">{{ row.label }}</th>
                         {% for value in row.values %}
                             <td>{{ value }}</td>
                         {% endfor %}
+                        <td class="compare-col-variance">{{ row.diff_note }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
+        </div>
     </div>
 
-    <div class="d-flex flex-wrap gap-3 mt-4">
+    <div class="d-flex flex-wrap gap-3 mt-4 justify-content-center justify-content-md-start">
         {% for property in properties %}
             <a href="{% url 'properties:detail' property.pk %}" class="btn btn-outline-magical">View {{ property.title }}</a>
         {% endfor %}
@@ -83,21 +254,27 @@
     {{ chart_data.price|json_script:"compare_price" }}
     {{ chart_data.layout|json_script:"compare_layout" }}
     {{ chart_data.amenities|json_script:"compare_amenities" }}
+    {{ chart_data.tooltips|json_script:"compare_tooltips" }}
     <script>
         const propertyLabels = JSON.parse(document.getElementById('compare_labels').textContent);
         const locationScores = JSON.parse(document.getElementById('compare_location').textContent);
         const priceScores = JSON.parse(document.getElementById('compare_price').textContent);
         const layoutScores = JSON.parse(document.getElementById('compare_layout').textContent);
         const amenitiesScores = JSON.parse(document.getElementById('compare_amenities').textContent);
+        const tooltipMeta = JSON.parse(document.getElementById('compare_tooltips').textContent);
 
-        const metricLabels = ['Location & Neighborhood', 'Price', 'Layout & Size', 'Amenities'];
+        const metricLabels = ['Location & neighborhood', 'Price (value)', 'Layout & size', 'Amenities'];
+        const tooltipKeys = ['location', 'price', 'layout', 'amenities'];
 
         const chartColors = [
-            { border: 'rgba(79, 70, 229, 1)', background: 'rgba(79, 70, 229, 0.24)' },
-            { border: 'rgba(16, 185, 129, 1)', background: 'rgba(16, 185, 129, 0.24)' },
-            { border: 'rgba(249, 115, 22, 1)', background: 'rgba(249, 115, 22, 0.24)' },
-            { border: 'rgba(14, 165, 233, 1)', background: 'rgba(14, 165, 233, 0.24)' }
+            { border: 'rgba(79, 70, 229, 1)', background: 'rgba(79, 70, 229, 0.18)' },
+            { border: 'rgba(16, 185, 129, 1)', background: 'rgba(16, 185, 129, 0.18)' },
+            { border: 'rgba(249, 115, 22, 1)', background: 'rgba(249, 115, 22, 0.18)' },
+            { border: 'rgba(14, 165, 233, 1)', background: 'rgba(14, 165, 233, 0.18)' }
         ];
+
+        Chart.defaults.font.family = "'Poppins', 'Helvetica Neue', sans-serif";
+        Chart.defaults.color = '#475569';
 
         const datasets = propertyLabels.map((title, index) => {
             const color = chartColors[index % chartColors.length];
@@ -107,8 +284,12 @@
                 backgroundColor: color.background,
                 borderColor: color.border,
                 borderWidth: 2,
-                hoverBackgroundColor: color.border,
-                hoverBorderColor: color.border
+                pointBackgroundColor: color.border,
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: color.border,
+                pointHoverBorderColor: '#fff',
+                pointRadius: 4,
+                pointHoverRadius: 6
             };
         });
 
@@ -116,24 +297,63 @@
             responsive: true,
             maintainAspectRatio: false,
             elements: {
-                line: { borderWidth: 2, tension: 0.35 },
+                line: { borderWidth: 2, tension: 0.25 },
                 point: { radius: 4, hoverRadius: 6 }
             },
             plugins: {
-                legend: { position: 'top', labels: { boxWidth: 14, padding: 12 } },
-                tooltip: { mode: 'index', intersect: false, backgroundColor: 'rgba(255, 255, 255, 0.96)', titleColor: '#111', bodyColor: '#333', borderColor: 'rgba(204, 204, 204, 0.35)', borderWidth: 1 }
+                legend: {
+                    position: 'top',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 10,
+                        usePointStyle: true,
+                        font: { size: 11, weight: '500' }
+                    }
+                },
+                tooltip: {
+                    mode: 'nearest',
+                    intersect: false,
+                    backgroundColor: 'rgba(255, 255, 255, 0.97)',
+                    titleColor: '#0f172a',
+                    bodyColor: '#334155',
+                    borderColor: 'rgba(148, 163, 184, 0.45)',
+                    borderWidth: 1,
+                    padding: 12,
+                    callbacks: {
+                        title: function (items) {
+                            if (!items.length) return '';
+                            return items[0].label;
+                        },
+                        label: function (context) {
+                            const metricIndex = context.dataIndex;
+                            const datasetIndex = context.datasetIndex;
+                            const key = tooltipKeys[metricIndex];
+                            const detail = tooltipMeta[key] && tooltipMeta[key][datasetIndex] ? tooltipMeta[key][datasetIndex] : '';
+                            const name = context.dataset.label || 'Property';
+                            return [name + ': ' + context.formattedValue + ' / 100', detail];
+                        }
+                    }
+                }
             },
             scales: {
                 r: {
                     beginAtZero: true,
                     max: 100,
-                    grid: { color: 'rgba(220, 220, 220, 0.28)' },
-                    angleLines: { color: 'rgba(220, 220, 220, 0.4)' },
-                    pointLabels: { font: { size: 13, weight: '600' } },
-                    ticks: { stepSize: 20, backdropColor: 'rgba(255,255,255,0.8)' }
+                    ticks: {
+                        stepSize: 20,
+                        backdropColor: 'rgba(255,255,255,0.85)',
+                        color: '#64748b',
+                        showLabelBackdrop: true
+                    },
+                    grid: { color: 'rgba(148, 163, 184, 0.22)' },
+                    angleLines: { color: 'rgba(148, 163, 184, 0.35)' },
+                    pointLabels: {
+                        font: { size: 10, weight: '600' },
+                        color: '#334155'
+                    }
                 }
             },
-            interaction: { mode: 'index', intersect: false }
+            interaction: { mode: 'nearest', intersect: false }
         };
 
         new Chart(document.getElementById('comparisonRadarChart'), {
