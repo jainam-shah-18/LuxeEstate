@@ -1,7 +1,7 @@
 """
 AI-powered property image search service for LuxeEstate.
 
-Uses OpenAI Vision (GPT-4o) to analyze uploaded query images, extract
+Uses NVIDIA NIM Vision to analyze uploaded query images, extract
 detailed property features (pool, kitchen type, amenities, architecture
 style, etc.), and rank active listings by visual similarity.
 """
@@ -181,7 +181,7 @@ class AIImageSearchService:
     a ranked list of property IDs that share the most features.
     """
 
-    VISION_MODEL = "gpt-4o"
+    VISION_MODEL = getattr(settings, "NVIDIA_VISION_MODEL", "nvidia/neva-22b")
 
     _SYSTEM_PROMPT = (
         "You are an expert real estate image analyst. "
@@ -212,12 +212,12 @@ class AIImageSearchService:
 
     def __init__(self):
         self._client = None
-        self._api_key = getattr(settings, "OPENAI_API_KEY", "") or os.environ.get("OPENAI_API_KEY", "")
+        self._api_key = getattr(settings, "NVIDIA_API_KEY", "") or os.environ.get("NVIDIA_API_KEY", "")
         # Log missing API key only once during init
         if not self._api_key:
             logger.warning(
-                "OPENAI_API_KEY is not configured. Image search will fail. "
-                "Please set OPENAI_API_KEY in your .env file or Django settings."
+                "NVIDIA_API_KEY is not configured. Image search will fail. "
+                "Please set NVIDIA_API_KEY in your .env file or Django settings."
             )
 
     # ------------------------------------------------------------------
@@ -228,21 +228,22 @@ class AIImageSearchService:
         if self._client is None:
             if not self._api_key:
                 error_msg = (
-                    "OPENAI_API_KEY is not configured. Please:\n"
-                    "1. Sign up at https://platform.openai.com\n"
+                    "NVIDIA_API_KEY is not configured. Please:\n"
+                    "1. Sign up at https://build.nvidia.com\n"
                     "2. Create an API key\n"
-                    "3. Add it to your .env file: OPENAI_API_KEY=sk-...\n"
+                    "3. Add it to your .env file: NVIDIA_API_KEY=...\n"
                     "4. Restart the Django server"
                 )
                 logger.error(error_msg)
                 raise RuntimeError(error_msg)
             try:
-                import openai
-                self._client = openai.OpenAI(api_key=self._api_key)
+                import requests
+                self._client = requests.Session()
+                self._base_url = "https://integrate.api.nvidia.com/v1"
             except ImportError:
-                raise RuntimeError("openai package is not installed. Run: pip install openai")
+                raise RuntimeError("Requests library is not installed. Run: pip install requests")
             except Exception as exc:
-                logger.error("Failed to initialize OpenAI client: %s", exc)
+                logger.error("Failed to initialize NVIDIA client: %s", exc)
                 raise
         return self._client
 
@@ -470,10 +471,15 @@ class AIImageSearchService:
             b64, mime = self._encode_image(image_path)
             client = self._get_client()
 
-            response = client.chat.completions.create(
-                model=self.VISION_MODEL,
-                max_tokens=1024,
-                messages=[
+            url = f"{self._base_url}/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": self.VISION_MODEL,
+                "max_tokens": 1024,
+                "messages": [
                     {"role": "system", "content": self._SYSTEM_PROMPT},
                     {
                         "role": "user",
@@ -489,9 +495,12 @@ class AIImageSearchService:
                         ],
                     },
                 ],
-            )
-
-            raw_text = response.choices[0].message.content or ""
+            }
+            response = client.post(url, headers=headers, json=payload)
+            if response.status_code != 200:
+                raise Exception(f"NVIDIA API error: {response.text}")
+            data = response.json()
+            raw_text = data['choices'][0]['message']['content'] or ""
             result = self._parse_vision_response(raw_text)
             
             # If AI returned no features, try fallback detection
@@ -505,7 +514,7 @@ class AIImageSearchService:
             return result
 
         except Exception as exc:
-            logger.error("GPT-4o vision analysis failed: %s", exc)
+            logger.error("NVIDIA vision analysis failed: %s", exc)
             # Try fallback detection even on API errors
             logger.info("Vision API failed; attempting fallback image analysis")
             fallback_features = self._detect_fallback_features(image_path)
@@ -892,7 +901,7 @@ class AIImageSearchService:
         query_set = set(self._resolve_features(query_features))
         if not query_set:
             return []
-        # Require at least one strongly corroborated amenity match (photo + text).
+        # Require at least one strongly corroborated amenity match (photo + text).  
         # Requiring two often over-filters real-world uploads where vision detects
         # one dominant amenity plus several noisy secondary tags.
         required_dual_matches = 1

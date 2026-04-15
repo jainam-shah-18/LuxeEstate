@@ -224,7 +224,7 @@
                     <ul>
                         <li><a href="{% url 'properties:add_property' %}">Post Property</a></li>
                         <li><a href="{% url 'accounts:dashboard' %}">Agent Dashboard</a></li>
-                        <li><a href="{% url 'payments:pricing' %}">Premium Services</a></li>
+                        <li><a href="{% url 'payments:history' %}">Payment History</a></li>
                         <li><a href="{% url 'properties:home' %}">Help Center</a></li>
                     </ul>
                 </div>
@@ -278,46 +278,34 @@
     
     {% block extra_js %}{% endblock %}
     
-    <!-- AI Chatbot Widget -->
-    <div class="ai-concierge-widget magical-ai-widget" id="aiConciergeWidget" data-chat-endpoint="{% url 'properties:chatbot_response' %}">
-        <button type="button" id="aiConciergeToggle" class="ai-concierge-toggle magical-ai-toggle" aria-label="Open AI concierge">
-            <span class="ai-toggle-ping magical-ping" aria-hidden="true"></span>
-            <i class="fas fa-robot"></i>
+    <!-- Live assistant (NVIDIA NIM + live listings) -->
+    <div class="ai-concierge-widget luxe-live-chat" id="aiConciergeWidget" data-chat-endpoint="{% url 'properties:chatbot_response' %}">
+        <button type="button" id="aiConciergeToggle" class="ai-concierge-toggle luxe-chat-fab" aria-label="Open live assistant">
+            <span class="ai-toggle-ping" aria-hidden="true"></span>
+            <i class="fas fa-comments"></i>
         </button>
 
-        <section id="aiConciergePanel" class="ai-concierge-panel magical-ai-panel" aria-live="polite">
-            <header class="ai-concierge-header magical-ai-header">
-                <div class="ai-brand magical-ai-brand">
-                    <span class="ai-brand-dot magical-dot"></span>
+        <section id="aiConciergePanel" class="ai-concierge-panel luxe-chat-panel" aria-live="polite" aria-label="Luxe live assistant chat">
+            <header class="ai-concierge-header luxe-chat-header">
+                <div class="ai-brand luxe-chat-brand">
+                    <span class="ai-brand-dot" aria-hidden="true"></span>
                     <div>
-                        <strong>Luxe AI Concierge</strong>
-                        <p>Live now - lead qualifying assistant</p>
+                        <strong class="luxe-chat-title">Luxe AI</strong>
+                        <p class="luxe-chat-sub">Listings, visits &amp; search — here to help</p>
                     </div>
                 </div>
-                <button type="button" id="aiConciergeClose" class="ai-concierge-close magical-close" aria-label="Close AI concierge">
-                    <i class="fas fa-times" aria-hidden="true"></i>
-                    <span class="ai-close-label">Close</span>
+                <button type="button" id="aiConciergeClose" class="ai-concierge-close luxe-chat-close" aria-label="Close chat">
+                    <i class="fas fa-times"></i>
                 </button>
             </header>
 
-            <div class="ai-concierge-quick magical-ai-quick" id="aiConciergeQuickActions">
-                <button type="button" class="ai-quick-chip magical-chip" data-chip="Find properties in my budget">Budget Match</button>
-                <button type="button" class="ai-quick-chip magical-chip" data-chip="I want to schedule a site visit">Schedule Visit</button>
-                <button type="button" class="ai-quick-chip magical-chip" data-chip="Help me compare top properties">Compare Homes</button>
-            </div>
-            <div class="d-flex justify-content-between align-items-center px-3 pb-2">
-                <small class="text-secondary">Follow-up memory</small>
-                <div class="form-check form-switch mb-0">
-                    <input class="form-check-input" type="checkbox" role="switch" id="aiUseMemoryToggle">
-                    <label class="form-check-label text-secondary small" for="aiUseMemoryToggle">Off</label>
-                </div>
-            </div>
 
-            <div class="ai-concierge-messages magical-ai-messages" id="aiConciergeMessages"></div>
 
-            <form id="aiConciergeForm" class="ai-concierge-form magical-ai-form">
-                <input id="aiConciergeInput" type="text" placeholder="Ask anything about properties..." autocomplete="off" class="magical-input">
-                <button type="submit" id="aiConciergeSend" aria-label="Send message" class="magical-send">
+            <div class="ai-concierge-messages luxe-chat-thread" id="aiConciergeMessages"></div>
+
+            <form id="aiConciergeForm" class="ai-concierge-form luxe-chat-composer">
+                <input id="aiConciergeInput" type="text" placeholder="Ask anything — properties, visits, or general questions" autocomplete="off" class="magical-input luxe-chat-input">
+                <button type="submit" id="aiConciergeSend" aria-label="Send" class="magical-send luxe-chat-send">
                     <i class="fas fa-paper-plane"></i>
                 </button>
             </form>

@@ -347,343 +347,7 @@ function initializeMagicalFloaters() {
     // Add any additional JS-based magical effects here if needed
 }
 
-function initializeAiConcierge() {
-    const widget = document.getElementById('aiConciergeWidget');
-    if (!widget) return;
-
-    const toggle = document.getElementById('aiConciergeToggle');
-    const panel = document.getElementById('aiConciergePanel');
-    const close = document.getElementById('aiConciergeClose');
-    const form = document.getElementById('aiConciergeForm');
-    const input = document.getElementById('aiConciergeInput');
-    const messages = document.getElementById('aiConciergeMessages');
-    const quickActions = document.getElementById('aiConciergeQuickActions');
-    const useMemoryToggle = document.getElementById('aiUseMemoryToggle');
-    const useMemoryLabel = document.querySelector('label[for="aiUseMemoryToggle"]');
-    const endpoint = widget.dataset.chatEndpoint;
-    const homeAnchor = document.getElementById('homeChatbotAnchor');
-    const USE_MEMORY_KEY = 'luxeAiUseMemory';
-    let useMemory = false;
-    const lead = {
-        intent: '',
-        name: '',
-        contact: '',
-        budget: ''
-    };
-
-    // Render the panel at document root level so it never gets clipped by
-    // hero/section stacking or overflow contexts.
-    if (panel.parentElement !== document.body) {
-        document.body.appendChild(panel);
-    }
-    panel.classList.add('ai-concierge-portal');
-
-    const resetPanelInlineStyles = () => {
-        panel.style.position = '';
-        panel.style.right = '';
-        panel.style.left = '';
-        panel.style.width = '';
-        panel.style.bottom = '';
-        panel.style.maxHeight = '';
-        panel.style.zIndex = '';
-        panel.style.display = '';
-        panel.style.opacity = '';
-        panel.style.visibility = '';
-        panel.style.pointerEvents = '';
-        panel.style.transform = '';
-    };
-
-    const adjustPanelPosition = () => {
-        resetPanelInlineStyles();
-        if (!panel.classList.contains('open')) return;
-
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const isMobileViewport = viewportWidth <= 767;
-
-        // Always pin the panel to the viewport so hero/layout stacking
-        // contexts cannot hide it behind section layers.
-        panel.style.position = 'fixed';
-        panel.style.zIndex = '9999';
-
-        if (isMobileViewport) {
-            panel.style.left = '0.5rem';
-            panel.style.right = '0.5rem';
-            panel.style.width = 'auto';
-            panel.style.bottom = 'calc(96px + 0.75rem)';
-            panel.style.maxHeight = `${Math.max(320, Math.floor(viewportHeight * 0.68))}px`;
-            return;
-        }
-
-        panel.style.right = '0.75rem';
-        panel.style.left = 'auto';
-        panel.style.width = `min(430px, calc(100vw - 2rem))`;
-        panel.style.bottom = 'calc(96px + 0.75rem)';
-        panel.style.maxHeight = `${Math.max(320, Math.floor(viewportHeight * 0.68))}px`;
-    };
-
-    const addMessage = (text, sender = 'bot', muted = false) => {
-        const bubble = document.createElement('div');
-        bubble.className = `ai-msg ${sender === 'user' ? 'ai-msg-user' : 'ai-msg-bot'}${muted ? ' ai-msg-muted' : ''}`;
-        bubble.textContent = text;
-        messages.appendChild(bubble);
-        messages.scrollTop = messages.scrollHeight;
-    };
-
-    const addTyping = () => {
-        const typing = document.createElement('div');
-        typing.className = 'ai-msg ai-msg-bot ai-typing';
-        typing.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> thinking...';
-        messages.appendChild(typing);
-        messages.scrollTop = messages.scrollHeight;
-        return typing;
-    };
-
-    const localFallbackReply = (message) => {
-        const lower = message.toLowerCase();
-        const cityMatch = message.match(/\b(mumbai|delhi|bangalore|chennai|kolkata|hyderabad|pune|ahmedabad|gurgaon|noida|jaipur|lucknow|coimbatore|kochi|thane|navi mumbai|surat|vadodara)\b/i);
-        const propertyTypeMatch = message.match(/\b(apartment|flat|villa|plot|house|studio|farmhouse|penthouse|builder floor)\b/i);
-        const budgetMatch = message.match(/(?:rs\.?|₹|inr)?\s*(\d+(?:[.,]\d+)?)(?:\s*(k|thousand|lakh|lac|cr|crore|million|m))?/i);
-
-        if (/\b(ok|yes|sure|thanks|got it|okay)\b/.test(lower)) {
-            if (lead.city && !lead.budget) {
-                return 'Thanks. Please share your budget range and preferred property type so I can shortlist options.';
-            }
-            if (lead.property_type && !lead.city) {
-                return 'Got it. Which city or neighborhood are you interested in, and what is your budget?';
-            }
-        }
-
-        if (propertyTypeMatch && !lead.property_type) {
-            lead.property_type = propertyTypeMatch[1];
-            return 'Great, a ' + propertyTypeMatch[1] + '. Please share your budget and preferred city/location.';
-        }
-
-        if (cityMatch && !lead.city) {
-            lead.city = cityMatch[1];
-            return 'Thanks for the city. Please share your budget and preferred property type (apartment, villa, plot).';
-        }
-
-        if (/(book|visit|tour|appointment|schedule)/.test(lower)) {
-            lead.intent = 'appointment';
-            return 'Perfect. Please share your name, phone/email, preferred area, and best date for a site visit.';
-        }
-        if (/(budget|price|cost|under|lakh|crore)/.test(lower)) {
-            lead.intent = 'budget';
-            return 'Tell me your budget range and city. I will shortlist properties and notify an agent instantly.';
-        }
-        if (/(buy|purchase)/.test(lower)) {
-            lead.intent = 'buy';
-            return 'Great. Are you looking for apartment, villa, or plot? Also share your budget and preferred location.';
-        }
-        if (/(rent|lease)/.test(lower)) {
-            lead.intent = 'rent';
-            return 'Nice. I can help with rentals quickly. Share monthly budget, area, and move-in timeline.';
-        }
-        return 'I can help with search, lead qualification, and scheduling visits. Tell me your city and budget to begin.';
-    };
-
-    const captureLeadData = (message) => {
-        const budgetMatch = message.match(/(?:rs\.?|₹|inr)?\s?(\d+(?:[.,]\d+)?)(?:\s*(k|thousand|lakh|lac|m|million|cr|crore))?/i);
-        const contactMatch = message.match(/([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}|(?:\+91[-\s]?)?[6-9]\d{9})/i);
-        const nameMatch = message.match(/(?:i am|i'm|my name is)\s+([a-zA-Z ]{2,40})/i);
-        const cityMatch = message.match(/\b(mumbai|delhi|bangalore|chennai|kolkata|hyderabad|pune|ahmedabad|gurgaon|noida|jaipur|lucknow|coimbatore|kochi|thane|navi mumbai|surat|vadodara)\b/i);
-        const propertyTypeMatch = message.match(/\b(apartment|flat|villa|plot|house|studio|farmhouse|penthouse|builder floor)\b/i);
-        const bhkMatch = message.match(/(\d{1,2})\s*(?:bhk|bedrooms?|beds?)/i);
-
-        if (budgetMatch && !lead.budget) {
-            lead.budget = budgetMatch[0];
-        }
-        if (contactMatch && !lead.contact) {
-            lead.contact = contactMatch[0];
-        }
-        if (nameMatch && !lead.name) {
-            lead.name = nameMatch[1].trim();
-        }
-        if (cityMatch && !lead.city) {
-            lead.city = cityMatch[1];
-        }
-        if (propertyTypeMatch && !lead.property_type) {
-            lead.property_type = propertyTypeMatch[1];
-        }
-        if (bhkMatch && !lead.bhk) {
-            lead.bhk = `${bhkMatch[1]} BHK`;
-        }
-    };
-
-    const syncLeadFromBackend = (payload) => {
-        if (!payload || typeof payload !== 'object') return;
-        const leadPayload = payload.lead || {};
-        if (leadPayload.name) lead.name = leadPayload.name;
-        if (leadPayload.contact) lead.contact = leadPayload.contact;
-        if (leadPayload.budget) lead.budget = leadPayload.budget;
-        if (leadPayload.city) lead.city = leadPayload.city;
-        if (leadPayload.property_type) lead.property_type = leadPayload.property_type;
-        if (leadPayload.bhk) lead.bhk = leadPayload.bhk;
-        if (payload.intent) lead.intent = payload.intent;
-    };
-
-    const setUseMemory = (enabled, persist = false) => {
-        useMemory = Boolean(enabled);
-        if (useMemoryToggle) {
-            useMemoryToggle.checked = useMemory;
-        }
-        if (useMemoryLabel) {
-            useMemoryLabel.textContent = useMemory ? 'On' : 'Off';
-        }
-        if (persist) {
-            try {
-                localStorage.setItem(USE_MEMORY_KEY, useMemory ? '1' : '0');
-            } catch (error) {
-                console.warn('Could not persist AI memory preference:', error);
-            }
-        }
-    };
-
-    try {
-        const savedUseMemory = localStorage.getItem(USE_MEMORY_KEY);
-        // Default on so each chat keeps context unless the user turns memory off.
-        setUseMemory(savedUseMemory === null ? true : savedUseMemory === '1');
-    } catch (error) {
-        setUseMemory(true);
-    }
-
-    if (useMemoryToggle) {
-        useMemoryToggle.addEventListener('change', () => {
-            setUseMemory(useMemoryToggle.checked, true);
-        });
-    }
-
-    const sendMessage = async (seedMessage) => {
-        const message = (seedMessage || input.value || '').trim();
-        if (!message) return;
-        addMessage(message, 'user');
-        input.value = '';
-        captureLeadData(message);
-
-        const typing = addTyping();
-        let reply = '';
-
-        try {
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken'),
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify({
-                    message,
-                    intent: lead.intent,
-                    lead_name: lead.name,
-                    lead_contact: lead.contact,
-                    lead_budget: lead.budget,
-                    lead_city: lead.city,
-                    lead_property_type: lead.property_type,
-                    lead_bhk: lead.bhk,
-                    use_memory: useMemory,
-                }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                console.error('AI concierge failed:', response.status, errorData);
-                reply = localFallbackReply(message);
-            } else {
-                const data = await response.json();
-                syncLeadFromBackend(data);
-                reply = data.response || localFallbackReply(message);
-            }
-        } catch (error) {
-            console.error('AI concierge error:', error);
-            reply = localFallbackReply(message);
-        } finally {
-            typing.remove();
-        }
-
-        addMessage(reply, 'bot');
-    };
-
-    const openAiPanel = () => {
-        panel.classList.add('open');
-        toggle.classList.add('active');
-        adjustPanelPosition();
-        // Force visible state inline to defeat any conflicting CSS layer.
-        panel.style.setProperty('position', 'fixed', 'important');
-        panel.style.setProperty('display', 'flex', 'important');
-        panel.style.setProperty('opacity', '1', 'important');
-        panel.style.setProperty('visibility', 'visible', 'important');
-        panel.style.setProperty('pointer-events', 'auto', 'important');
-        panel.style.setProperty('transform', 'translateY(0)', 'important');
-        panel.style.setProperty('z-index', '2147483647', 'important');
-        setTimeout(() => input.focus(), 180);
-    };
-
-    const closeAiPanel = () => {
-        panel.classList.remove('open');
-        toggle.classList.remove('active');
-        resetPanelInlineStyles();
-    };
-
-    const toggleAiPanel = () => {
-        if (panel.classList.contains('open')) {
-            closeAiPanel();
-        } else {
-            openAiPanel();
-        }
-    };
-
-    // Prevent touch+click double firing on mobile/emulation.
-    const bindTap = (element, handler) => {
-        let lastTouchAt = 0;
-
-        element.addEventListener('touchstart', (e) => {
-            lastTouchAt = Date.now();
-            e.preventDefault();
-            handler();
-        }, { passive: false });
-
-        element.addEventListener('click', (e) => {
-            if (Date.now() - lastTouchAt < 500) {
-                e.preventDefault();
-                return;
-            }
-            handler();
-        });
-    };
-
-    bindTap(toggle, toggleAiPanel);
-    bindTap(close, closeAiPanel);
-
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        sendMessage();
-    });
-
-    quickActions.addEventListener('click', (e) => {
-        const chip = e.target.closest('.ai-quick-chip');
-        if (!chip) return;
-        panel.classList.add('open');
-        toggle.classList.add('active');
-        adjustPanelPosition();
-        sendMessage(chip.dataset.chip);
-    });
-
-    if (homeAnchor) {
-        // Keep widget globally floating across all breakpoints/themes.
-        // We intentionally avoid attaching it inside home anchors.
-        widget.classList.remove('ai-under-hero');
-    }
-
-    window.addEventListener('resize', () => {
-        if (panel.classList.contains('open')) {
-            adjustPanelPosition();
-        }
-    });
-
-    addMessage('Welcome to Luxe AI Concierge. I can answer instantly, qualify your requirement, and book a visit in 60 seconds.', 'bot');
-    addMessage('Start with city + budget, or tap a quick action above.', 'bot', true);
-}
+// NOTE: initializeAiConcierge is defined later in this file.
 
 function scrollToContact() {
     const target = document.getElementById('contactSection');
@@ -887,5 +551,506 @@ function initializeMobileOptimizations() {
         document.addEventListener('touchstart', function() {}, { passive: true });
         document.addEventListener('touchmove', function() {}, { passive: true });
     }
+}
+
+// ============================================
+// AI Concierge (Chatbot)
+// ============================================
+
+function initializeAiConcierge() {
+    const widget = document.getElementById('aiConciergeWidget');
+    if (!widget) return;
+
+    const toggle = document.getElementById('aiConciergeToggle');
+    const panel = document.getElementById('aiConciergePanel');
+    const closeBtn = document.getElementById('aiConciergeClose');
+    const newChatBtn = document.getElementById('aiConciergeNewChat');
+    const header = panel ? panel.querySelector('.ai-concierge-header') : null;
+    const titleNode = panel ? panel.querySelector('.luxe-chat-title') : null;
+    const subTitleNode = panel ? panel.querySelector('.luxe-chat-sub') : null;
+    const messages = document.getElementById('aiConciergeMessages');
+    const form = document.getElementById('aiConciergeForm');
+    const input = document.getElementById('aiConciergeInput');
+    const sendBtn = document.getElementById('aiConciergeSend');
+    const quickActions = document.getElementById('aiConciergeQuickActions');
+    const useMemoryToggle = document.getElementById('aiUseMemoryToggle');
+
+    const endpoint = widget.dataset.chatEndpoint;
+    const TRANSCRIPT_KEY = 'luxeAiTranscript';
+    const USE_MEMORY_KEY = 'luxeAiUseMemory';
+    const TRANSCRIPT_LIMIT = 50;
+
+    let useMemory = false;  // Memory always disabled - always start fresh
+    let requestInFlight = false;
+    let lead = {
+        intent: '',
+        name: '',
+        contact: '',
+        budget: '',
+        city: '',
+        property_type: '',
+        bhk: '',
+    };
+
+    const setUseMemory = (value, persist = false) => {
+        useMemory = !!value;
+        if (useMemoryToggle) {
+            useMemoryToggle.checked = useMemory;
+        }
+        if (persist) {
+            try {
+                localStorage.setItem(USE_MEMORY_KEY, useMemory ? '1' : '0');
+            } catch (error) {
+                console.warn('Could not persist memory preference:', error);
+            }
+        }
+    };
+
+    const captureLeadData = (message) => {
+        // Extract lead information from user messages
+        const lower = message.toLowerCase();
+        
+        // Extract email
+        const emailMatch = message.match(/[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}/);
+        if (emailMatch) lead.contact = emailMatch[0];
+        
+        // Extract phone
+        const phoneMatch = message.match(/(?:\+91|0)?\s*([1-9]\d{9})\b/);
+        if (phoneMatch) lead.contact = phoneMatch[1];
+        
+        // Extract name
+        const nameMatch = message.match(/(?:my name is|i am|i'm)\s+([A-Za-z][A-Za-z ]{1,40})/i);
+        if (nameMatch) lead.name = nameMatch[1].trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+        
+        // Extract budget
+        const budgetMatch = message.match(/(\d+(?:\.\d+)?)\s*(lakh|lac|l\b|crore|cr\b|k\b)?/i);
+        if (budgetMatch) lead.budget = budgetMatch[0].trim();
+        
+        // Extract city
+        const cityMatch = message.match(/(?:in|at|near)\s+([A-Za-z][A-Za-z\s]{1,30}?)(?:\s+(?:for|under|budget|price)|\b|$)/i);
+        if (cityMatch) lead.city = cityMatch[1].trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+        
+        // Extract BHK
+        const bhkMatch = message.match(/(\d+)\s*(?:bhk|bedroom|bedrooms|beds?)/i);
+        if (bhkMatch) lead.bhk = `${bhkMatch[1]} BHK`;
+        
+        // Extract property type
+        const typeMatch = message.match(/\b(apartment|flat|villa|plot|house|studio|penthouse|commercial|office|shop|farmland)\b/i);
+        if (typeMatch) {
+            const rawType = typeMatch[1].toLowerCase();
+            lead.property_type = rawType === 'flat' ? 'apartment' : rawType;
+        }
+    };
+
+    const syncLeadFromBackend = (data) => {
+        if (data.lead) {
+            lead = { ...lead, ...data.lead };
+        }
+    };
+
+    const localFallbackReply = (message) => {
+        const fallbacks = [
+            "I'm here to help you find your perfect property. What are you looking for?",
+            "I'd be happy to assist with your property search. Could you tell me more about what you're looking for?",
+            "Let me help you discover great properties. What's your budget and preferred location?",
+        ];
+        return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    };
+
+    // Render the panel at document root level so it never gets clipped by
+    // hero/section stacking or overflow contexts.
+    if (panel.parentElement !== document.body) {
+        document.body.appendChild(panel);
+    }
+    panel.classList.add('ai-concierge-portal');
+
+    const resetPanelInlineStyles = () => {
+        panel.style.position = '';
+        panel.style.right = '';
+        panel.style.left = '';
+        panel.style.width = '';
+        panel.style.bottom = '';
+        panel.style.maxHeight = '';
+        panel.style.zIndex = '';
+        panel.style.display = '';
+        panel.style.opacity = '';
+        panel.style.visibility = '';
+        panel.style.pointerEvents = '';
+        panel.style.transform = '';
+    };
+
+    const enforceHeaderVisibility = () => {
+        if (!header) return;
+        header.style.setProperty('display', 'flex', 'important');
+        header.style.setProperty('align-items', 'center', 'important');
+        header.style.setProperty('justify-content', 'space-between', 'important');
+        header.style.setProperty('visibility', 'visible', 'important');
+        header.style.setProperty('opacity', '1', 'important');
+        header.style.setProperty('min-height', '74px', 'important');
+        header.style.setProperty('padding', '1rem 1.2rem', 'important');
+        header.style.setProperty('z-index', '4', 'important');
+        header.style.setProperty('position', 'sticky', 'important');
+        header.style.setProperty('top', '0', 'important');
+        if (titleNode) {
+            titleNode.style.setProperty('display', 'block', 'important');
+            titleNode.style.setProperty('color', '#ffffff', 'important');
+            titleNode.style.setProperty('visibility', 'visible', 'important');
+            titleNode.style.setProperty('opacity', '1', 'important');
+        }
+        if (subTitleNode) {
+            subTitleNode.style.setProperty('display', 'block', 'important');
+            subTitleNode.style.setProperty('color', 'rgba(255, 255, 255, 0.92)', 'important');
+            subTitleNode.style.setProperty('visibility', 'visible', 'important');
+            subTitleNode.style.setProperty('opacity', '1', 'important');
+        }
+        if (closeBtn) {
+            closeBtn.style.setProperty('display', 'inline-flex', 'important');
+            closeBtn.style.setProperty('align-items', 'center', 'important');
+            closeBtn.style.setProperty('justify-content', 'center', 'important');
+            closeBtn.style.setProperty('visibility', 'visible', 'important');
+            closeBtn.style.setProperty('opacity', '1', 'important');
+            closeBtn.style.setProperty('color', '#ffffff', 'important');
+            closeBtn.style.setProperty('min-width', '42px', 'important');
+            closeBtn.style.setProperty('min-height', '42px', 'important');
+            closeBtn.style.setProperty('z-index', '5', 'important');
+        }
+    };
+
+    const adjustPanelPosition = () => {
+        resetPanelInlineStyles();
+        if (!panel.classList.contains('open')) return;
+
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const isMobileViewport = viewportWidth <= 767;
+
+        // Always pin the panel to the viewport so hero/layout stacking
+        // contexts cannot hide it behind section layers.
+        panel.style.position = 'fixed';
+        panel.style.zIndex = '9999';
+
+        if (isMobileViewport) {
+            panel.style.left = '0.5rem';
+            panel.style.right = '0.5rem';
+            panel.style.width = 'auto';
+            panel.style.bottom = 'calc(96px + 0.75rem)';
+            panel.style.maxHeight = `${Math.max(320, Math.floor(viewportHeight * 0.68))}px`;
+            return;
+        }
+
+        panel.style.right = '0.75rem';
+        panel.style.left = 'auto';
+        panel.style.width = `min(430px, calc(100vw - 2rem))`;
+        panel.style.bottom = 'calc(96px + 0.75rem)';
+        panel.style.maxHeight = `${Math.max(320, Math.floor(viewportHeight * 0.68))}px`;
+    };
+
+    const persistTranscript = () => {
+        if (!useMemory) return;
+        try {
+            const bubbles = Array.from(messages.querySelectorAll('.ai-msg[data-sender]'));
+            const transcript = bubbles
+                .map((node) => ({
+                    sender: node.dataset.sender || 'bot',
+                    text: (node.querySelector('.ai-msg-text')?.textContent || node.textContent || '').trim(),
+                    muted: node.classList.contains('ai-msg-muted'),
+                    ts: node.dataset.ts || new Date().toISOString(),
+                }))
+                .filter((item) => item.text);
+            localStorage.setItem(TRANSCRIPT_KEY, JSON.stringify(transcript.slice(-TRANSCRIPT_LIMIT)));
+        } catch (error) {
+            console.warn('Could not persist AI transcript:', error);
+        }
+    };
+
+    const addMessage = (text, sender = 'bot', muted = false, timestampIso = null) => {
+        const bubble = document.createElement('div');
+        bubble.className = `ai-msg ${sender === 'user' ? 'ai-msg-user' : 'ai-msg-bot'}${muted ? ' ai-msg-muted' : ''}`;
+        bubble.dataset.sender = sender;
+        const ts = timestampIso || new Date().toISOString();
+        bubble.dataset.ts = ts;
+        const tsDate = new Date(ts);
+        const displayTime = Number.isNaN(tsDate.getTime())
+            ? new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+            : tsDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+        const content = document.createElement('div');
+        content.className = 'ai-msg-text';
+        content.textContent = text;
+        const stamp = document.createElement('span');
+        stamp.className = 'ai-msg-time';
+        stamp.textContent = displayTime;
+        bubble.appendChild(content);
+        bubble.appendChild(stamp);
+
+        const prev = messages.lastElementChild;
+        if (prev && prev.classList.contains('ai-msg') && prev.dataset.sender === sender) {
+            bubble.classList.add('ai-msg-grouped');
+        }
+
+        messages.appendChild(bubble);
+        messages.scrollTop = messages.scrollHeight;
+        persistTranscript();
+    };
+
+    const addTyping = () => {
+        const typing = document.createElement('div');
+        typing.className = 'ai-msg ai-msg-bot ai-typing';
+        typing.setAttribute('aria-live', 'polite');
+        typing.innerHTML = `
+            <div class="ai-typing-dots">
+                <span></span><span></span><span></span>
+            </div>
+            <span class="ai-msg-time">${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+        `;
+        messages.appendChild(typing);
+        messages.scrollTop = messages.scrollHeight;
+        return typing;
+    };
+
+    const restoreTranscript = () => {
+        if (!useMemory) return false;
+        try {
+            const raw = localStorage.getItem(TRANSCRIPT_KEY);
+            if (!raw) return false;
+            const items = JSON.parse(raw);
+            if (!Array.isArray(items) || !items.length) return false;
+            messages.innerHTML = '';
+            items.forEach((item) => {
+                if (!item || typeof item.text !== 'string') return;
+                addMessage(item.text, item.sender === 'user' ? 'user' : 'bot', Boolean(item.muted), item.ts || null);
+            });
+            return true;
+        } catch (error) {
+            console.warn('Could not restore AI transcript:', error);
+            return false;
+        }
+    };
+
+    // Clear any stored memory on init - always start fresh
+    try {
+        localStorage.removeItem(TRANSCRIPT_KEY);
+        localStorage.removeItem(USE_MEMORY_KEY);
+    } catch (error) {
+        console.warn('Could not clear AI transcript on init:', error);
+    }
+
+    const sendMessage = async (seedMessage) => {
+        const message = (seedMessage || input.value || '').trim();
+        if (!message || requestInFlight) return;
+        requestInFlight = true;
+        if (sendBtn) sendBtn.disabled = true;
+        if (input) input.disabled = true;
+        addMessage(message, 'user');
+        input.value = '';
+        captureLeadData(message);
+
+        const typing = addTyping();
+        let reply = '';
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    message,
+                    intent: lead.intent,
+                    lead_name: lead.name,
+                    lead_contact: lead.contact,
+                    lead_budget: lead.budget,
+                    lead_city: lead.city,
+                    lead_property_type: lead.property_type,
+                    lead_bhk: lead.bhk,
+                    use_memory: useMemory,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('AI concierge failed:', response.status, errorData);
+                reply = (typeof errorData.response === 'string' && errorData.response.trim())
+                    ? errorData.response.trim()
+                    : localFallbackReply(message);
+            } else {
+                const data = await response.json();
+                syncLeadFromBackend(data);
+                reply = data.response || localFallbackReply(message);
+                if (data.requires_human) {
+                    addMessage(`I am routing this to a human agent. Reason: ${data.handoff_reason || 'Requested by user.'}`, 'bot', true);
+                }
+            }
+        } catch (error) {
+            console.error('AI concierge error:', error);
+            reply = localFallbackReply(message);
+        } finally {
+            typing.remove();
+            requestInFlight = false;
+            if (sendBtn) sendBtn.disabled = false;
+            if (input) {
+                input.disabled = false;
+                input.focus();
+            }
+        }
+
+        addMessage(reply, 'bot');
+    };
+
+    const nimPanel = () => {
+        panel.classList.add('open');
+        toggle.classList.add('active');
+        // Clear transcript every time panel opens to ensure fresh chat
+        try {
+            localStorage.removeItem(TRANSCRIPT_KEY);
+        } catch (error) {
+            console.warn('Could not clear AI transcript:', error);
+        }
+        // Force visible state inline to defeat any conflicting CSS layer.
+        panel.style.setProperty('display', 'grid', 'important');
+        panel.style.setProperty('grid-template-rows', 'auto auto 1fr auto', 'important');
+        panel.style.setProperty('opacity', '1', 'important');
+        panel.style.setProperty('visibility', 'visible', 'important');
+        panel.style.setProperty('pointer-events', 'auto', 'important');
+        panel.style.setProperty('transform', 'translateY(0)', 'important');
+        panel.style.setProperty('z-index', '2147483647', 'important');
+        panel.style.setProperty('overflow', 'hidden', 'important');
+        enforceHeaderVisibility();
+        setTimeout(() => input.focus(), 180);
+        adjustPanelPosition();
+    };
+
+    const closeAiPanel = () => {
+        panel.classList.remove('open');
+        toggle.classList.remove('active');
+        resetPanelInlineStyles();
+    };
+
+    const toggleAiPanel = () => {
+        if (panel.classList.contains('open')) {
+            closeAiPanel();
+        } else {
+            nimPanel();
+        }
+    };
+
+    const resetChat = () => {
+        // Clear all messages from the UI
+        messages.innerHTML = '';
+        
+        // Clear transcript from localStorage (but respect memory preference)
+        try {
+            localStorage.removeItem(TRANSCRIPT_KEY);
+        } catch (error) {
+            console.warn('Could not clear AI transcript:', error);
+        }
+        
+        // Reset lead data
+        lead = {
+            intent: '',
+            name: '',
+            contact: '',
+            budget: '',
+            city: '',
+            property_type: '',
+            bhk: '',
+        };
+        
+        // Reset input and button state
+        input.value = '';
+        input.disabled = false;
+        if (sendBtn) sendBtn.disabled = false;
+        requestInFlight = false;
+        
+        // Show welcome message
+        addMessage("Hello. Ask about properties, budgets, or site visits.", 'bot');
+        
+        // Focus input
+        setTimeout(() => input.focus(), 100);
+    };
+
+    // Prevent touch+click double firing on mobile/emulation.
+    const bindTap = (element, handler) => {
+        let lastTouchAt = 0;
+        element.addEventListener('touchstart', (e) => {
+            lastTouchAt = Date.now();
+        });
+        element.addEventListener('click', (e) => {
+            const now = Date.now();
+            if (now - lastTouchAt > 300) {
+                handler(e);
+            }
+        });
+    };
+
+    // Event listeners
+    if (toggle) bindTap(toggle, toggleAiPanel);
+    if (closeBtn) bindTap(closeBtn, closeAiPanel);
+    if (newChatBtn) bindTap(newChatBtn, resetChat);
+
+    if (form) {
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            sendMessage();
+        });
+    }
+
+    if (input) {
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    }
+
+    if (quickActions) {
+        quickActions.addEventListener('click', (e) => {
+            const chip = e.target.closest('.ai-quick-chip');
+            if (chip) {
+                const message = chip.dataset.chip;
+                if (message) {
+                    sendMessage(message);
+                }
+            }
+        });
+    }
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        if (panel.classList.contains('open')) {
+            enforceHeaderVisibility();
+            adjustPanelPosition();
+        }
+    });
+
+    // Handle escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && panel.classList.contains('open')) {
+            closeAiPanel();
+        }
+    });
+
+    if (!useMemory) {
+        try {
+            localStorage.removeItem(TRANSCRIPT_KEY);
+        } catch (error) {
+            console.warn('Could not clear AI transcript:', error);
+        }
+    }
+    const hasTranscript = restoreTranscript();
+
+    // Auto-open on first visit or show welcome message
+    const hasVisited = localStorage.getItem('luxeAiVisited');
+    if (!hasVisited && !hasTranscript) {
+        localStorage.setItem('luxeAiVisited', 'true');
+        setTimeout(() => {
+            addMessage("👋 Hi! I'm Luxe AI Concierge. I handle property inquiries, qualify leads, schedule appointments, and provide immediate customer support 24/7. Are you looking to buy, rent, or invest today?", 'bot');
+        }, 2000);
+    } else if (!hasTranscript) {
+        addMessage("Hello. Ask about properties, budgets, or site visits.", 'bot');
+    }
+    enforceHeaderVisibility();
 }
 

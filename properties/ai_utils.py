@@ -743,7 +743,7 @@ class PropertyRecommendationEngine:
         score = 1.0 - min(distance_ratio, 1.0)
         return max(score, 0.0)
     
-    def get_recommendations(self, user, count=10, city: str = None):
+    def get_recommendations(self, user, count=10):
         """
         Get personalized property recommendations for a user
         """
@@ -751,15 +751,7 @@ class PropertyRecommendationEngine:
             from properties.models import Property
             
             preferences = self.get_user_preferences(user)
-            properties_qs = (
-                Property.objects.filter(is_active=True)
-                # Never recommend the current user's own listings
-                .exclude(agent=user)
-                # Avoid repeating properties the user already opened
-                .exclude(id__in=preferences['viewed_properties'])
-            )
-            if city:
-                properties_qs = properties_qs.filter(city__icontains=city)
+            properties_qs = Property.objects.filter(is_active=True).exclude(agent=user)
             properties = list(properties_qs[:220])
             if not properties:
                 return []
@@ -782,6 +774,17 @@ class PropertyRecommendationEngine:
             tfidf_matrix = self.vectorizer.fit_transform(corpus)
             similarities = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:]).flatten()
             
+            # Calculate recency scores
+            from datetime import datetime
+            now = datetime.now()
+            dates = [prop.created_at for prop in properties]
+            if dates:
+                min_date = min(dates)
+                max_date = max(dates)
+                date_range = (max_date - min_date).total_seconds() if max_date != min_date else 1
+            else:
+                date_range = 1
+            
             scored = []
             for idx, prop in enumerate(properties):
                 city_clean = self._clean_city(getattr(prop, 'city', ''))
@@ -793,42 +796,17 @@ class PropertyRecommendationEngine:
                 popularity_score = min((float(prop.views_count or 0) / 250.0), 1.0)
                 rating_score = min((float(prop.rating or 0) / 5.0), 1.0)
                 semantic_score = float(similarities[idx]) if idx < len(similarities) else 0.0
-                # Prefer fresher listings, but don't overpower preference fit.
-                recency_score = 0.5
-                try:
-                    created_at = getattr(prop, 'created_at', None)
-                    if created_at:
-                        age_days = max((datetime.now(created_at.tzinfo) - created_at).days, 0)
-                        recency_score = max(1.0 - (age_days / 45.0), 0.0)
-                except Exception:
-                    recency_score = 0.5
-
+                recency_score = ((prop.created_at - min_date).total_seconds() / date_range) if date_range > 0 else 0.5
                 final_score = (
-                    0.30 * semantic_score
-                    + 0.22 * budget_score
-                    + 0.16 * city_score
-                    + 0.10 * type_score
-                    + 0.10 * popularity_score
-                    + 0.06 * rating_score
-                    + 0.06 * recency_score
+                    0.29 * semantic_score
+                    + 0.20 * budget_score
+                    + 0.15 * city_score
+                    + 0.09 * type_score
+                    + 0.09 * popularity_score
+                    + 0.07 * rating_score
+                    + 0.05 * recency_score
                 )
                 prop.recommendation_score = round(final_score, 4)
-                prop.recommendation_score_pct = int(round(max(min(final_score, 1.0), 0.0) * 100))
-
-                highlights = []
-                if city_score >= 0.75 and city_clean:
-                    highlights.append(f"Matches your location interest in {prop.city}.")
-                if type_score >= 1.0:
-                    highlights.append(f"Matches your preferred type: {prop.get_property_type_display}.")
-                if budget_score >= 0.75 and preferred_price:
-                    highlights.append("Fits closely within your typical budget range.")
-                if semantic_score >= 0.25:
-                    highlights.append("Similar to listings you recently explored.")
-                if recency_score >= 0.8:
-                    highlights.append("Recently listed (fresh inventory).")
-                if not highlights:
-                    highlights.append("Selected from your recent browsing behavior.")
-                prop.recommendation_highlights = highlights[:4]
                 scored.append((final_score, prop))
             
             scored.sort(key=lambda item: item[0], reverse=True)
@@ -862,7 +840,7 @@ class PropertyRecommendationEngine:
 
 class AIDescriptionGenerator:
     """
-    Use OpenAI or other AI services to generate property descriptions
+    Use NVIDIA NIM or other AI services to generate property descriptions
     """
     
     def __init__(self):
@@ -870,17 +848,17 @@ class AIDescriptionGenerator:
         self._init_client()
     
     def _init_client(self):
-        """Initialize OpenAI client if API key is available"""
+        """Initialize NVIDIA client if API key is available"""
         try:
-            api_key = os.getenv('OPENAI_API_KEY') or getattr(settings, 'OPENAI_API_KEY', None)
+            api_key = os.getenv('NVIDIA_API_KEY') or getattr(settings, 'NVIDIA_API_KEY', None)
             api_key = api_key.strip() if isinstance(api_key, str) else None
             if api_key and (not hasattr(self, '_api_key') or self._api_key != api_key):
-                os.environ['OPENAI_API_KEY'] = api_key
-                from openai import OpenAI
-                self.client = OpenAI(api_key=api_key)
+                import requests
+                self.client = requests.Session()
+                self._base_url = "https://integrate.api.nvidia.com/v1"
                 self._api_key = api_key
         except Exception as e:
-            logger.warning(f"OpenAI client not initialized: {str(e)}")
+            logger.warning(f"NVIDIA client not initialized: {str(e)}")
     
     def generate_description(self, property_data: Dict) -> str:
         """
@@ -908,17 +886,26 @@ class AIDescriptionGenerator:
             and appeals to potential buyers. Keep it between 150-250 words.
             """
             
-            response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
+            url = f"{self._base_url}/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": getattr(settings, 'NVIDIA_MODEL', 'meta/llama-3.1-8b-instruct'),
+                "messages": [
                     {"role": "system", "content": "You are a professional real estate copywriter."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.7,
-                max_tokens=300
-            )
+                "temperature": 0.7,
+                "max_tokens": 300
+            }
+            response = self.client.post(url, headers=headers, json=payload)
+            if response.status_code != 200:
+                raise Exception(f"NVIDIA API error: {response.text}")
+            data = response.json()
             
-            return response.choices[0].message.content
+            return data['choices'][0]['message']['content']
             
         except Exception as e:
             logger.error(f"Error generating AI description: {str(e)}")
@@ -1017,15 +1004,15 @@ class ImageFeatureDetector:
 
     def _init_client(self):
         try:
-            api_key = os.getenv('OPENAI_API_KEY') or getattr(settings, 'OPENAI_API_KEY', None)
+            api_key = os.getenv('NVIDIA_API_KEY') or getattr(settings, 'NVIDIA_API_KEY', None)
             api_key = api_key.strip() if isinstance(api_key, str) else None
             if api_key and (not hasattr(self, '_api_key') or self._api_key != api_key):
-                os.environ['OPENAI_API_KEY'] = api_key
-                from openai import OpenAI
-                self.client = OpenAI(api_key=api_key)
+                import requests
+                self.client = requests.Session()
+                self._base_url = "https://integrate.api.nvidia.com/v1"
                 self._api_key = api_key
         except Exception as e:
-            logger.warning(f"OpenAI client not initialized for Vision: {str(e)}")
+            logger.warning(f"NVIDIA client not initialized for Vision: {str(e)}")
 
     def _normalize_hist(self, values):
         vector = np.array(values, dtype=np.float32)
@@ -1123,8 +1110,8 @@ class ImageFeatureDetector:
             'avg_hash': avg_hash,
         }
 
-    def _analyze_with_openai_vision(self, image_path: str) -> set:
-        """Call OpenAI Vision API to detect exact features."""
+    def _analyze_with_nim_vision(self, image_path: str) -> set:
+        """Call NIM Vision API to detect exact features."""
         self._init_client()
         if not self.client:
             return set()
@@ -1142,9 +1129,14 @@ class ImageFeatureDetector:
                 "Return the detected features as a JSON array of strings (e.g., [\"swimming pool\", \"garden\"]). If none are visible, return []."
             )
             
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
+            url = f"{self._base_url}/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": getattr(settings, 'NVIDIA_VISION_MODEL', 'nvidia/neva-22b'),
+                "messages": [
                     {
                         "role": "user",
                         "content": [
@@ -1153,9 +1145,13 @@ class ImageFeatureDetector:
                         ]
                     }
                 ],
-                max_tokens=150,
-            )
-            content = response.choices[0].message.content.strip()
+                "max_tokens": 150,
+            }
+            response = self.client.post(url, headers=headers, json=payload)
+            if response.status_code != 200:
+                raise Exception(f"NVIDIA API error: {response.text}")
+            data = response.json()
+            content = data['choices'][0]['message']['content'].strip()
             
             # Extract JSON array
             import json
@@ -1166,7 +1162,7 @@ class ImageFeatureDetector:
                 return {str(item).lower() for item in detected_list if str(item).lower() in CANONICAL_VISUAL_FEATURES}
                 
         except Exception as e:
-            logger.warning("OpenAI Vision failed: %s", e)
+            logger.warning("NIM Vision failed: %s", e)
             
         return set()
 
@@ -1183,7 +1179,7 @@ class ImageFeatureDetector:
                 signature = self._extract_visual_signature(rgb)
 
                 # Fetch AI features
-                inferred = self._analyze_with_openai_vision(image_path)
+                inferred = self._analyze_with_nim_vision(image_path)
                 
                 # If API quota/fail occurs, it relies gracefully on filename features.
                 if inferred:

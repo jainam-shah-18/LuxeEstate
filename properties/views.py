@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+import re
 from tempfile import NamedTemporaryFile
 from urllib.parse import urlencode
 
@@ -505,29 +506,27 @@ def _user_favorite_ids(request):
 
 
 def _get_recommended_properties(user, city=None, count=4):
-    # Prefer ML recommendations (behavior + location history + budget).
-    # Hard rule: never recommend the current user's own listings.
-    recommended = list(recommendation_engine.get_recommendations(user, count=count, city=city))
-    if recommended:
-        # Ensure template-safe fields exist.
-        for prop in recommended:
-            if not hasattr(prop, 'recommendation_score_pct'):
-                score = float(getattr(prop, 'recommendation_score', 0) or 0)
-                prop.recommendation_score_pct = int(round(max(min(score, 1.0), 0.0) * 100))
-            if not hasattr(prop, 'recommendation_highlights'):
-                prop.recommendation_highlights = ['Selected from your recent activity.']
-        return recommended
-
-    # Cold-start fallback: show fresh listings from other users (latest first).
-    qs = Property.objects.filter(is_active=True).exclude(agent=user)
-    if city:
-        qs = qs.filter(city__icontains=city)
-    fallback = list(qs.order_by('-created_at')[:count])
-    for prop in fallback:
-        prop.recommendation_score_pct = 0
-        prop.recommendation_highlights = ['Fresh listing from another seller.']
-        prop.recommendation_reason = 'Fresh listing from another seller.'
-    return fallback
+    recommendations = recommendation_engine.get_recommendations(user, count=count * 2)  # Get more to filter
+    if not recommendations:
+        # Fallback to simple ordering
+        recommendations = Property.objects.filter(is_active=True)
+        if city:
+            recommendations = recommendations.filter(city__icontains=city)
+        recommendations = list(recommendations.order_by('-views_count', '-rating', '-created_at')[:count])
+        for prop in recommendations:
+            prop.recommendation_score_pct = 85  # Default
+            prop.recommendation_highlights = ["Popular property", "High rating"]
+            prop.recommendation_reason = "Based on popularity and ratings"
+    else:
+        # Filter by city if provided
+        if city:
+            recommendations = [prop for prop in recommendations if city.lower() in prop.city.lower()]
+        recommendations = recommendations[:count]
+        for prop in recommendations:
+            prop.recommendation_score_pct = int(getattr(prop, 'recommendation_score', 0) * 100)
+            prop.recommendation_highlights = ["Matches your preferences", "Based on your activity"]
+            prop.recommendation_reason = "AI-powered recommendation"
+    return recommendations
 
 
 @ensure_csrf_cookie
@@ -536,25 +535,19 @@ def home(request):
     latest_properties = Property.objects.filter(is_active=True).order_by('-created_at')[:8]
     recommended_properties = []
     recommendation_prefill_hint = None
-    show_recommendations = False
 
     if request.user.is_authenticated:
         recommended_properties = list(_get_recommended_properties(request.user, count=6))
         if not recommended_properties:
-            recommended_properties = list(
-                Property.objects.filter(is_active=True)
-                .exclude(agent=request.user)
-                .order_by('-created_at')[:6]
-            )
+            recommended_properties = list(Property.objects.filter(is_active=True).order_by('-views_count', '-rating')[:6])
         recommendation_prefill_hint = 'These properties are popular with users on LuxeEstate.'
-        show_recommendations = bool(recommended_properties)
 
     context = {
         'featured_properties': featured_properties,
         'latest_properties': latest_properties,
         'recommended_properties': recommended_properties,
         'recommendation_prefill_hint': recommendation_prefill_hint,
-        'show_recommendations': show_recommendations,
+        'show_recommendations': bool(recommended_properties),
         'total_properties': Property.objects.filter(is_active=True).count(),
     }
     return render(request, 'properties/home.html', context)
@@ -934,6 +927,7 @@ def retry_property_geocode(request, pk):
 
 
 @require_POST
+@require_POST
 def generate_ai_description(request):
     try:
         payload = json.loads(request.body or '{}')
@@ -942,53 +936,16 @@ def generate_ai_description(request):
         return JsonResponse({'error': 'Invalid JSON payload.'}, status=400)
 
     try:
-        title = (payload.get('title') or '').strip()
-        property_type = (payload.get('property_type') or '').strip()
-        city = (payload.get('city') or '').strip()
-        address = (payload.get('address') or '').strip()
-        furnishing = (payload.get('furnishing') or '').strip()
-        state = (payload.get('state') or '').strip()
-        amenities = payload.get('amenities') or []
-
-        # Guardrail: don't generate nonsense from an empty listing.
-        has_any_meaningful_input = any([
-            bool(title),
-            bool(property_type),
-            bool(city),
-            bool(address),
-            bool(payload.get('price')),
-            bool(payload.get('bedrooms')),
-            bool(payload.get('bathrooms')),
-            bool(payload.get('area_sqft')),
-            bool(furnishing),
-            bool(state),
-            bool(amenities),
-        ])
-        if not has_any_meaningful_input:
-            return JsonResponse(
-                {'error': 'Please fill in at least Property Type and City (or any basic details) before generating an AI description.'},
-                status=400,
-            )
-
-        # Stronger minimum for good output quality.
-        if not property_type or not city:
-            return JsonResponse(
-                {'error': 'Please enter Property Type and City to generate an AI description.'},
-                status=400,
-            )
-
         data = {
-            'title': title or 'Property',
-            'property_type': property_type,
-            'city': city,
-            'state': state,
-            'address': address,
+            'title': payload.get('title', ''),
+            'city': payload.get('city', ''),
+            'address': payload.get('address', ''),
             'price': payload.get('price'),
             'bedrooms': payload.get('bedrooms'),
             'bathrooms': payload.get('bathrooms'),
             'area_sqft': payload.get('area_sqft'),
-            'furnishing': furnishing,
-            'amenities': amenities,
+            'furnishing': payload.get('furnishing', ''),
+            'amenities': payload.get('amenities') or [],
         }
 
         description = _generate_property_description(data)
@@ -1159,7 +1116,7 @@ def search_by_image(request):
         logger.error('AI image search failed: %s', exc, exc_info=True)
         
         # Check for specific error types
-        if 'OPENAI_API_KEY' in error_msg or 'not configured' in error_msg.lower():
+        if 'NIM_API_KEY' in error_msg or 'not configured' in error_msg.lower():
             return JsonResponse(
                 {
                     'success': False, 
@@ -1175,7 +1132,7 @@ def search_by_image(request):
             return JsonResponse(
                 {
                     'success': False, 
-                    'message': 'Invalid OpenAI API key. Please contact the administrator.',
+                    'message': 'Invalid NVIDIA NIM API key. Please contact the administrator.',
                     'error_type': 'api_auth_failed',
                 },
                 status=500,
@@ -1297,19 +1254,20 @@ def clear_comparison(request):
 @require_POST
 def chatbot_response(request):
     """
-    AI-powered chatbot endpoint (GPT-4o).
+    Live assistant: NIM chat with injected listing snapshot and server time.
 
     Accepts JSON body: { "message": str, "use_memory": bool }
     Session key 'chatbot_state' persists conversation across requests.
 
     Returns JSON:
-      response          – text reply to show the user
-      intent            – detected intent label
+      response          – assistant reply
+      intent            – heuristic intent label
       lead              – captured lead data dict
       qualification_stage – cold | warm | hot
-      appointment       – appointment details dict
+      appointment       – visit-request hints (requested, preferred_datetime, …)
       requires_human    – bool; true when human agent should take over
       handoff_reason    – reason string if requires_human is true
+      model             – NIM model id when the API call succeeds
     """
     from .chatbot_service import chatbot as luxe_chatbot
 
@@ -1336,19 +1294,37 @@ def chatbot_response(request):
         if not isinstance(session_state, dict):
             session_state = {}
 
+    # Start a fresh session if user sends a pure greeting (e.g. hi/hello)
+    # so old qualification state does not force follow-up questions like name/contact.
+    greeting_only = re.match(
+        r"^(hi|hello|hey|hii|hola|good morning|good evening|good afternoon|namaste|namaskar)[!.,\s]*$",
+        user_message,
+        re.IGNORECASE,
+    )
+    if use_memory and greeting_only:
+        session_state = {}
+        request.session['chatbot_state'] = session_state
+
+    # If no chat history exists, start with fresh state (clear any old session data)
+    if use_memory and not session_state.get('chat_history'):
+        session_state = {}
+        request.session['chatbot_state'] = session_state
+
     # Build conversation_state from session
     conversation_state = {
         'chat_history': session_state.get('chat_history', []),
         'lead': session_state.get('lead', {}),
         'search_criteria': session_state.get('search_criteria', {}),
         'appointment': session_state.get('appointment', {}),
+        'asked_fields': session_state.get('asked_fields', []),
+        'last_question_field': session_state.get('last_question_field', ''),
     }
 
     for source_key, target_key in [
         ('lead_name', 'name'),
         ('lead_contact', 'contact'),
         ('lead_budget', 'budget'),
-        ('lead_city', 'city'),
+        ('lead_city', 'location'),
         ('lead_property_type', 'property_type'),
         ('lead_bhk', 'bhk'),
     ]:
@@ -1380,6 +1356,8 @@ def chatbot_response(request):
             'lead': result.get('lead', {}),
             'search_criteria': result.get('search_criteria', {}),
             'appointment': result.get('appointment', {}),
+            'asked_fields': result.get('asked_fields', []),
+            'last_question_field': result.get('last_question_field', ''),
         }
         request.session.modified = True
 
@@ -1391,4 +1369,7 @@ def chatbot_response(request):
         'appointment': result.get('appointment', {}),
         'requires_human': result.get('requires_human', False),
         'handoff_reason': result.get('handoff_reason', ''),
+        'current_datetime': result.get('current_datetime', ''),
+        'guidelines': result.get('guidelines', []),
+        'model': result.get('model', ''),
     })

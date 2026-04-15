@@ -2,6 +2,249 @@
 
 {% block title %}Invoice - LuxeEstate{% endblock %}
 
+{% block extra_css %}
+<style>
+    #aiConciergeWidget,
+    .floating-back-btn,
+    .site-footer {
+        display: none !important;
+    }
+
+    .payment-invoice-layout {
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+    }
+
+    .invoice-watermark {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        transform: rotate(-30deg);
+        pointer-events: none;
+        user-select: none;
+        z-index: 0;
+        opacity: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .invoice-watermark-mark {
+        display: inline-flex;
+        align-items: center;
+        gap: 16px;
+        font-size: clamp(56px, 7vw, 94px);
+        font-weight: 900;
+        letter-spacing: 2px;
+        color: transparent;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark), var(--accent-gold));
+        -webkit-background-clip: text;
+        background-clip: text;
+        text-shadow: 0 0 1px rgba(11, 31, 59, 0.35);
+        white-space: nowrap;
+    }
+
+    .invoice-watermark-mark i {
+        font-size: 0.9em;
+        color: var(--accent-gold);
+        text-shadow: 0 6px 16px rgba(11, 31, 59, 0.22);
+    }
+
+    .payment-invoice-layout > *:not(.invoice-watermark) {
+        position: relative;
+        z-index: 1;
+    }
+
+    .payment-invoice-signature {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 24px;
+        margin-bottom: 12px;
+    }
+
+    .payment-invoice-signature-block {
+        min-width: 240px;
+        text-align: center;
+    }
+
+    .payment-invoice-signature-name {
+        display: block;
+        font-family: "Brush Script MT", "Segoe Script", cursive;
+        font-size: 30px;
+        line-height: 1;
+        color: rgba(69, 44, 133, 0.95);
+        margin-bottom: 6px;
+    }
+
+    .payment-invoice-signature-line {
+        display: block;
+        border-top: 1px solid rgba(30, 33, 50, 0.35);
+        margin-bottom: 6px;
+    }
+
+    .payment-invoice-signature-label {
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(30, 33, 50, 0.75);
+    }
+
+    .payment-invoice-thanks {
+        margin-top: 18px;
+        padding-top: 14px;
+        border-top: 1px dashed rgba(30, 33, 50, 0.22);
+        text-align: center;
+    }
+
+    .payment-invoice-thanks-title {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        margin-bottom: 4px;
+    }
+
+    .payment-invoice-thanks-subtitle {
+        font-size: 12px;
+        color: rgba(30, 33, 50, 0.72);
+        margin-bottom: 0;
+    }
+
+    @media print {
+        @page {
+            margin: 14mm;
+        }
+
+        body {
+            background: #fff !important;
+        }
+
+        .payments-hero,
+        .site-footer,
+        .navbar-magical,
+        .floating-back-btn,
+        #aiConciergeWidget,
+        .payment-invoice-actions {
+            display: none !important;
+        }
+
+        .container,
+        .page-section,
+        .payments-shell {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .payment-invoice-card,
+        .payment-invoice-layout {
+            background: #fff !important;
+            color: #111 !important;
+            border: 1px solid #d9d9d9 !important;
+            box-shadow: none !important;
+            overflow: visible !important;
+        }
+
+        .payment-invoice-card::before,
+        .payment-card::before {
+            display: none !important;
+        }
+
+        .payment-invoice-layout * {
+            text-shadow: none !important;
+            filter: none !important;
+        }
+
+        .payment-invoice-layout p,
+        .payment-invoice-layout span,
+        .payment-invoice-layout h2,
+        .payment-invoice-layout h3,
+        .payment-invoice-layout .payment-invoice-line-title,
+        .payment-invoice-layout .payment-invoice-line-amount,
+        .payment-invoice-layout .payment-invoice-value,
+        .payment-invoice-layout .payment-invoice-amount {
+            color: #111 !important;
+            opacity: 1 !important;
+        }
+
+        .payment-invoice-layout .payments-meta-label,
+        .payment-invoice-layout .payment-invoice-label,
+        .payment-invoice-layout .payment-invoice-subtitle {
+            color: #4a4a4a !important;
+        }
+
+        .payment-invoice-status {
+            background: #f1f1f1 !important;
+            border-color: #cfcfcf !important;
+            color: #111 !important;
+        }
+
+        .payment-invoice-grid,
+        .payment-invoice-lines {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        .invoice-watermark {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            padding: 8% 6%;
+            box-sizing: border-box;
+            overflow: hidden;
+            opacity: 0.18;
+            transform: none;
+            z-index: 2;
+        }
+
+        .invoice-watermark-mark {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            width: 100%;
+            max-width: 100%;
+            text-align: center;
+            font-size: 46px;
+            line-height: 1.1;
+            letter-spacing: 1.5px;
+            font-weight: 900;
+            color: rgba(93, 59, 171, 1) !important;
+            background: none !important;
+            -webkit-background-clip: initial !important;
+            background-clip: initial !important;
+            -webkit-text-fill-color: rgba(93, 59, 171, 1) !important;
+            font-family: "Poppins", "Segoe UI", Arial, sans-serif;
+            text-transform: none;
+            white-space: normal;
+            word-break: keep-all;
+            overflow-wrap: normal;
+            text-shadow: none !important;
+        }
+
+        .invoice-watermark-mark i {
+            font-size: 0.88em;
+            color: rgba(93, 59, 171, 1) !important;
+            text-shadow: none !important;
+        }
+
+        .payment-invoice-layout > *:not(.invoice-watermark) {
+            z-index: 3;
+        }
+
+        .payment-invoice-signature-name {
+            color: rgba(69, 44, 133, 0.85);
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="hero-section payments-hero">
     <div class="container text-center">
@@ -12,19 +255,92 @@
 </section>
 
 <div class="container page-section payments-shell">
-    <div class="card-panel payment-card payment-invoice-card mx-auto" style="max-width:720px;">
-        <p class="payments-meta-label mb-2">Invoice Record</p>
-        <h2 class="mb-3">Invoice {{ invoice.invoice_number }}</h2>
-        <div class="row g-3 mb-3">
-            <div class="col-6"><strong>Date:</strong> {{ invoice.invoice_date|date:'M d, Y' }}</div>
-            <div class="col-6"><strong>Due Date:</strong> {{ invoice.due_date|date:'M d, Y' }}</div>
+    <div class="card-panel payment-card payment-invoice-card payment-invoice-layout mx-auto">
+        <div class="invoice-watermark" aria-hidden="true">
+            <span class="invoice-watermark-mark">
+                <i class="fas fa-crown"></i>
+                LuxeEstate
+            </span>
         </div>
-        <hr>
-        <p><strong>Payment Amount:</strong> ₹{{ invoice.total|floatformat:2 }}</p>
-        <p><strong>Payment Status:</strong> {{ invoice.is_paid|yesno:'Paid,Unpaid' }}</p>
-        <div class="d-flex flex-column gap-3 mt-4 text-center">
-            <button type="button" class="btn btn-magical payment-cta-btn" onclick="window.print();"><i class="fas fa-file-arrow-down"></i> Download / Print Invoice</button>
-            <a href="{% url 'payments:history' %}" class="btn btn-outline-magical payment-secondary-btn"><i class="fas fa-arrow-left"></i> Back to History</a>
+        <div class="payment-invoice-head">
+            <div class="payment-invoice-title-block">
+                <div class="payment-brand-block payment-brand-block-inline mb-3">
+                    <span class="payment-brand-mark" aria-hidden="true"><i class="fas fa-crown"></i></span>
+                    <div class="payment-brand-copy">
+                        <span class="payment-brand-eyebrow">LuxeEstate Premium</span>
+                        <strong class="payment-brand-title">Official Tax Invoice</strong>
+                    </div>
+                </div>
+                <p class="payments-meta-label mb-2">Invoice Record</p>
+                <h2 class="mb-1">Invoice {{ invoice.invoice_number }}</h2>
+                <p class="payment-invoice-subtitle mb-0">Your verified payment breakdown and due timeline.</p>
+            </div>
+            <span class="payment-invoice-status {% if invoice.is_paid %}is-paid{% else %}is-unpaid{% endif %}">
+                {{ invoice.is_paid|yesno:'Paid,Unpaid' }}
+            </span>
+        </div>
+
+        <div class="payment-invoice-grid mt-4">
+            <div class="payment-invoice-item">
+                <span class="payment-invoice-label">Invoice Date</span>
+                <span class="payment-invoice-value">{{ invoice.invoice_date|date:'M d, Y' }}</span>
+            </div>
+            <div class="payment-invoice-item">
+                <span class="payment-invoice-label">Due Date</span>
+                <span class="payment-invoice-value">{{ invoice.due_date|date:'M d, Y' }}</span>
+            </div>
+            <div class="payment-invoice-item payment-invoice-item-wide">
+                <span class="payment-invoice-label">Payment Amount</span>
+                <span class="payment-invoice-value payment-invoice-amount">₹{{ invoice.total|floatformat:2 }}</span>
+            </div>
+        </div>
+
+        <div class="payment-invoice-lines mt-4">
+            <div class="payment-invoice-lines-head">
+                <h3 class="h6 mb-0">Line Items</h3>
+                <span class="payments-meta-label mb-0">1 Service Entry</span>
+            </div>
+            <div class="payment-invoice-line-item">
+                <span class="payment-invoice-line-title">
+                    {% if payment.package %}
+                        {{ payment.package.name }}
+                    {% elif payment.property %}
+                        Property Payment - {{ payment.property.title }}
+                    {% else %}
+                        Platform Service Payment
+                    {% endif %}
+                </span>
+                <span class="payment-invoice-line-amount">₹{{ invoice.subtotal|floatformat:2 }}</span>
+            </div>
+            {% if invoice.tax and invoice.tax > 0 %}
+            <div class="payment-invoice-line-item is-meta">
+                <span class="payment-invoice-line-title">Tax</span>
+                <span class="payment-invoice-line-amount">₹{{ invoice.tax|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            <div class="payment-invoice-line-item is-total">
+                <span class="payment-invoice-line-title">Grand Total</span>
+                <span class="payment-invoice-line-amount">₹{{ invoice.total|floatformat:2 }}</span>
+            </div>
+        </div>
+
+        <div class="payment-invoice-signature">
+            <div class="payment-invoice-signature-block">
+                <span class="payment-invoice-signature-name">LuxeEstate Team</span>
+                <span class="payment-invoice-signature-line" aria-hidden="true"></span>
+                <span class="payment-invoice-signature-label">Authorized Signature</span>
+            </div>
+        </div>
+
+        <div class="payment-invoice-thanks">
+            <p class="payment-invoice-thanks-title">Thank you for your business!</p>
+            <p class="payment-invoice-thanks-subtitle">We appreciate your trust in LuxeEstate.</p>
+        </div>
+
+        <div class="payment-invoice-actions mt-4 text-center">
+            <button type="button" class="btn btn-magical payment-cta-btn" onclick="window.print();">
+                <i class="fas fa-file-arrow-down"></i> Download / Print Invoice
+            </button>
         </div>
     </div>
 </div>

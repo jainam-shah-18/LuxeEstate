@@ -1,27 +1,27 @@
 # Image Search Feature Setup Guide
 
 ## Problem
-The "Search by Image" feature requires OpenAI API access to analyze photos and detect property features (pool, kitchen, amenities, etc.).
+The "Search by Image" feature requires Nvidia NIM API access to analyze photos and detect property features (pool, kitchen, amenities, etc.).
 
-## Solution: Get Your OpenAI API Key
+## Solution: Get Your Nvidia NIM API Key
 
-### Step 1: Sign Up at OpenAI
-1. Go to [https://platform.openai.com](https://platform.openai.com)
+### Step 1: Sign Up at Nvidia
+1. Go to [https://build.nvidia.com](https://build.nvidia.com)
 2. Sign up or log in with your account
 3. Agree to the terms
 
 ### Step 2: Generate an API Key
 1. Click on your profile icon (top-right)
-2. Select "API keys" or go to [https://platform.openai.com/api/keys](https://platform.openai.com/api/keys)
+2. Select "API keys" or go to the API keys section
 3. Click "Create new secret key"
-4. Copy the key (it starts with `sk-`)
+4. Copy the key (it starts with `nvapi-`)
 5. **Save it somewhere safe** – you won't be able to see it again!
 
 ### Step 3: Add to Your Project
 1. Open the `.env` file in `c:\Indianic\LuxeEstate\LuxeEstate_updated\.env`
 2. Add this line (replace with your actual API key):
    ```
-   OPENAI_API_KEY=sk-your-actual-api-key-here
+   NVIDIA_API_KEY=nvapi-your-actual-api-key-here
    ```
 
 ### Step 4: Verify Configuration
@@ -41,13 +41,13 @@ The "Search by Image" feature requires OpenAI API access to analyze photos and d
 ## Troubleshooting
 
 ### Error: "Image search feature is not properly configured"
-- **Cause**: OPENAI_API_KEY is not set in `.env`
+- **Cause**: NVIDIA_API_KEY is not set in `.env`
 - **Fix**: Follow steps 1-4 above
 
-### Error: "Invalid OpenAI API key"
+### Error: "Invalid Nvidia NIM API key"
 - **Cause**: API key is incorrect or has been revoked
 - **Fix**: 
-  1. Go to [https://platform.openai.com/api/keys](https://platform.openai.com/api/keys)
+  1. Go to [https://build.nvidia.com](https://build.nvidia.com/api/keys)
   2. Verify your key is valid and active
   3. Generate a new key if needed
 
@@ -59,8 +59,8 @@ The "Search by Image" feature requires OpenAI API access to analyze photos and d
   - Architectural features
 
 ## Cost Considerations
-- OpenAI charges per API call (GPT-4o Vision is ~$0.01 per image)
-- Consider setting API usage limits in your OpenAI account dashboard
+- Nvidia NIM charges per API call (Llama models are free or low cost)
+- Consider setting API usage limits in your Nvidia account dashboard
 
 ## Features Detected
 The AI analyzes images for:
@@ -73,5 +73,5 @@ The AI analyzes images for:
 - **Amenities**: Gym, parking, security, lift, etc.
 
 ## More Info
-- [OpenAI API Documentation](https://platform.openai.com/docs)
-- [GPT-4o Vision Guide](https://platform.openai.com/docs/guides/vision)
+- [Nvidia NIM API Documentation](https://docs.api.nvidia.com/nim/)
+- [Nvidia Build Guide](https://build.nvidia.com)

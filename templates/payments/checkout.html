@@ -7,7 +7,7 @@
     <div class="container text-center">
         <span class="payments-kicker"><i class="fas fa-shield-heart"></i> Protected Transaction</span>
         <h1>Secure Checkout</h1>
-        <p>Finish your promotion purchase with a polished payment experience.</p>
+        <p>Complete your payment securely with Razorpay.</p>
     </div>
 </section>
 
@@ -15,6 +15,13 @@
     <div class="row justify-content-center">
         <div class="col-md-6">
             <div class="card-panel payment-card payment-checkout-card text-center">
+                <div class="payment-brand-block mb-3">
+                    <span class="payment-brand-mark" aria-hidden="true"><i class="fas fa-crown"></i></span>
+                    <div class="payment-brand-copy">
+                        <span class="payment-brand-eyebrow">LuxeEstate Premium</span>
+                        <strong class="payment-brand-title">Secure Billing Gateway</strong>
+                    </div>
+                </div>
                 <h2 class="mb-3">{% if package %}{{ package.name }}{% else %}{{ property.title }}{% endif %}</h2>
                 <p class="text-secondary">
                     {% if package %}
@@ -29,7 +36,7 @@
                     <input type="hidden" name="razorpay_order_id" value="{{ razorpay_order_id }}">
                     <input type="hidden" name="razorpay_payment_id" id="razorpay_payment_id">
                     <input type="hidden" name="razorpay_signature" id="razorpay_signature">
-                    <button id="pay-button" type="button" class="btn btn-magical w-100 payment-cta-btn" onclick="handlePayment()"><i class="fas fa-credit-card"></i> Pay with Razorpay</button>
+                    <button id="pay-button" type="button" class="btn btn-magical w-100 payment-cta-btn"><i class="fas fa-credit-card"></i> Pay with Razorpay</button>
                 </form>
             </div>
         </div>
@@ -44,19 +51,69 @@
     const TEST_MODE = {% if test_mode %}true{% else %}false{% endif %};
     const RAZORPAY_KEY = '{{ razorpay_key|escapejs }}';
     const ORDER_ID = '{{ razorpay_order_id|escapejs }}';
-    const AMOUNT = '{{ payment.amount|floatformat:2 }}';
+    const AMOUNT_PAISE = Number('{{ razorpay_amount_paise|default:0 }}');
+    const CALLBACK_URL = '{{ razorpay_callback_url|default:""|escapejs }}';
     const PACKAGE_NAME = '{% if package %}{{ package.name|escapejs }}{% else %}{{ property.title|escapejs }}{% endif %}';
     const PACKAGE_DESC = '{% if package %}{{ package.description|escapejs }}{% else %}Pay the full property amount for this listing.{% endif %}';
     const USER_NAME = '{{ user_name|escapejs }}';
     const USER_EMAIL = '{{ user_email|escapejs }}';
     const USER_PHONE = '{{ user_phone|escapejs }}';
-    const PAYMENT_ID = {{ payment.id }};
-    
     console.log('Checkout page loaded, test mode:', TEST_MODE);
     
-    // Global function for onclick backup
+    let isCheckoutProcessing = false;
+
+    function setCheckoutProcessingState(isProcessing) {
+        isCheckoutProcessing = isProcessing;
+        const payButton = document.getElementById('pay-button');
+        if (!payButton) {
+            return;
+        }
+
+        payButton.disabled = isProcessing;
+        if (isProcessing) {
+            payButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        } else {
+            payButton.innerHTML = '<i class="fas fa-credit-card"></i> Pay with Razorpay';
+        }
+    }
+
+    function redirectToFailurePage() {
+        const failureUrl = '{% url "payments:failed" payment.id %}';
+        try {
+            // If Razorpay opened a child window, redirect the parent and close child.
+            if (window.opener && !window.opener.closed) {
+                window.opener.location.href = failureUrl;
+                window.close();
+                return;
+            }
+        } catch (error) {
+            console.warn('Unable to access opener window:', error);
+        }
+
+        try {
+            if (window.top && window.top !== window) {
+                window.top.location.href = failureUrl;
+                return;
+            }
+        } catch (error) {
+            console.warn('Unable to access top window:', error);
+        }
+
+        try {
+            window.location.assign(failureUrl);
+        } catch (error) {
+            console.error('Failed to navigate to failure page:', error);
+            window.location.href = failureUrl;
+        }
+    }
+
+    // Single checkout trigger to avoid duplicate Razorpay popups.
     function handlePayment() {
-        console.log('handlePayment() called from onclick');
+        console.log('handlePayment() called');
+        if (isCheckoutProcessing) {
+            console.log('Checkout already processing, ignoring repeated click');
+            return;
+        }
         
         const paymentForm = document.getElementById('payment-form');
         if (!paymentForm) {
@@ -64,18 +121,28 @@
             alert('Payment form not found. Please refresh the page.');
             return;
         }
+
+        setCheckoutProcessingState(true);
         
         console.log('Opening Razorpay modal...');
         
-        const amountPaise = Math.round(parseFloat(AMOUNT) * 100);
+        if (!Number.isFinite(AMOUNT_PAISE) || AMOUNT_PAISE <= 0) {
+            setCheckoutProcessingState(false);
+            alert('Invalid payment amount. Please refresh and try again.');
+            return;
+        }
         const activeTheme = document.documentElement.getAttribute('data-theme');
         const razorpayThemeColor = activeTheme === 'cosmic' ? '#312E81' : '#B4238A';
         const options = {
             key: RAZORPAY_KEY,
-            amount: amountPaise,
+            amount: AMOUNT_PAISE,
             currency: 'INR',
             name: PACKAGE_NAME,
             description: PACKAGE_DESC,
+            // Redirect-based flows (for example, net banking) should return to a real callback URL.
+            // This prevents landing on an orphaned about:blank popup after bank auth hops.
+            redirect: true,
+            callback_url: CALLBACK_URL,
             handler: function (response) {
                 console.log('Payment successful:', response);
                 document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id;
@@ -85,7 +152,8 @@
             modal: {
                 ondismiss: function () {
                     console.log('Payment modal dismissed');
-                    window.location.href = '/payments/failed/' + PAYMENT_ID + '/';
+                    setCheckoutProcessingState(false);
+                    alert('Payment window closed before completion. You can try again.');
                 }
             },
             prefill: {
@@ -98,7 +166,9 @@
             }
         };
         
-        if (!TEST_MODE) {
+        // Always pass order_id for Razorpay checkout, including test keys.
+        // Redirect-based methods such as netbanking are unstable without a valid order.
+        if (ORDER_ID) {
             options.order_id = ORDER_ID;
         }
         
@@ -106,11 +176,13 @@
             const razorpay = new Razorpay(options);
             razorpay.on('payment.failed', function (response) {
                 console.log('Payment failed:', response);
-                window.location.href = '/payments/failed/' + PAYMENT_ID + '/';
+                setCheckoutProcessingState(false);
+                redirectToFailurePage();
             });
             razorpay.open();
         } catch (error) {
             console.error('Error opening Razorpay:', error);
+            setCheckoutProcessingState(false);
             alert('Error initializing payment. Please try again.');
         }
     }

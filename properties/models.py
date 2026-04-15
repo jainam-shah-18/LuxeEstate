@@ -214,3 +214,148 @@ class PropertyComparison(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.name}"
 
+
+class Lead(models.Model):
+    """Leads generated from chatbot interactions"""
+    STATUS_CHOICES = [
+        ('new', 'New'),
+        ('qualified', 'Qualified'),
+        ('contacted', 'Contacted'),
+        ('converted', 'Converted'),
+        ('lost', 'Lost'),
+    ]
+    
+    QUALIFICATION_CHOICES = [
+        ('cold', 'Cold'),
+        ('warm', 'Warm'),
+        ('hot', 'Hot'),
+    ]
+    
+    # Lead Information
+    name = models.CharField(max_length=100, blank=True, null=True)
+    contact = models.CharField(max_length=100, blank=True, null=True)  # Phone or email
+    intent = models.CharField(max_length=20, choices=[
+        ('buy', 'Buy'),
+        ('rent', 'Rent'),
+        ('invest', 'Invest'),
+    ], blank=True, null=True)
+    budget = models.CharField(max_length=50, blank=True, null=True)
+    location = models.CharField(max_length=100, blank=True, null=True)
+    property_type = models.CharField(max_length=20, choices=Property.PROPERTY_TYPES, blank=True, null=True)
+    bhk = models.CharField(max_length=10, blank=True, null=True)
+    
+    # Qualification
+    qualification_stage = models.CharField(max_length=10, choices=QUALIFICATION_CHOICES, default='cold')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+    score = models.IntegerField(default=0)  # Qualification score
+    
+    # Source and tracking
+    source = models.CharField(max_length=50, default='chatbot')  # chatbot, website, etc.
+    session_id = models.CharField(max_length=100, blank=True, null=True)
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_contacted = models.DateTimeField(blank=True, null=True)
+    
+    # Assigned agent
+    assigned_agent = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_leads')
+    
+    # Notes
+    notes = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', 'qualification_stage']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['assigned_agent']),
+        ]
+    
+    def __str__(self):
+        return f"Lead: {self.name or 'Anonymous'} - {self.intent or 'Unknown'}"
+    
+    def update_qualification(self):
+        """Update qualification stage based on filled fields"""
+        filled_fields = sum(1 for field in ['name', 'contact', 'intent', 'location', 'property_type', 'budget'] if getattr(self, field))
+        self.score = filled_fields
+        
+        if filled_fields >= 5:
+            self.qualification_stage = 'hot'
+        elif filled_fields >= 3:
+            self.qualification_stage = 'warm'
+        else:
+            self.qualification_stage = 'cold'
+        
+        self.save(update_fields=['qualification_stage', 'score', 'updated_at'])
+
+
+class Appointment(models.Model):
+    """Scheduled appointments from chatbot"""
+    STATUS_CHOICES = [
+        ('scheduled', 'Scheduled'),
+        ('confirmed', 'Confirmed'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+        ('no_show', 'No Show'),
+    ]
+    
+    # Appointment details
+    lead = models.ForeignKey('Lead', on_delete=models.CASCADE, related_name='appointments')
+    property = models.ForeignKey(Property, on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
+    
+    # Date and time
+    scheduled_datetime = models.DateTimeField()
+    duration_minutes = models.IntegerField(default=60)
+    
+    # Status and notes
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
+    notes = models.TextField(blank=True, null=True)
+    
+    # Agent assignment
+    assigned_agent = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
+    
+    # Confirmation
+    confirmation_sent = models.BooleanField(default=False)
+    reminder_sent = models.BooleanField(default=False)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    confirmed_at = models.DateTimeField(blank=True, null=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
+    
+    class Meta:
+        ordering = ['scheduled_datetime']
+        indexes = [
+            models.Index(fields=['scheduled_datetime', 'status']),
+            models.Index(fields=['lead']),
+            models.Index(fields=['assigned_agent']),
+        ]
+    
+    def __str__(self):
+        return f"Appointment: {self.lead.name} - {self.scheduled_datetime}"
+    
+    def is_upcoming(self):
+        return self.scheduled_datetime > timezone.now() and self.status in ['scheduled', 'confirmed']
+    
+    def is_past(self):
+        return self.scheduled_datetime < timezone.now()
+    
+    def send_confirmation(self):
+        """Send confirmation notification (placeholder for email/SMS integration)"""
+        if not self.confirmation_sent:
+            # TODO: Integrate with email/SMS service
+            # For now, just mark as sent
+            self.confirmation_sent = True
+            self.save(update_fields=['confirmation_sent'])
+    
+    def send_reminder(self):
+        """Send reminder notification (placeholder for email/SMS integration)"""
+        if not self.reminder_sent and self.is_upcoming:
+            # TODO: Integrate with email/SMS service
+            # For now, just mark as sent
+            self.reminder_sent = True
+            self.save(update_fields=['reminder_sent'])
+

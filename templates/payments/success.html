@@ -7,23 +7,52 @@
     <div class="container text-center">
         <span class="payments-kicker"><i class="fas fa-party-horn"></i> Transaction Complete</span>
         <h1>Payment Successful</h1>
-        <p>{% if payment.package %}Your promotion package has been activated successfully.{% elif payment.property %}Your property payment was completed successfully.{% else %}Your payment was completed successfully.{% endif %}</p>
+        <p>{% if payment.property %}Your property payment was completed successfully.{% else %}Your payment was completed successfully.{% endif %}</p>
     </div>
 </section>
 
 <div class="container page-section payments-shell">
-    <div class="card-panel payment-card payment-success-card text-center">
-        <div class="status-badge status-success mb-3">Success</div>
-        <h2 class="mb-2">{% if payment.package %}{{ payment.package.name }}{% elif payment.property %}{{ payment.property.title }}{% else %}Payment Completed{% endif %}</h2>
-        <p class="text-secondary mb-3">{% if payment.package %}Your promotion package has been activated successfully.{% elif payment.property %}Your property payment was completed successfully.{% else %}Your payment was completed successfully.{% endif %}</p>
-        {% if invoice %}
-            <p><strong>Invoice #:</strong> {{ invoice.invoice_number }}</p>
-            <div class="d-flex flex-column gap-2 justify-content-center align-items-center">
-                <a href="{% url 'payments:invoice' invoice.id %}" target="_blank" class="btn btn-outline-magical payment-secondary-btn mt-3">View Invoice</a>
-                <a href="{% url 'payments:invoice' invoice.id %}" target="_blank" class="btn btn-magical payment-cta-btn mt-3">Download Invoice</a>
+    <div class="card-panel payment-card payment-success-card payment-status-shell mx-auto">
+        <div class="payment-status-header text-center">
+            <span class="payment-status-icon" aria-hidden="true"><i class="fas fa-check"></i></span>
+            <div class="status-badge status-success mb-3">Success</div>
+            <h2 class="mb-2">{% if payment.property %}{{ payment.property.title }}{% else %}Payment Completed{% endif %}</h2>
+            <p class="text-secondary mb-0">{% if payment.property %}Your property payment was completed successfully.{% else %}Your payment was completed successfully.{% endif %}</p>
+        </div>
+
+        <div class="payment-status-details mt-4">
+            {% if invoice %}
+                <div class="payment-status-row">
+                    <span class="payment-status-label">Invoice Number</span>
+                    <span class="payment-status-value">{{ invoice.invoice_number }}</span>
+                </div>
+            {% endif %}
+            <div class="payment-status-row">
+                <span class="payment-status-label">Payment Mode</span>
+                <span class="payment-status-value">Razorpay Secure Checkout</span>
             </div>
-        {% endif %}
-        <a href="{% if payment.property %}{% url 'properties:detail' payment.property.pk %}{% else %}{% url 'payments:pricing' %}{% endif %}" class="btn btn-magical payment-cta-btn mt-3"><i class="fas fa-arrow-right"></i> Continue</a>
+            <div class="payment-status-row">
+                <span class="payment-status-label">Confirmation</span>
+                <span class="payment-status-value">Verified and Recorded</span>
+            </div>
+        </div>
+
+        <div class="payment-status-actions mt-4">
+            {% if invoice %}
+                <a href="{% url 'payments:invoice' invoice.id %}" target="_blank" class="btn btn-outline-magical payment-secondary-btn">
+                    <i class="fas fa-eye"></i> View Invoice
+                </a>
+                <a href="{% url 'payments:invoice' invoice.id %}" target="_blank" class="btn btn-magical payment-cta-btn">
+                    <i class="fas fa-download"></i> Download Invoice
+                </a>
+            {% endif %}
+            <a href="{% url 'payments:history' %}" class="btn btn-outline-magical payment-secondary-btn">
+                <i class="fas fa-clock-rotate-left"></i> View Payment History
+            </a>
+            <a href="{% if payment.property %}{% url 'properties:detail' payment.property.pk %}{% else %}{% url 'payments:pricing' %}{% endif %}" class="btn btn-magical payment-cta-btn">
+                <i class="fas fa-arrow-right"></i> Continue
+            </a>
+        </div>
     </div>
 </div>
 {% endblock %}

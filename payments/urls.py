@@ -11,6 +11,7 @@ urlpatterns = [
     # Payment flow
     path('create/<int:package_id>/', views.create_payment, name='create_payment'),
     path('verify/', views.verify_payment, name='verify_payment'),
+    path('verify/callback/', views.verify_payment_callback, name='verify_payment_callback'),
     path('success/<int:payment_id>/', views.payment_success, name='success'),
     path('failed/<int:payment_id>/', views.payment_failed, name='failed'),
     
@@ -29,4 +30,5 @@ urlpatterns = [
     # AJAX
     path('api/razorpay-key/', views.get_razorpay_key, name='razorpay_key'),
     path('webhook/razorpay/', views.webhook_razorpay, name='webhook'),
+    path('webhook/payment-gateway/', views.webhook_razorpay, name='payment_gateway_webhook'),
 ]

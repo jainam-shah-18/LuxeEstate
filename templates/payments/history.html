@@ -3,41 +3,122 @@
 {% block title %}Payment History - LuxeEstate{% endblock %}
 
 {% block content %}
-<section class="hero-section payments-hero">
-    <div class="container text-center">
+<section class="hero-section payments-hero payments-history-page">
+    <div class="container text-center payments-history-hero-content">
         <span class="payments-kicker"><i class="fas fa-file-invoice-dollar"></i> Billing Ledger</span>
         <h1>Payment History</h1>
-        <p>Review your completed promotions, invoices, and subscription records.</p>
+        <p>Review your completed payments and invoices.</p>
     </div>
 </section>
 
-<div class="container page-section payments-shell">
+<div class="container page-section payments-shell payments-history-page">
     {% if payments %}
-        <div class="row g-4">
-            {% for payment in payments %}
-                <div class="col-md-6">
-                    <div class="card-panel payment-card payment-history-card h-100">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div>
-                                <p class="payments-meta-label mb-2">Transaction</p>
-                                <h4>{{ payment.package.name }}</h4>
-                                <p class="text-secondary mb-1">Amount: ₹{{ payment.amount|floatformat:2 }}</p>
-                                <p class="text-secondary mb-0">Status: <span class="status-pill {% if payment.status == 'completed' %}status-success{% else %}status-warning{% endif %}">{{ payment.get_status_display }}</span></p>
-                            </div>
-                            <a href="{% url 'payments:invoice' payment.invoice.id %}" class="btn btn-outline-magical payment-secondary-btn">Invoice</a>
-                        </div>
-                        <p class="text-secondary">Date: {{ payment.created_at|date:'M d, Y' }}</p>
-                    </div>
+        <div class="payment-history-table-wrap card-panel payment-card">
+            <div class="payment-history-toolbar">
+                <div class="payment-history-toolbar-main">
+                    <h2 class="payment-history-heading">Transaction Ledger</h2>
+                    <p class="payment-history-subtitle">A complete view of your subscription and property payment records.</p>
                 </div>
-            {% endfor %}
+                <div class="payment-history-filters" role="tablist" aria-label="Filter transactions by status">
+                    <button type="button" class="payment-history-filter-btn is-active" data-filter="all" aria-pressed="true">All</button>
+                    <button type="button" class="payment-history-filter-btn" data-filter="completed" aria-pressed="false">Completed</button>
+                    <button type="button" class="payment-history-filter-btn" data-filter="pending" aria-pressed="false">Pending</button>
+                </div>
+                <div class="payment-history-metric">
+                    <span class="payment-history-metric-label">Total Transactions</span>
+                    <strong class="payment-history-metric-value">{{ payments|length }}</strong>
+                </div>
+            </div>
+            <div class="table-responsive payment-history-scroll">
+                <table class="table payment-history-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Transaction</th>
+                            <th scope="col">Amount</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Date</th>
+                            <th scope="col" class="text-end">Invoice</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                            <tr data-status="{{ payment.status|lower }}">
+                                <td class="payment-history-title-cell">
+                                    {% if payment.package %}
+                                        {{ payment.package.name }}
+                                    {% else %}
+                                        Property Payment
+                                    {% endif %}
+                                </td>
+                                <td class="payment-history-amount">₹{{ payment.amount|floatformat:2 }}</td>
+                                <td>
+                                    <span class="status-pill {% if payment.status == 'completed' %}status-success{% else %}status-warning{% endif %}">
+                                        {{ payment.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="payment-history-date">{{ payment.created_at|date:'M d, Y' }}</td>
+                                <td class="text-end">
+                                    {% if payment.invoice and payment.invoice.id %}
+                                        <a href="{% url 'payments:invoice' payment.invoice.id %}" class="btn btn-outline-magical payment-secondary-btn payment-invoice-btn">
+                                            <i class="fas fa-file-invoice"></i>
+                                            <span>Invoice</span>
+                                        </a>
+                                    {% else %}
+                                        <span class="btn btn-outline-magical payment-secondary-btn payment-invoice-btn disabled" aria-disabled="true">
+                                            <i class="fas fa-clock"></i>
+                                            <span>Pending</span>
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     {% else %}
-        <div class="empty-state text-center">
+        <div class="empty-state text-center payment-history-empty">
             <div class="empty-state-icon"><i class="fas fa-wallet"></i></div>
             <h3 class="empty-state-title">No payments found</h3>
             <p class="empty-state-text">You have not completed any transactions yet.</p>
-            <a href="{% url 'payments:pricing' %}" class="btn btn-magical">View Plans</a>
+            <a href="{% url 'properties:home' %}" class="btn btn-magical">Browse Properties</a>
         </div>
     {% endif %}
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tableWrap = document.querySelector('.payment-history-table-wrap');
+    if (!tableWrap) {
+        return;
+    }
+
+    const filterButtons = Array.from(tableWrap.querySelectorAll('.payment-history-filter-btn'));
+    const rows = Array.from(tableWrap.querySelectorAll('.payment-history-table tbody tr'));
+
+    if (!filterButtons.length || !rows.length) {
+        return;
+    }
+
+    const applyFilter = (filterValue) => {
+        rows.forEach((row) => {
+            const rowStatus = (row.dataset.status || '').toLowerCase();
+            const showRow = filterValue === 'all' || rowStatus === filterValue;
+            row.hidden = !showRow;
+        });
+
+        filterButtons.forEach((button) => {
+            const isActive = button.dataset.filter === filterValue;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+    };
+
+    filterButtons.forEach((button) => {
+        button.addEventListener('click', function () {
+            applyFilter((this.dataset.filter || 'all').toLowerCase());
+        });
+    });
+});
+</script>
 {% endblock %}

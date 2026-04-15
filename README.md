@@ -1,233 +1,138 @@
-# LuxeEstate V2 ✨
+# LuxeEstate
 
-> Premium AI-powered real estate experience built with Django - crafted for discovery, trust, and high-conversion property journeys.
+LuxeEstate is a full-stack Django real estate platform for listing discovery, user engagement, messaging, and payment-powered property promotion.
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
-![Django](https://img.shields.io/badge/Django-Framework-092E20?logo=django&logoColor=white)
-![DRF](https://img.shields.io/badge/API-Django_REST_Framework-red)
-![Channels](https://img.shields.io/badge/Realtime-Django_Channels-purple)
-![Status](https://img.shields.io/badge/Status-Active-success)
-![License](https://img.shields.io/badge/License-Educational-blue)
+## Core Features
 
----
-
-## Table of Contents
-
-- [Vision](#vision-)
-- [Feature Badges by Category](#feature-badges-by-category-)
-- [Signature Highlights](#signature-highlights-)
-- [Product Preview](#product-preview-)
-- [Tech Stack](#tech-stack-)
-- [Project Structure](#project-structure-)
-- [Quick Start](#quick-start-)
-- [Required Environment Variables](#required-environment-variables-)
-- [Development Notes](#development-notes-)
-- [Latest Updates (April 2026)](#latest-updates-april-2026-)
-- [License](#license-)
-
----
-
-## Vision
-
-LuxeEstate brings modern property discovery and transaction workflows into one polished platform:
-- 🔍 Smart browsing with rich filters and listing comparison
-- 🤖 AI-assisted recommendations via conversational search
-- 👥 Role-based journeys for buyers, agents, and admins
-- 💬 Built-in communication for faster conversion
-- 💳 Secure monetization and payment-ready flows
-
----
-
-## Feature Badges by Category
-
-### Discovery & Experience
-![Smart Search](https://img.shields.io/badge/Discovery-Smart_Search-1f6feb)
-![Property Filters](https://img.shields.io/badge/Discovery-Advanced_Filters-1f6feb)
-![Comparison](https://img.shields.io/badge/Discovery-Listing_Comparison-1f6feb)
-
-### AI & Automation
-![OpenAI Chatbot](https://img.shields.io/badge/AI-OpenAI_Assistant-7a3cff)
-![Contextual Recommendations](https://img.shields.io/badge/AI-Contextual_Recommendations-7a3cff)
-
-### Engagement & Communication
-![Messaging](https://img.shields.io/badge/Engagement-Real--Time_Messaging-ff6b35)
-![Favorites](https://img.shields.io/badge/Engagement-Favorites-ff6b35)
-![Dashboards](https://img.shields.io/badge/Engagement-Role_Based_Dashboards-ff6b35)
-
-### Payments & Growth
-![Razorpay](https://img.shields.io/badge/Payments-Razorpay_Integrated-00a86b)
-![Promotions](https://img.shields.io/badge/Growth-Promotions_Ready-00a86b)
-
-### Security & Identity
-![Google OAuth](https://img.shields.io/badge/Auth-Google_OAuth-4285F4)
-![Role Access](https://img.shields.io/badge/Security-Role_Based_Access-4285F4)
-
-### Location Intelligence
-![Google Maps](https://img.shields.io/badge/Maps-Google_Maps-fbbc05)
-![Places API](https://img.shields.io/badge/Maps-Places_API-fbbc05)
-
----
-
-## Signature Highlights
-
-- **Premium discovery flow:** elegant listing exploration with useful filter depth.
-- **AI concierge feel:** natural language search support for instant recommendations.
-- **Role-first architecture:** tailored user experiences for buyer, agent, and admin personas.
-- **Integrated conversion loop:** favorites, messaging, and payments in one stack.
-- **Scalable Django base:** production-friendly structure with REST and Channels.
-
----
-
-## Product Preview
-
-> Keep screenshots in `docs/screenshots/` (update paths if filenames change).
-
-| Home Page | Property Listing |
-| --- | --- |
-| [![LuxeEstate Home](docs/screenshots/home-page.png)](docs/screenshots/home-page.png) | [![Property Listing](docs/screenshots/property-listing.png)](docs/screenshots/property-listing.png) |
-| Property Details | User Dashboard |
-| [![Property Details](docs/screenshots/property-details.png)](docs/screenshots/property-details.png) | [![User Dashboard](docs/screenshots/user-dashboard.png)](docs/screenshots/user-dashboard.png) |
-| Chatbot / Messaging | |
-| [![Chatbot and Messaging](docs/screenshots/chatbot-messaging.png)](docs/screenshots/chatbot-messaging.png) | |
-
----
+- Property listing, browsing, and detail pages
+- Favorites and saved properties
+- Built-in messaging between users
+- Role-based admin dashboard
+- AI-assisted chat and image search integrations
+- Payment flows for subscriptions and promoted listings
+- Google OAuth login support
+- Realtime-ready architecture with Django Channels
 
 ## Tech Stack
 
-### Backend
-- Python
-- Django
+- Python 3.10+
+- Django 6
 - Django REST Framework
-- Django Channels + Daphne
 - Django Allauth
-
-### Services & Integrations
-- OpenAI API
-- Razorpay
-- Google OAuth
-- Google Maps / Places APIs
-
-### Data
-- SQLite (default local database)
-
----
+- Django Channels + Daphne
+- Razorpay integration
+- Google APIs (OAuth, Maps, Places)
+- SQLite by default (configurable)
 
 ## Project Structure
 
 ```text
 LuxeEstate_updated/
-├── LuxeEstate/          # Django project settings, urls, asgi/wsgi
-├── accounts/            # Authentication, profiles, role-based features
-├── properties/          # Property models, views, AI/chatbot services
-├── favorites/           # Favorite properties
-├── messaging/           # Conversations and chat logic
-├── payments/            # Payment and subscription logic
-├── admin_dashboard/     # Admin analytics and dashboard views
+├── LuxeEstate/          # Project settings, URLs, ASGI/WSGI
+├── accounts/            # Authentication and user account logic
+├── admin_dashboard/     # Admin-specific pages and tools
+├── favorites/           # Favorites feature
+├── messaging/           # User messaging flows
+├── payments/            # Checkout, subscriptions, invoices, webhooks
+├── properties/          # Property models, views, AI/image search logic
 ├── templates/           # HTML templates
 ├── static/              # Source static assets
-├── manage.py
 ├── requirements.txt
 └── .env.example
 ```
 
----
+## Local Setup
 
-## Quick Start
+### 1) Clone and enter project
 
-### 1) Clone repository
 ```bash
-git clone https://github.com/jainam-shah-18/LuxeEstate.git
-cd LuxeEstate
+git clone <your-repo-url>
+cd LuxeEstate_updated
 ```
 
 ### 2) Create and activate virtual environment
+
 ```bash
 python -m venv .venv
 ```
 
-- Windows PowerShell:
-  ```powershell
-  .\.venv\Scripts\Activate.ps1
-  ```
-- macOS/Linux:
-  ```bash
-  source .venv/bin/activate
-  ```
+Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+macOS/Linux:
+
+```bash
+source .venv/bin/activate
+```
 
 ### 3) Install dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4) Configure environment
-macOS/Linux:
-```bash
-cp .env.example .env
-```
+### 4) Configure environment variables
 
-Windows PowerShell:
+Copy the sample file:
+
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Update `.env` with your credentials and API keys.
+Then update `.env` with the credentials and API keys required for your environment.
 
 ### 5) Run migrations
+
 ```bash
 python manage.py migrate
 ```
 
-### 6) Start local server
+### 6) (Optional) Create admin user
+
+```bash
+python manage.py createsuperuser
+```
+
+### 7) Run the development server
+
 ```bash
 python manage.py runserver
 ```
 
-Open: `http://127.0.0.1:8000`
+Open `http://127.0.0.1:8000`.
 
----
+## Environment Variables
 
-## Required Environment Variables
+Key variables used by this project include:
 
-Set these values in `.env`:
-- `SECRET_KEY`
-- `DEBUG`
-- `ALLOWED_HOSTS`
-- `GOOGLE_OAUTH_CLIENT_ID`
-- `GOOGLE_OAUTH_CLIENT_SECRET`
-- `GOOGLE_MAPS_API_KEY`
-- `GOOGLE_PLACES_API_KEY`
-- `RAZORPAY_KEY_ID`
-- `RAZORPAY_KEY_SECRET`
-- `RAZORPAY_WEBHOOK_SECRET`
-- `OPENAI_API_KEY`
-- `EMAIL_HOST_USER`
-- `EMAIL_HOST_PASSWORD`
+- `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`
+- `DB_ENGINE`, `DB_NAME`
+- `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`
+- `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`
+- `GOOGLE_MAPS_API_KEY`, `GOOGLE_PLACES_API_KEY`
+- `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`
+- `NVIDIA_API_KEY`, `NIM_CHAT_MODEL`, `NVIDIA_VISION_MODEL`
+- `CHANNEL_LAYERS_HOST`, `CHANNEL_LAYERS_PORT`
 
----
+See `.env.example` for the full template and defaults.
 
-## Development Notes
+## Payment Webhook Endpoint
 
-- Do not commit `.env` files or private credentials.
-- Runtime/generated directories (`media`, `staticfiles`, `logs`, `__pycache__`) are intentionally ignored.
-- For Redis-backed Channels, configure `CHANNEL_LAYERS_HOST` and `CHANNEL_LAYERS_PORT`.
+For Razorpay webhook delivery, configure:
 
----
+- `/payments/webhook/razorpay/`
 
-## Latest Updates (April 2026)
+Use the same webhook secret in Razorpay Dashboard and `.env`.
 
-- Refined AI-powered property assistance and recommendation handling in core property flows.
-- Enhanced property detail and route-map pages for a smoother map and location experience.
-- Improved add/edit property and chat interfaces for cleaner form and conversation UX.
-- Updated global frontend behavior and styling for better responsiveness and consistency.
-- Refreshed project dependencies and template structure for ongoing feature stability.
+## Notes
 
----
+- `.env`, `venv`, `db.sqlite3`, `logs`, `media`, and generated static artifacts are git-ignored.
+- For production, set `DEBUG=False`, configure secure cookie/SSL settings, and use a production-grade database and ASGI deployment.
+- If using realtime messaging at scale, configure Redis-backed Channels.
 
 ## License
 
-This repository is currently intended for educational and development use.  
-Add a dedicated `LICENSE` file for production or public distribution.
-
----
-
-_Last updated: April 14, 2026_
+This project is currently intended for educational and development use.

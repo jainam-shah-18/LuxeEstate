@@ -5,22 +5,20 @@
 {% block content %}
 <section class="hero-section payments-hero">
     <div class="container text-center">
-        <span class="payments-kicker"><i class="fas fa-layer-group"></i> Plan Selection</span>
-        <h1>Subscribe</h1>
-        <p>Choose a promotion plan that helps your property listing rise above the crowd.</p>
+        <span class="payments-kicker"><i class="fas fa-circle-info"></i> Unavailable</span>
+        <h1>Subscription Plans Removed</h1>
+        <p>Promotional subscription plans are not available.</p>
     </div>
 </section>
 
 <div class="container page-section payments-shell">
     <div class="row justify-content-center">
-        <div class="col-md-7">
-            <div class="card-panel payment-card payment-subscribe-card text-center">
-                <p class="payments-meta-label mb-2">Selected Package</p>
-                <h2 class="mb-3">{{ package.name }}</h2>
-                <p class="text-secondary">{{ package.description }}</p>
-                <p class="property-price mb-1">Amount: ₹{{ package.price|floatformat:2 }}</p>
-                <p class="text-secondary mb-3">Duration: {{ package.duration_days }} days</p>
-                <button class="btn btn-magical payment-cta-btn" onclick="window.location.href='{% url 'payments:create_payment' package.pk %}'"><i class="fas fa-arrow-right"></i> Proceed to Checkout</button>
+        <div class="col-md-8">
+            <div class="empty-state text-center">
+                <div class="empty-state-icon"><i class="fas fa-info-circle"></i></div>
+                <h3 class="empty-state-title">No subscription plans available</h3>
+                <p class="empty-state-text">This section has been disabled across the website.</p>
+                <a href="{% url 'properties:home' %}" class="btn btn-magical payment-cta-btn">Back to Home</a>
             </div>
         </div>
     </div>

@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import User
 from properties.models import Property
 from django.utils import timezone
@@ -70,16 +70,22 @@ class Payment(models.Model):
         return f"Payment {self.razorpay_order_id} - {self.status}"
     
     def mark_completed(self):
-        """Mark payment as completed"""
-        self.status = 'completed'
-        self.completed_at = timezone.now()
-        self.save()
-        
-        # Apply promotion to property if applicable
-        if self.package and self.property:
-            self.property.is_promoted = True
-            self.property.promotion_until = timezone.now() + timezone.timedelta(days=self.package.duration_days)
-            self.property.save()
+        """Mark payment as completed with an atomic update."""
+        with transaction.atomic():
+            payment = Payment.objects.select_for_update().select_related('package', 'property').get(pk=self.pk)
+            completed_at = payment.completed_at or timezone.now()
+
+            if payment.status != 'completed':
+                payment.status = 'completed'
+                payment.completed_at = completed_at
+                payment.save(update_fields=['status', 'completed_at', 'updated_at'])
+
+            # Apply promotion to property if applicable.
+            if payment.package and payment.property:
+                promotion_until = completed_at + timezone.timedelta(days=payment.package.duration_days)
+                payment.property.is_promoted = True
+                payment.property.promotion_until = promotion_until
+                payment.property.save(update_fields=['is_promoted', 'promotion_until', 'updated_at'])
 
 
 class Subscription(models.Model):
@@ -157,3 +163,34 @@ class PaymentAuditLog(models.Model):
 
     def __str__(self):
         return f"{self.payment.razorpay_order_id} - {self.event}"
+
+
+class PaymentWebhookEvent(models.Model):
+    """Persist webhook payloads for idempotency and reconciliation."""
+    STATUS_CHOICES = [
+        ('received', 'Received'),
+        ('processed', 'Processed'),
+        ('ignored', 'Ignored'),
+        ('failed', 'Failed'),
+    ]
+
+    payload_hash = models.CharField(max_length=64, unique=True, db_index=True)
+    event_name = models.CharField(max_length=100, db_index=True)
+    signature = models.CharField(max_length=256, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='received')
+
+    transaction_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    razorpay_order_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    razorpay_payment_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+
+    payload = models.JSONField(default=dict, blank=True)
+    error_message = models.TextField(blank=True, null=True)
+    processed_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.event_name} [{self.status}]"

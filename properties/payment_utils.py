@@ -223,33 +223,7 @@ class PropertyPromotionPayment:
     
     def get_promotion_plans(self) -> list:
         """Get available promotion plans"""
-        plans = [
-            {
-                'id': 'standard',
-                'name': 'Standard Promotion',
-                'price': 999,
-                'duration_days': 7,
-                'features': ['Featured listing', '7 days promotion'],
-                'description': 'Get your property featured for 7 days'
-            },
-            {
-                'id': 'premium',
-                'name': 'Premium Promotion',
-                'price': 2499,
-                'duration_days': 30,
-                'features': ['Featured listing', '30 days promotion', 'Priority search'],
-                'description': 'Premium visibility for 30 days'
-            },
-            {
-                'id': 'platinum',
-                'name': 'Platinum Promotion',
-                'price': 4999,
-                'duration_days': 90,
-                'features': ['Featured listing', '90 days promotion', 'Priority search', 'Top results'],
-                'description': 'Maximum visibility for 90 days'
-            }
-        ]
-        return plans
+        return []
     
     def create_promotion_order(self, property_id: int, plan_id: str, user) -> dict:
         """Create order for property promotion"""

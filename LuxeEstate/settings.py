@@ -250,8 +250,20 @@ RAZORPAY_WEBHOOK_SECRET = config('RAZORPAY_WEBHOOK_SECRET', default='')
 # Payment Test Mode (use Razorpay checkout with test keys when False)
 PAYMENT_TEST_MODE = config('PAYMENT_TEST_MODE', default=False, cast=bool)
 
-OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
-OPENAI_MODEL = config('OPENAI_MODEL', default='gpt-3.5-turbo')
+NVIDIA_API_KEY = config('NIM_API_KEY', default='')
+NIM_CHAT_MODEL = config('NVIDIA_MODEL', default='meta/llama-3.1-8b-instruct')
+NVIDIA_VISION_MODEL = config('NVIDIA_VISION_MODEL', default='nvidia/neva-22b')
+AI_CHATBOT_GUIDELINES = config(
+    'AI_CHATBOT_GUIDELINES',
+    default=(
+        'Use only LuxeEstate listing data for inventory and pricing claims.|'
+        'Do not fabricate legal, financial, ownership, or payment confirmations.|'
+        'For payments, explain steps but never ask users for OTP, card PIN, CVV, or passwords.|'
+        'If information is unavailable, say so clearly and suggest a safe next step.|'
+        'Keep responses concise, helpful, and professional.'
+    ),
+    cast=lambda v: [item.strip() for item in str(v).split('|') if item.strip()],
+)
 
 # Social Auth - Google OAuth
 SOCIALACCOUNT_PROVIDERS = {

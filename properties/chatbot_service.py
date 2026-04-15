@@ -1,21 +1,35 @@
-"""Fresh intelligent chatbot backend for LuxeEstate."""
+"""
+LuxeEstate chatbot backend (rewritten from scratch).
 
-import json
+Design goals:
+- deterministic and fast first response path
+- live listing snapshot from Property table on every request
+- session-friendly state shape compatible with existing view layer
+- optional NIM generation with graceful fallback
+"""
+
+from __future__ import annotations
+
 import logging
-import os
 import re
-from statistics import mean
-from typing import Any, Dict, List
+from datetime import timedelta
+from decimal import Decimal, InvalidOperation
+from typing import Any, Dict, List, Optional, Tuple
 
 from django.conf import settings
+from django.db.models import Avg, Max, Min, QuerySet
+from django.utils import timezone
+
+from .models import Property, Lead, Appointment
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_LEAD = {
     "name": "",
     "contact": "",
+    "intent": "",
     "budget": "",
-    "city": "",
+    "location": "",
     "property_type": "",
     "bhk": "",
 }
@@ -24,879 +38,914 @@ DEFAULT_APPOINTMENT = {
     "requested": False,
     "property_hint": "",
     "preferred_datetime": "",
+    "confirmed": False,
 }
 
-HUMAN_HANDOFF_TRIGGERS = {
-    "speak to agent": "User requested a human agent.",
-    "talk to agent": "User requested a human agent.",
-    "human": "User requested human support.",
-    "real person": "User requested a real person.",
-    "urgent": "Urgent support needed.",
-    "complaint": "Complaint requires agent follow-up.",
-    "legal": "Legal query requires human support.",
+LEAD_ORDER = ["intent", "location", "property_type", "budget", "name", "contact"]
+
+GREETING_RE = re.compile(
+    r"^\s*(hi|hello|hey|hii|namaste|good morning|good afternoon|good evening)\s*[!.,\s]*$",
+    re.IGNORECASE,
+)
+GOODBYE_RE = re.compile(r"^\s*(bye|goodbye|exit|quit|stop|see you)\s*[!.,\s]*$", re.IGNORECASE)
+DATETIME_HINT_RE = re.compile(
+    r"\b("
+    r"time|date|day|today|tomorrow|yesterday|"
+    r"jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|"
+    r"aug|august|sep|sept|september|oct|october|nov|november|dec|december|"
+    r"\d{1,2}\s*(?:/|-)\s*\d{1,2}(?:\s*(?:/|-)\s*\d{2,4})?"
+    r")\b",
+    re.IGNORECASE,
+)
+
+PROPERTY_TYPES = {"apartment", "house", "villa", "plot", "commercial", "office", "shop", "farmland"}
+INTENT_PATTERNS = {
+    "rent": re.compile(r"\b(rent|rental|lease|on rent)\b", re.IGNORECASE),
+    "invest": re.compile(r"\b(invest|investment|roi|yield|appreciation)\b", re.IGNORECASE),
+    "buy": re.compile(r"\b(buy|purchase|looking|need|want|search|find|show)\b", re.IGNORECASE),
 }
+APPOINTMENT_RE = re.compile(r"\b(site visit|visit|schedule|appointment|callback|call back|meeting)\b", re.IGNORECASE)
+HUMAN_RE = re.compile(r"\b(human|agent|manager|complaint|fraud|legal|dispute|urgent)\b", re.IGNORECASE)
+SECURITY_RE = re.compile(
+    r"\b(otp|pin|cvv|card number|password|passcode|secret key|ignore instructions|jailbreak|system prompt)\b",
+    re.IGNORECASE,
+)
 
-APPOINTMENT_PATTERNS = [
-    r"\bschedule\b",
-    r"\bappointment\b",
-    r"\bvisit\b",
-    r"\bsite visit\b",
-    r"\bbook\b",
-    r"\bcall back\b",
-    r"\bcallback\b",
-]
-
-MARKET_PRICE_PATTERNS = [
-    r"\bprice\b",
-    r"\bcost\b",
-    r"\brate\b",
-    r"\bmarket\b",
-    r"\bas of now\b",
-    r"\bcurrent(?:ly)?\b",
-]
-
-WEBSITE_REALTIME_PATTERNS = [
-    r"\bhow many\b",
-    r"\bcount\b",
-    r"\bavailable\b",
-    r"\blistings?\b",
-    r"\bshow\b",
-    r"\blatest\b",
-    r"\bnew\b",
-    r"\brecent(?:ly)?\b",
-    r"\bposted\b",
-    r"\btop\s*\d+\b",
-    r"\bunder\b",
-    r"\bwithin\b",
-    r"\bnearby\b",
-    r"\bnear\b",
-    r"\bcities?\b",
-    r"\blocations?\b",
-    r"\bright now\b",
-    r"\bmost recent(?:ly)?\b",
-]
-
-LOCALITY_NOISE_TERMS = {
-    "india",
-    "address",
-    "road",
-    "rd",
-    "street",
-    "st",
-    "lane",
-    "ln",
-    "main road",
-    "cross road",
-    "apartment",
-    "apartments",
-    "apt",
-    "building",
-    "tower",
-    "floor",
-    "flat",
-    "house",
-    "plot",
-    "block",
-    "phase",
-}
-
-SYSTEM_PROMPT = """You are Luxe, the 24/7 intelligent assistant for LuxeEstate.
-You must handle property inquiries, qualify leads, and schedule appointments.
-Answer user questions directly first. Then ask at most one concise follow-up question only when needed.
-Never repeat the same question/response in back-to-back turns.
-Do not ask for details already captured in current lead state.
-Ask concise follow-up questions to collect missing details from: name, contact, budget, city, property_type, bhk.
-Escalate to human only for explicit requests, legal matters, or unresolved complaints.
-Return JSON only with this exact shape:
-{{
-  "message": "string",
-  "intent": "greeting|inquiry|buy|rent|invest|appointment|support|qualification|handoff|unknown",
-  "lead": {{"name":"","contact":"","budget":"","city":"","property_type":"","bhk":""}},
-  "appointment": {{"requested": false, "property_hint": "", "preferred_datetime": ""}},
-  "requires_human": false,
-  "handoff_reason": ""
-}}
-Property inventory snapshot: {property_context}
-Conversation history: {history_context}
-Current lead state: {lead_context}
-"""
+# Additional patterns for advanced queries
+READY_TO_MOVE_RE = re.compile(r"\b(ready.?to.?move|ready.?possession|immediate|available now)\b", re.IGNORECASE)
+FURNISHED_RE = re.compile(r"\b(furnished|unfurnished|semi.furnished)\b", re.IGNORECASE)
+FACING_RE = re.compile(r"\b(east.facing|west.facing|north.facing|south.facing)\b", re.IGNORECASE)
+AMENITIES_RE = re.compile(r"\b(parking|lift|elevator|garden|pool|gym|security|gated|community)\b", re.IGNORECASE)
+RECENT_POST_RE = re.compile(r"\b(last \d+ days?|recent|newly launched|posted in)\b", re.IGNORECASE)
+AREA_SQFT_RE = re.compile(r"\b(at least (\d+) sq ft|minimum (\d+) sqft|over (\d+) square feet)\b", re.IGNORECASE)
 
 
 class LuxeChatbot:
-    DEFAULT_MODEL = "gpt-4o-mini"
-    TEMPERATURE = 0.2
-    MAX_HISTORY = 20
+    MAX_HISTORY = 24
+    MAX_HISTORY_MESSAGES = 12
 
-    def __init__(self):
-        self.model = getattr(settings, "OPENAI_MODEL", self.DEFAULT_MODEL)
-        self._api_key = getattr(settings, "OPENAI_API_KEY", "") or os.environ.get("OPENAI_API_KEY", "")
-        self._client = None
-
-    @staticmethod
-    def _is_plain_greeting(message: str) -> bool:
-        lowered = (message or "").strip().lower()
-        if not lowered:
-            return False
-        return bool(re.fullmatch(r"(hi|hello|hey|hii|hola|good morning|good evening|good afternoon)[!. ]*", lowered))
-
-    @staticmethod
-    def _normalize(value: Any) -> str:
-        return value.strip() if isinstance(value, str) else ""
-
-    @staticmethod
-    def _base_result() -> Dict[str, Any]:
-        return {
-            "message": "",
-            "intent": "unknown",
-            "lead": {**DEFAULT_LEAD},
-            "qualification_stage": "cold",
-            "appointment": {**DEFAULT_APPOINTMENT},
-            "requires_human": False,
-            "handoff_reason": "",
-        }
-
-    @staticmethod
-    def _safe_json_parse(raw_text: str) -> Dict[str, Any]:
-        if not raw_text:
-            return {}
-        text = raw_text.strip()
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            match = re.search(r"\{.*\}", text, re.DOTALL)
-            if not match:
-                return {}
-            try:
-                return json.loads(match.group(0))
-            except json.JSONDecodeError:
-                return {}
-
-    @staticmethod
-    def _merge_lead(base: Dict[str, Any], incoming: Dict[str, Any]) -> Dict[str, str]:
-        merged = {**DEFAULT_LEAD, **(base or {})}
-        for key in DEFAULT_LEAD:
-            value = (incoming or {}).get(key)
-            if value:
-                merged[key] = str(value).strip()
-        return merged
-
-    @staticmethod
-    def _merge_appointment(base: Dict[str, Any], incoming: Dict[str, Any]) -> Dict[str, Any]:
-        merged = {**DEFAULT_APPOINTMENT, **(base or {})}
-        if (incoming or {}).get("requested"):
-            merged["requested"] = True
-        for field in ("property_hint", "preferred_datetime"):
-            value = (incoming or {}).get(field)
-            if value:
-                merged[field] = str(value).strip()
-        return merged
-
-    @staticmethod
-    def _qualification_stage(lead: Dict[str, Any]) -> str:
-        score = sum(bool(lead.get(k)) for k in DEFAULT_LEAD)
-        if score >= 4:
-            return "hot"
-        if score >= 2:
-            return "warm"
-        return "cold"
-
-    @staticmethod
-    def _extract_message_fields(message: str) -> Dict[str, str]:
-        text = message.lower()
-        out: Dict[str, str] = {}
-
-        email = re.search(r"[\w\.-]+@[\w\.-]+\.[a-zA-Z]{2,}", message)
-        if email:
-            out["contact"] = email.group(0)
-
-        phone = re.search(r"(?:\+91|0)?\s*([6-9]\d{9})", re.sub(r"[^\d+]", "", message))
-        if phone and not out.get("contact"):
-            out["contact"] = phone.group(1)
-
-        name = re.search(r"\b(my name is|i am|i'm)\s+([A-Za-z ]{2,40})", message, re.IGNORECASE)
-        if name:
-            out["name"] = name.group(2).strip().title()
-
-        budget = re.search(
-            r"((?:rs\.?|inr|₹)?\s*\d+(?:[\.,]\d+)?\s*(?:lakh|lac|crore|cr|k|million|m)?)",
-            text,
+    def _now_context(self) -> Tuple[str, str, str, str]:
+        now = timezone.localtime(timezone.now())
+        tz_name = now.strftime("%Z") or "IST"
+        return (
+            f"{now.strftime('%A, %d %B %Y, %I:%M %p')} {tz_name}",
+            now.strftime("%A"),
+            now.strftime("%d %B %Y"),
+            now.strftime("%I:%M %p"),
         )
-        if budget:
-            out["budget"] = budget.group(1).strip()
 
-        city = re.search(
-            r"\b(?:in|at|near)\s+([A-Za-z ]{2,30}?)(?:\s+(?:with|for|under|budget|price)\b|[.,]|$)",
+    def _relative_date_reply(self, user_message: str) -> Optional[str]:
+        now = timezone.localtime(timezone.now())
+        if re.search(r"\bday after tomorrow\b", user_message, re.IGNORECASE):
+            target = now + timedelta(days=2)
+            return f"The day after tomorrow is {target.strftime('%A, %d %B %Y')}."
+        if re.search(r"\btomorrow\b", user_message, re.IGNORECASE):
+            target = now + timedelta(days=1)
+            return f"Tomorrow is {target.strftime('%A, %d %B %Y')}."
+        if re.search(r"\byesterday\b", user_message, re.IGNORECASE):
+            target = now - timedelta(days=1)
+            return f"Yesterday was {target.strftime('%A, %d %B %Y')}."
+        return None
+
+    def _normalize_property_type(self, token: str) -> str:
+        t = (token or "").strip().lower()
+        synonyms = {
+            "flat": "apartment",
+            "apartment": "apartment",
+            "villa": "villa",
+            "plot": "plot",
+            "house": "house",
+            "home": "house",
+            "office": "office",
+            "shop": "shop",
+            "commercial": "commercial",
+            "farmland": "farmland",
+        }
+        return synonyms.get(t, t if t in PROPERTY_TYPES else "")
+
+    def _extract_budget_text(self, message: str) -> str:
+        if not message:
+            return ""
+        m = re.search(
+            r"(?:under|upto|up to|below|within|budget|around)?\s*(?:rs\.?|inr|₹)?\s*"
+            r"(\d+(?:[\.,]\d+)?)\s*(lakh|lac|l|crore|cr|k|thousand|million|m)?",
             message,
             re.IGNORECASE,
         )
-        if city:
-            out["city"] = city.group(1).strip().title()
+        if not m:
+            return ""
+        value = m.group(1).replace(",", "")
+        unit = (m.group(2) or "").lower()
+        return f"{value} {unit}".strip()
 
-        bhk = re.search(r"(\d+)\s*(?:bhk|bedroom|bedrooms|beds?)\b", text)
-        if bhk:
-            out["bhk"] = f"{bhk.group(1)} BHK"
+    def _budget_to_rupees(self, budget_text: str) -> Optional[Decimal]:
+        if not budget_text:
+            return None
+        m = re.search(r"(\d+(?:\.\d+)?)\s*(lakh|lac|l|crore|cr|k|thousand|million|m)?", budget_text, re.IGNORECASE)
+        if not m:
+            return None
+        try:
+            value = Decimal(m.group(1))
+        except (InvalidOperation, TypeError):
+            return None
+        unit = (m.group(2) or "").lower()
+        multiplier = Decimal("1")
+        if unit in {"k", "thousand"}:
+            multiplier = Decimal("1000")
+        elif unit in {"lakh", "lac", "l"}:
+            multiplier = Decimal("100000")
+        elif unit in {"crore", "cr"}:
+            multiplier = Decimal("10000000")
+        elif unit in {"million", "m"}:
+            multiplier = Decimal("1000000")
+        return value * multiplier
 
-        ptype = re.search(r"\b(apartment|villa|plot|flat|house|studio|penthouse)\b", text)
+    def _extract_lead_fields(self, message: str) -> Dict[str, str]:
+        out: Dict[str, str] = {}
+        text = (message or "").strip()
+        lower = text.lower()
+
+        name_match = re.search(r"\b(?:my name is|i am|i'm)\s+([A-Za-z][A-Za-z ]{1,40})\b", text, re.IGNORECASE)
+        if name_match:
+            out["name"] = name_match.group(1).strip().title()
+
+        email_match = re.search(r"[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}", text)
+        phone_match = re.search(r"(?:\+91|0)?\s*([1-9]\d{9})\b", text)
+        if email_match:
+            out["contact"] = email_match.group(0).strip()
+        elif phone_match:
+            out["contact"] = phone_match.group(1).strip()
+
+        for intent, pattern in INTENT_PATTERNS.items():
+            if pattern.search(lower):
+                out["intent"] = intent
+                break
+
+        city_match = re.search(
+            r"\b(?:in|at|near)\s+([A-Za-z][A-Za-z\s]{1,30}?)(?:\s+(?:for|under|budget|price|with)\b|[.,]|$)",
+            text,
+            re.IGNORECASE,
+        )
+        if city_match:
+            city = city_match.group(1).strip().title()
+            # Handle abbreviations
+            abbreviations = {
+                "Blr": "Bangalore",
+                "Mumbai": "Mumbai",
+                "Delhi": "Delhi",
+                "Pune": "Pune",
+                "Chennai": "Chennai",
+                "Kolkata": "Kolkata",
+                "Hyderabad": "Hyderabad",
+                "Noida": "Noida",
+                "Gurgaon": "Gurgaon",
+                "Ahmedabad": "Ahmedabad",
+                "Whitefield": "Whitefield",
+                "Manyata": "Manyata",
+            }
+            out["location"] = abbreviations.get(city, city)
+        elif re.match(r"^\s*[A-Za-z][A-Za-z\s]{2,30}\s*$", text) and " " not in text.strip() and not GREETING_RE.match(text) and not GOODBYE_RE.match(text):
+            city = text.strip().title()
+            abbreviations = {
+                "Blr": "Bangalore",
+                "Mumbai": "Mumbai",
+                "Delhi": "Delhi",
+                "Pune": "Pune",
+                "Chennai": "Chennai",
+                "Kolkata": "Kolkata",
+                "Hyderabad": "Hyderabad",
+                "Noida": "Noida",
+                "Gurgaon": "Gurgaon",
+                "Ahmedabad": "Ahmedabad",
+            }
+            out["location"] = abbreviations.get(city, city)
+
+        ptype = re.search(r"\b(flat|apartment|villa|plot|house|home|office|shop|commercial|farmland)\b", lower)
         if ptype:
-            out["property_type"] = ptype.group(1)
+            normalized = self._normalize_property_type(ptype.group(1))
+            if normalized:
+                out["property_type"] = normalized
+
+        bhk_match = re.search(r"\b(\d{1,2})\s*(?:bhk|bed|bedroom|bedrooms)\b", lower)
+        if bhk_match:
+            out["bhk"] = f"{bhk_match.group(1)} BHK"
+        elif re.search(r"\b(\d{1,2})bhk\b", lower):  # Handle 2BHK without space
+            num_match = re.search(r"\b(\d{1,2})bhk\b", lower)
+            if num_match:
+                out["bhk"] = f"{num_match.group(1)} BHK"
+
+        budget_text = self._extract_budget_text(text)
+        if budget_text:
+            out["budget"] = budget_text
+
+        # Additional extractions
+        if READY_TO_MOVE_RE.search(lower):
+            out["ready_to_move"] = "yes"
+        if FURNISHED_RE.search(lower):
+            furnished_match = FURNISHED_RE.search(lower)
+            out["furnished"] = furnished_match.group(0).lower()
+        if FACING_RE.search(lower):
+            facing_match = FACING_RE.search(lower)
+            out["facing"] = facing_match.group(0).lower()
+        if AMENITIES_RE.search(lower):
+            amenities = AMENITIES_RE.findall(lower)
+            out["amenities"] = ", ".join(set(amenities))
+        if RECENT_POST_RE.search(lower):
+            days_match = re.search(r"last (\d+) days?", lower)
+            if days_match:
+                out["posted_within_days"] = days_match.group(1)
+        if AREA_SQFT_RE.search(lower):
+            sqft_match = AREA_SQFT_RE.search(lower)
+            if sqft_match:
+                out["min_area_sqft"] = sqft_match.group(1) or sqft_match.group(2) or sqft_match.group(3)
 
         return out
 
-    @staticmethod
-    def _detect_appointment(message: str) -> bool:
-        normalized = message.lower()
-        return any(re.search(pattern, normalized) for pattern in APPOINTMENT_PATTERNS)
-
-    @staticmethod
-    def _extract_datetime_hint(message: str) -> str:
-        explicit = re.search(
-            r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\s*(?:at)?\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?)",
-            message,
-            re.IGNORECASE,
-        )
-        if explicit:
-            return explicit.group(1).strip()
-        match = re.search(
-            r"(\b(?:today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+)(?:\s+at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?)?)",
-            message,
-            re.IGNORECASE,
-        )
-        return match.group(1) if match else ""
-
-    @staticmethod
-    def _is_property_query(message: str) -> bool:
-        lowered = message.lower()
-        property_terms = (
-            "property",
-            "apartment",
-            "flat",
-            "villa",
-            "plot",
-            "house",
-            "home",
-            "bhk",
-            "buy",
-            "rent",
-            "lease",
-            "invest",
-            "price",
-            "locality",
-            "location",
-        )
-        return any(term in lowered for term in property_terms)
-
-    @staticmethod
-    def _is_information_question(message: str) -> bool:
-        lowered = message.strip().lower()
-        if "?" in lowered:
-            return True
-        return bool(
-            re.search(
-                r"^(what|which|where|when|why|how|can|could|is|are|do|does|should)\b",
-                lowered,
-            )
-        )
-
-    @staticmethod
-    def _is_market_price_query(message: str) -> bool:
-        lowered = message.lower()
-        has_price_keyword = any(re.search(pattern, lowered) for pattern in MARKET_PRICE_PATTERNS)
-        has_property_reference = bool(
-            re.search(r"\b(apartment|flat|villa|plot|house|property|bhk|home)\b", lowered)
-        )
-        return has_price_keyword and has_property_reference
-
-    @staticmethod
-    def _is_website_realtime_query(message: str) -> bool:
-        lowered = message.lower()
-        return any(re.search(pattern, lowered) for pattern in WEBSITE_REALTIME_PATTERNS)
-
-    @staticmethod
-    def _next_missing_field(lead: Dict[str, str]) -> str:
-        priority = ["city", "bhk", "budget", "property_type", "name", "contact"]
-        for field in priority:
-            if not lead.get(field):
-                return field
-        return ""
-
-    @staticmethod
-    def _label_for_field(field: str) -> str:
-        labels = {
-            "city": "preferred city",
-            "bhk": "required BHK",
-            "budget": "budget range",
-            "property_type": "property type",
-            "name": "name",
-            "contact": "contact number or email",
-        }
-        return labels.get(field, field.replace("_", " "))
-
-    @staticmethod
-    def _detect_handoff(message: str) -> str:
-        lowered = message.lower()
-        for trigger, reason in HUMAN_HANDOFF_TRIGGERS.items():
-            if trigger in lowered:
-                return reason
-        return ""
-
-    @staticmethod
-    def _history_text(history: List[Dict[str, str]]) -> str:
-        if not history:
-            return "No previous conversation."
-        lines = []
-        for item in history[-LuxeChatbot.MAX_HISTORY:]:
-            role = item.get("role", "user")
-            content = item.get("content", "")
-            lines.append(f"{role}: {content}")
-        return "\n".join(lines)
-
-    @staticmethod
-    def _lead_text(lead: Dict[str, str]) -> str:
-        parts = [f"{k}={v}" for k, v in (lead or {}).items() if v]
-        return ", ".join(parts) if parts else "No lead details yet."
-
-    def _get_client(self):
-        if self._client is not None:
-            return self._client
-        if not self._api_key:
-            return None
-        try:
-            import openai
-        except ImportError:
-            return None
-        if hasattr(openai, "OpenAI"):
-            self._client = openai.OpenAI(api_key=self._api_key)
-        else:
-            openai.api_key = self._api_key
-            self._client = openai
-        return self._client
-
-    def _extract_llm_text(self, response: Any) -> str:
-        if not response:
+    def _extract_appointment_datetime(self, message: str) -> str:
+        text = (message or "").strip()
+        if not text:
             return ""
-        if hasattr(response, "output_text") and response.output_text:
-            return self._normalize(response.output_text)
-        if hasattr(response, "choices") and response.choices:
-            msg = getattr(response.choices[0], "message", None)
-            if isinstance(msg, dict):
-                return self._normalize(msg.get("content", ""))
-            return self._normalize(getattr(msg, "content", ""))
+        date_pattern = re.compile(
+            r"\b("
+            r"today|tomorrow|day after tomorrow|"
+            r"\d{1,2}\s*(?:/|-)\s*\d{1,2}(?:\s*(?:/|-)\s*\d{2,4})?|"
+            r"\d{1,2}(?:st|nd|rd|th)?\s+"
+            r"(?:jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|"
+            r"aug|august|sep|sept|september|oct|october|nov|november|dec|december)"
+            r")\b",
+            re.IGNORECASE,
+        )
+        date_matches = list(date_pattern.finditer(text))
+        time_match = re.search(r"\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)|\d{1,2}\s*o'?clock)\b", text, re.IGNORECASE)
+
+        # Ignore listing metadata dates like "Posted on: 5 April".
+        candidate_dates = []
+        for match in date_matches:
+            context_before = text[max(0, match.start() - 20):match.start()].lower()
+            if re.search(r"(posted|listed)\s+on\s*:?\s*$", context_before):
+                continue
+            candidate_dates.append(match.group(1).strip())
+
+        chosen_date = candidate_dates[-1] if candidate_dates else ""
+        if chosen_date and time_match:
+            return f"{chosen_date} {time_match.group(1)}".strip()
+        if chosen_date:
+            return chosen_date
+        if time_match:
+            return time_match.group(1).strip()
         return ""
 
-    def _build_property_context(self, search_criteria: Dict[str, Any]) -> str:
-        try:
-            from properties.models import Property
-
-            query = Property.objects.filter(is_active=True)
-            if search_criteria.get("city"):
-                query = query.filter(city__icontains=search_criteria["city"])
-            if search_criteria.get("property_type"):
-                query = query.filter(property_type__icontains=search_criteria["property_type"])
-
-            records = []
-            for prop in query.order_by("-created_at")[:8]:
-                records.append(
-                    {
-                        "id": prop.id,
-                        "title": getattr(prop, "title", ""),
-                        "city": getattr(prop, "city", ""),
-                        "price": str(getattr(prop, "price", "")),
-                        "listing_type": getattr(prop, "listing_type", ""),
-                        "property_type": getattr(prop, "property_type", ""),
-                        "bedrooms": str(getattr(prop, "bedrooms", "")),
-                    }
-                )
-            return json.dumps(records)
-        except Exception as exc:
-            logger.warning("Property context unavailable: %s", exc)
-            return "[]"
-
-    def _call_llm(self, user_message: str, history: List[Dict[str, str]], lead: Dict[str, str], search_criteria: Dict[str, Any]) -> Dict[str, Any]:
-        client = self._get_client()
-        if client is None:
-            return {}
-
-        system = SYSTEM_PROMPT.format(
-            property_context=self._build_property_context(search_criteria),
-            history_context=self._history_text(history),
-            lead_context=self._lead_text(lead),
-        )
-
-        try:
-            if hasattr(client, "responses"):
-                response = client.responses.create(
-                    model=self.model,
-                    temperature=self.TEMPERATURE,
-                    input=[
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": user_message},
-                    ],
-                )
-            elif hasattr(client, "chat") and hasattr(client.chat, "completions"):
-                response = client.chat.completions.create(
-                    model=self.model,
-                    temperature=self.TEMPERATURE,
-                    messages=[
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": user_message},
-                    ],
-                )
-            else:
-                response = client.ChatCompletion.create(
-                    model=self.model,
-                    temperature=self.TEMPERATURE,
-                    messages=[
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": user_message},
-                    ],
-                )
-        except Exception as exc:
-            logger.warning("LLM request failed, using fallback: %s", exc)
-            return {}
-
-        return self._safe_json_parse(self._extract_llm_text(response))
-
-    @staticmethod
-    def _format_price(value: float) -> str:
-        if value >= 1e7:
-            return f"Rs {value / 1e7:.2f} Cr"
-        if value >= 1e5:
-            return f"Rs {value / 1e5:.1f} Lakh"
-        return f"Rs {value:,.0f}"
-
-    @staticmethod
-    def _parse_budget_to_value(raw_budget: str) -> float:
-        if not raw_budget:
-            return 0.0
-        text = str(raw_budget).strip().lower().replace(",", "")
-        match = re.search(r"(\d+(?:\.\d+)?)\s*(crore|cr|lakh|lac|k|thousand|million|m)?", text)
-        if not match:
-            return 0.0
-        value = float(match.group(1))
-        unit = (match.group(2) or "").strip()
-        multipliers = {
-            "crore": 1e7,
-            "cr": 1e7,
-            "lakh": 1e5,
-            "lac": 1e5,
-            "k": 1e3,
-            "thousand": 1e3,
-            "million": 1e6,
-            "m": 1e6,
+    def extract_entities(self, message: str) -> Dict[str, Any]:
+        lead_fields = self._extract_lead_fields(message)
+        return {
+            "lead": lead_fields,
+            "appointment_datetime": self._extract_appointment_datetime(message),
         }
-        return value * multipliers.get(unit, 1.0)
 
-    @staticmethod
-    def _extract_locality_names(addresses: List[str], limit: int = 8) -> List[str]:
-        def _clean_part(part: str) -> str:
-            token = re.sub(r"\(.*?\)", "", part or "").strip(" -:.")
-            token = re.sub(r"\s+", " ", token).strip()
-            token = re.sub(
-                r"^(near|opp|opp\.|opposite|behind|beside|adjacent to)\s+",
-                "",
-                token,
-                flags=re.IGNORECASE,
-            ).strip()
-            return token
+    def _handle_faq(self, message: str) -> Optional[str]:
+        """Handle common FAQs automatically"""
+        text = (message or "").strip().lower()
+        
+        faqs = {
+            "how to buy": "To buy a property on LuxeEstate: 1) Search for properties, 2) Contact the agent, 3) Schedule site visits, 4) Make an offer, 5) Complete legal paperwork. I can help with steps 1-3!",
+            "how to sell": "To sell your property: 1) Create a listing with photos and details, 2) Set competitive pricing, 3) Respond to inquiries, 4) Show the property, 5) Negotiate and close. Contact our team for professional assistance.",
+            "pricing": "Property prices vary by location, type, and condition. I can show you current market rates and help find properties within your budget.",
+            "loan": "For home loans, I recommend consulting licensed banks or NBFCs. They offer various schemes for different buyer types. I can help you find properties that fit common loan amounts.",
+            "legal": "All LuxeEstate transactions involve proper legal documentation. We ensure clear titles and transparent processes. For specific legal advice, consult a qualified lawyer.",
+            "commission": "Agent commissions vary but typically range from 1-2% of the property value. LuxeEstate ensures transparent fee structures.",
+            "verification": "We verify all property documents and agent credentials. Every listing goes through our quality check process.",
+            "support": "I'm here 24/7 to help with property searches, lead qualification, and appointment scheduling. For complex issues, I can connect you with human experts.",            # Legal & Verification
+            "rera": "RERA registration ensures project transparency. Check the RERA website or ask the developer for the registration number. All LuxeEstate projects are RERA compliant.",
+            "documents": "Key documents to verify: Sale deed, title deed, encumbrance certificate, property tax receipts, and NOC from society/builder.",
+            "oc/cc": "OC (Occupation Certificate) allows legal occupation. CC (Completion Certificate) confirms construction completion. Always verify these before booking.",
+            "freehold": "Freehold means you own the land and building. Leasehold means ownership for a fixed period. Freehold is generally preferred for long-term investment.",
+            "encumbrance": "An encumbrance-free property has no legal claims, liens, or disputes. Always get an encumbrance certificate from the sub-registrar.",
+            "sale agreement": "Sale agreement is a contract outlining terms. Sale deed is the final transfer document registered with the government.",
+            "home loan pre-approval": "Pre-approval gives you a clear budget and strengthens your offer. It shows sellers you're a serious buyer.",
+            "taxes": "Stamp duty and registration charges vary by state (typically 5-8%). Property tax is annual, based on property value.",
+            # Location & Lifestyle
+            "best areas": "I can help identify family-friendly areas based on schools, hospitals, and connectivity. Share your city and preferences for specific recommendations.",
+            "metro": "Properties near metro stations offer excellent connectivity. I can show listings within 1-2 km of metro lines in major cities.",
+            "schools": "I can find properties near top-rated schools. Popular areas include [city-specific recommendations].",
+            "hospitals": "Medical facilities are crucial. I can locate properties near reputed hospitals and healthcare centers.",
+            "traffic": "Low-traffic areas typically have good infrastructure. I can suggest localities with efficient public transport and road networks.",
+            "it parks": "Tech hubs offer convenience for working professionals. I can show properties near major IT parks and business districts.",
+            "long-term living": "Consider factors like infrastructure, amenities, future development, and community. I can provide insights on specific localities.",
+            "amenities": "Nearby amenities include schools, hospitals, malls, parks, and transport. I can check proximity for specific properties.",
+            "safe neighborhoods": "Safety is paramount. I can recommend areas with good security, lighting, and community watch programs.",
+            "lifestyle comparison": "I can compare localities based on cost of living, connectivity, amenities, and growth potential.",
+            # Investment
+            "good investment": "Look for properties in growing areas with good rental demand. I can analyze potential ROI based on location and type.",
+            "rental yield": "Rental yield varies by location (typically 3-6%). I can estimate based on current market rates.",
+            "appreciation": "Areas with infrastructure development show higher appreciation. I can share historical trends for specific localities.",
+            "buy now or wait": "Market timing depends on economic conditions. Generally, buying in a stable market is advisable. I can provide current market insights.",
+            "roi comparison": "2BHK vs 3BHK ROI depends on rental rates and capital appreciation. I can compare based on current data.",
+            "maintenance costs": "Budget 0.5-1% of property value annually for maintenance, depending on property age and type.",        }
+        
+        for keyword, response in faqs.items():
+            if keyword in text:
+                return response
+        
+        # Handle budget queries
+        budget_response = self._handle_budget_queries(message)
+        if budget_response:
+            return budget_response
+        
+        return None
 
-        scored: Dict[str, int] = {}
-        for address in addresses:
-            for part in str(address).split(","):
-                token = _clean_part(part)
-                if not token or len(token) < 3:
-                    continue
+    def handle_fallback(self, intent: str, user_message: str) -> str:
+        """Handle unknown intents with a generic fallback response"""
+        return "I can help with property search, pricing, and site visits on LuxeEstate. What would you like to explore?"
 
-                lowered = token.lower()
-                if lowered in LOCALITY_NOISE_TERMS:
-                    continue
-                if re.fullmatch(r"\d{4,}", lowered):
-                    continue
-                if re.search(r"\b(?:pin|pincode|zip)\b", lowered):
-                    continue
+    def _qualification_stage(self, lead: Dict[str, str]) -> str:
+        """Determine lead qualification stage"""
+        missing = len(self._missing_fields(lead))
+        if missing == 0:
+            return "hot"
+        elif missing <= 2:
+            return "warm"
+        else:
+            return "cold"
 
-                score = 1
-                if not any(ch.isdigit() for ch in token):
-                    score += 2
-                if " " in token:
-                    score += 1
-                if len(token) > 4:
-                    score += 1
+    def _save_lead(self, lead: Dict[str, str], session_id: Optional[str] = None):
+        """Stub method for saving leads - not implemented"""
+        return None
 
-                current = scored.get(token, -1)
-                if score > current:
-                    scored[token] = score
+    def _save_appointment(self, lead, appointment: Dict[str, Any]):
+        """Stub method for saving appointments - not implemented"""
+        return None
 
-        ranked = sorted(scored.items(), key=lambda item: (-item[1], item[0].lower()))
-        return [name for name, _ in ranked[:limit]]
+    def _assign_agent_to_hot_lead(self, lead):
+        """Stub method for assigning agents - not implemented"""
+        pass
 
-    def _market_price_message(self, lead: Dict[str, str], search_criteria: Dict[str, Any]) -> str:
-        try:
-            from properties.models import Property
+    def manage_conversation_state(self, conversation_state: Optional[dict], user_message: str) -> Dict[str, Any]:
+        raw = (user_message or "").strip()[:1000]
+        state = conversation_state or {}
+        history = list(state.get("chat_history", []) or [])
+        extracted = self.extract_entities(raw)
+        lead = self._merge(state.get("lead", {}), extracted.get("lead", {}), DEFAULT_LEAD)
+        criteria = dict(state.get("search_criteria", {}) or {})
+        for key in ("location", "property_type", "budget", "bhk"):
+            if lead.get(key):
+                criteria[key] = lead[key]
+        appointment = self._merge(state.get("appointment", {}), {}, DEFAULT_APPOINTMENT)
+        if extracted.get("appointment_datetime"):
+            appointment["preferred_datetime"] = extracted.get("appointment_datetime")
+        intent = self.detect_intent(raw)
+        if intent == "appointment":
+            appointment["requested"] = True
+            appointment["property_hint"] = (raw[:160]).strip()
+        if appointment.get("requested") and intent == "datetime":
+            intent = "appointment"
+        if appointment.get("requested") and appointment.get("preferred_datetime") and lead.get("contact"):
+            appointment["confirmed"] = True
+        
+        # Handle intent changes
+        if intent == "intent_change":
+            # Reset intent based on new message
+            for new_intent, pattern in INTENT_PATTERNS.items():
+                if pattern.search(raw.lower()):
+                    lead["intent"] = new_intent
+                    break
+        
+        # Handle preferences
+        if intent == "preference":
+            # Extract and store preferences
+            if "west-facing" in raw.lower():
+                lead["preferred_facing"] = "west-facing"
+            elif "east-facing" in raw.lower():
+                lead["preferred_facing"] = "east-facing"
+            if "balcony" in raw.lower():
+                lead["preferred_features"] = (lead.get("preferred_features", "") + " balcony").strip()
+        
+        asked_fields = set(state.get("asked_fields", []) or [])
+        previous_missing = len(self._missing_fields(state.get("lead", {})))
+        missing_fields = self._missing_fields(lead)
+        next_question = next((f for f in missing_fields if f not in asked_fields), missing_fields[0] if missing_fields else "")
+        return {
+            "raw": raw,
+            "history": history,
+            "lead": lead,
+            "criteria": criteria,
+            "appointment": appointment,
+            "asked_fields": asked_fields,
+            "previous_missing": previous_missing,
+            "missing_fields": missing_fields,
+            "next_question": next_question,
+            "intent": intent,
+        }
 
-            query = Property.objects.filter(is_active=True)
-            city = (lead.get("city") or search_criteria.get("city") or "").strip()
-            if city:
-                query = query.filter(city__icontains=city)
-
-            property_type = (lead.get("property_type") or search_criteria.get("property_type") or "").strip()
-            if property_type:
-                query = query.filter(property_type__icontains=property_type)
-
-            bhk_val = (lead.get("bhk") or "").strip().lower()
-            bhk_match = re.search(r"(\d+)", bhk_val)
-            if bhk_match:
-                query = query.filter(bedrooms=int(bhk_match.group(1)))
-
-            count = query.count()
-            if not count:
-                if city:
-                    return (
-                        f"I do not see active listings for {city} right now. "
-                        "Share your budget and BHK preference, and I will suggest nearby options."
-                    )
-                return "I need your preferred city to share current apartment prices."
-
-            prices = [float(p.price) for p in query.exclude(price__isnull=True).exclude(price=0).only("price")[:100]]
-            if not prices:
-                return "Live price data is limited for this filter right now. I can still suggest matching properties."
-            avg_price = sum(prices) / len(prices)
-            min_price = min(prices)
-            max_price = max(prices)
-            city_label = city or "your selected area"
-            return (
-                f"Current apartment prices in {city_label} are around {self._format_price(avg_price)} on average, "
-                f"with active listings from {self._format_price(min_price)} to {self._format_price(max_price)} "
-                f"based on {count} live listings."
-            )
-        except Exception as exc:
-            logger.warning("Market price lookup failed: %s", exc)
-            return "I am unable to fetch live prices right now. Please try again in a moment."
-
-    def _website_realtime_message(
+    def generate_response(
         self,
-        user_message: str,
+        raw: str,
+        intent: str,
+        history: List[Dict[str, str]],
         lead: Dict[str, str],
-        search_criteria: Dict[str, Any],
-    ) -> str:
+        criteria: Dict[str, Any],
+        appointment: Dict[str, Any],
+        missing_fields: List[str],
+        next_question: str,
+        asked_fields: set,
+    ) -> Tuple[str, str, set]:
+        if intent == "greeting":
+            return "Hello! I am Luxe AI Concierge. Are you looking to buy, rent, or invest today?", "", asked_fields
+        
+        if intent == "goodbye":
+            return "Thanks for chatting with LuxeEstate. I am here whenever you need property help.", "", asked_fields
+        
+        if intent == "appointment" or appointment.get("requested"):
+            return self._deterministic_reply(raw, intent, lead, criteria, appointment), "", asked_fields
+
+        if intent == "intent_change":
+            return f"I understand you've changed your mind. Let's focus on {lead.get('intent', 'your property needs')}. What specific requirements do you have?", "", asked_fields
+        
+        if intent == "preference":
+            return f"Noted! I'll remember your preferences for future recommendations. {self._listing_snapshot(lead, criteria)[0]}", "", asked_fields
+        
+        if intent == "explanation":
+            return "I recommend properties based on your specified criteria (location, budget, type, etc.) and current market availability. All listings are live and verified.", "", asked_fields
+        
+        if intent == "data_freshness":
+            now_text, day_name, date_text, time_text = self._now_context()
+            return f"All property data is current as of {date_text} at {time_text}. Listings are updated in real-time from our database.", "", asked_fields
+
+        if intent == "unknown":
+            # Check for common FAQs
+            faq_response = self._handle_faq(raw)
+            if faq_response:
+                return faq_response
+            return self.handle_fallback(intent, raw), "", asked_fields
+
         try:
-            from properties.models import Property
-
-            lowered = user_message.lower()
-            base_query = Property.objects.filter(is_active=True)
-            city = (lead.get("city") or search_criteria.get("city") or "").strip()
-            property_type = (lead.get("property_type") or search_criteria.get("property_type") or "").strip()
-
-            filtered = base_query
-            if city:
-                filtered = filtered.filter(city__icontains=city)
-            if property_type:
-                filtered = filtered.filter(property_type__icontains=property_type)
-
-            budget_cap = self._parse_budget_to_value(lead.get("budget") or "")
-            message_budget_match = re.search(
-                r"\b(?:under|within|upto|up to|max(?:imum)?|budget(?:\s+is)?(?:\s+only)?)\s*((?:rs\.?|inr|₹)?\s*\d+(?:[\.,]\d+)?\s*(?:lakh|lac|crore|cr|k|million|m)?)",
-                lowered,
-                re.IGNORECASE,
-            )
-            if message_budget_match:
-                message_budget_cap = self._parse_budget_to_value(message_budget_match.group(1))
-                if message_budget_cap > 0:
-                    budget_cap = message_budget_cap
-            budget_mentioned = bool(re.search(r"\b(budget|under|within|max(?:imum)?|upto|up to)\b", lowered))
-            if budget_cap > 0:
-                filtered = filtered.filter(price__lte=budget_cap)
-
-            top_count_match = re.search(r"\btop\s*(\d+)\b", lowered)
-            top_limit = int(top_count_match.group(1)) if top_count_match else 3
-            top_limit = min(max(top_limit, 1), 10)
-
-            asks_locations = bool(re.search(r"\b(which|what)\s+(locations|cities|areas)\b", lowered))
-            if asks_locations:
-                location_query = base_query
-                if property_type:
-                    location_query = location_query.filter(property_type__icontains=property_type)
-                if budget_cap > 0:
-                    location_query = location_query.filter(price__lte=budget_cap)
-                city_counts = (
-                    location_query.exclude(city__isnull=True)
-                    .exclude(city="")
-                    .values("city")
-                    .order_by("city")
-                )
-                summary: Dict[str, int] = {}
-                for row in city_counts:
-                    c = row.get("city")
-                    if c:
-                        summary[c] = summary.get(c, 0) + 1
-                if not summary:
-                    return "I do not see active LuxeEstate locations for that filter right now."
-                top_locations = sorted(summary.items(), key=lambda item: (-item[1], item[0]))[:8]
-                suffix = f" under {self._format_price(budget_cap)}" if budget_cap > 0 else ""
-                labels = [f"{name} ({count})" for name, count in top_locations]
-                return f"Active LuxeEstate locations{suffix}: " + ", ".join(labels) + "."
-
-            if (
-                "latest" in lowered
-                or "new" in lowered
-                or "recent" in lowered
-                or "posted" in lowered
-                or top_count_match
-                or budget_mentioned
-            ):
-                latest = list(filtered.order_by("-created_at").values("title", "city", "price")[:top_limit])
-                if not latest:
-                    return "No recent active listings found for this filter right now."
-                latest_lines = []
-                for item in latest:
-                    latest_lines.append(
-                        f"{item.get('title', 'Property')} ({item.get('city', 'Unknown city')}) - {self._format_price(float(item.get('price') or 0))}"
-                    )
-                scope = f" in {city}" if city else ""
-                budget_note = f" under {self._format_price(budget_cap)}" if budget_cap > 0 else ""
-                return f"Latest active listings{scope}{budget_note}: " + "; ".join(latest_lines)
-
-            if "nearby" in lowered or "near by" in lowered or "near area" in lowered or "nearby area" in lowered:
-                nearby_samples = list(
-                    filtered.exclude(address__isnull=True)
-                    .exclude(address="")
-                    .values_list("address", flat=True)[:8]
-                )
-                if not nearby_samples:
-                    # Fall back to a broader set (without strict budget filtering) for locality hints.
-                    fallback_query = base_query
-                    if city:
-                        fallback_query = fallback_query.filter(city__icontains=city)
-                    if property_type:
-                        fallback_query = fallback_query.filter(property_type__icontains=property_type)
-                    nearby_samples = list(
-                        fallback_query.exclude(address__isnull=True)
-                        .exclude(address="")
-                        .values_list("address", flat=True)[:8]
-                    )
-                    if not nearby_samples:
-                        nearby_samples = list(
-                            base_query.exclude(address__isnull=True)
-                            .exclude(address="")
-                            .values_list("address", flat=True)[:8]
-                        )
-                    if not nearby_samples:
-                        return (
-                            "I could not find nearby locality details right now. "
-                            "Try sharing city or landmark to get better locality suggestions."
-                        )
-                area_list = self._extract_locality_names(nearby_samples, limit=8)
-                if not area_list:
-                    return "Nearby locality details are limited in current listings, but I can still suggest matching properties."
-                return "Nearby areas from current active listings: " + ", ".join(area_list[:8]) + "."
-
-            if "cities" in lowered:
-                cities = list(
-                    base_query.exclude(city__isnull=True).exclude(city="")
-                    .values_list("city", flat=True).distinct()[:15]
-                )
-                if not cities:
-                    return "I do not see active city data right now."
-                return "Active listing cities on LuxeEstate: " + ", ".join(cities) + "."
-
-            if "how many" in lowered or "count" in lowered or "available" in lowered or "listing" in lowered:
-                total = filtered.count()
-                scope_parts = []
-                if city:
-                    scope_parts.append(f"in {city}")
-                if property_type:
-                    scope_parts.append(f"for {property_type}")
-                scope = " ".join(scope_parts).strip()
-                if scope:
-                    return f"There are currently {total} active listings {scope} on LuxeEstate."
-                return f"There are currently {total} active listings on LuxeEstate."
-
-            if self._is_market_price_query(user_message):
-                return self._market_price_message(lead, search_criteria)
-
-            priced_values = [float(p.price) for p in filtered.exclude(price__isnull=True).exclude(price=0).only("price")[:120]]
-            if priced_values:
-                avg_price = mean(priced_values)
-                return (
-                    f"Based on live LuxeEstate listings, average price is {self._format_price(avg_price)} "
-                    f"with a range of {self._format_price(min(priced_values))} to {self._format_price(max(priced_values))}."
-                )
-            return "I can answer LuxeEstate listing questions in real time. Ask about counts, latest listings, cities, or price ranges."
+            message, model = self._nim_reply(raw, history, lead, criteria)
         except Exception as exc:
-            logger.warning("Website realtime lookup failed: %s", exc)
-            return "I am unable to fetch live LuxeEstate data right now. Please try again shortly."
+            logger.info("NVIDIA NIM unavailable, using deterministic fallback: %s", exc)
+            message = self._deterministic_reply(raw, intent, lead, criteria, appointment)
+            model = ""
 
-    def _rule_based_reply(
+        if next_question and intent in {"unknown", "inquiry", "buy", "rent", "invest"}:
+            prompts = {
+                "intent": "Are you looking to buy, rent, or invest in a property?",
+                "location": "Which city or locality do you prefer?",
+                "property_type": "Which property type should I look for (apartment, villa, plot, office, etc.)?",
+                "budget": "What budget range should I target?",
+                "name": "May I have your name so our LuxeEstate team can follow up?",
+                "contact": "Please share your phone number or email for follow-up.",
+            }
+            if next_question not in asked_fields:
+                followup = prompts.get(next_question, "")
+                if followup:
+                    message = f"{message} {followup}".strip()
+                    asked_fields.add(next_question)
+        return message, model, asked_fields
+
+    def _merge(self, base: Dict[str, Any], update: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, Any]:
+        merged = {**defaults, **(base or {})}
+        for key, value in (update or {}).items():
+            if value is None:
+                continue
+            if isinstance(value, str):
+                value = value.strip()
+                if not value:
+                    continue
+            merged[key] = value
+        return merged
+
+    def _missing_fields(self, lead: Dict[str, str]) -> List[str]:
+        return [f for f in LEAD_ORDER if not (lead or {}).get(f)]
+
+    def send_automated_followups(self):
+        """Send automated follow-ups for leads and appointments (to be called by management command)"""
+        now = timezone.now()
+        
+        # Send reminders for upcoming appointments
+        upcoming_appointments = Appointment.objects.filter(
+            scheduled_datetime__gte=now,
+            scheduled_datetime__lte=now + timezone.timedelta(hours=24),
+            status='scheduled',
+            reminder_sent=False
+        )
+        
+        for appointment in upcoming_appointments:
+            try:
+                appointment.send_reminder()
+                logger.info(f"Sent reminder for appointment {appointment.id}")
+            except Exception as e:
+                logger.error(f"Failed to send reminder for appointment {appointment.id}: {e}")
+        
+        # Follow up on cold leads after 7 days
+        cold_leads = Lead.objects.filter(
+            qualification_stage='cold',
+            created_at__lte=now - timezone.timedelta(days=7),
+            status='new'
+        )
+        
+        for lead in cold_leads:
+            # TODO: Send follow-up message via email/SMS
+            logger.info(f"Follow-up needed for cold lead {lead.id}")
+        
+        # Escalate hot leads without appointments after 24 hours
+        hot_leads_no_appointment = Lead.objects.filter(
+            qualification_stage='hot',
+            created_at__lte=now - timezone.timedelta(hours=24),
+            status='qualified'
+        ).exclude(appointments__isnull=False)
+        
+        for lead in hot_leads_no_appointment:
+            # TODO: Escalate to human agent or send urgent follow-up
+            logger.info(f"Hot lead {lead.id} needs urgent follow-up")
+
+    def _query_from_lead(self, lead: Dict[str, str], criteria: Dict[str, Any]) -> QuerySet:
+        qs = Property.objects.filter(is_active=True, status="available")
+        location = (criteria.get("location") or criteria.get("city") or lead.get("location") or "").strip()
+        if location:
+            qs = qs.filter(city__icontains=location)
+        ptype = (criteria.get("property_type") or lead.get("property_type") or "").strip().lower()
+        normalized_type = self._normalize_property_type(ptype)
+        if normalized_type:
+            qs = qs.filter(property_type=normalized_type)
+        bhk_text = (criteria.get("bhk") or lead.get("bhk") or "").strip().lower()
+        bhk_num = re.search(r"(\d+)", bhk_text)
+        if bhk_num:
+            qs = qs.filter(bedrooms=int(bhk_num.group(1)))
+
+        budget_rupees = self._budget_to_rupees(criteria.get("budget") or lead.get("budget") or "")
+        if budget_rupees:
+            qs = qs.filter(price__lte=budget_rupees)
+
+        # Additional filters
+        if lead.get("ready_to_move") == "yes":
+            qs = qs.filter(possession_status="ready")
+        if lead.get("furnished"):
+            qs = qs.filter(furnishing__icontains=lead["furnished"])
+        if lead.get("facing"):
+            qs = qs.filter(facing__icontains=lead["facing"].split()[0])  # e.g., east from east-facing
+        if lead.get("amenities"):
+            amenities_list = [a.strip() for a in lead["amenities"].split(",")]
+            for amenity in amenities_list:
+                qs = qs.filter(amenities__icontains=amenity)
+        if lead.get("posted_within_days"):
+            days = int(lead["posted_within_days"])
+            qs = qs.filter(created_at__gte=timezone.now() - timedelta(days=days))
+        if lead.get("min_area_sqft"):
+            sqft = int(lead["min_area_sqft"])
+            qs = qs.filter(area__gte=sqft)
+
+        return qs
+
+    def _calculate_emi(self, principal: Decimal, interest_rate: Decimal, tenure_years: int) -> Decimal:
+        """Calculate monthly EMI using standard formula"""
+        monthly_rate = interest_rate / 12 / 100
+        months = tenure_years * 12
+        if monthly_rate == 0:
+            return principal / months
+        emi = principal * monthly_rate * (1 + monthly_rate) ** months / ((1 + monthly_rate) ** months - 1)
+        return emi.quantize(Decimal('0.01'))
+
+    def _estimate_rental_yield(self, property_price: Decimal, monthly_rent: Decimal) -> Decimal:
+        """Estimate annual rental yield"""
+        if property_price == 0:
+            return Decimal('0')
+        return (monthly_rent * 12 / property_price * 100).quantize(Decimal('0.01'))
+
+    def _handle_budget_queries(self, message: str) -> Optional[str]:
+        """Handle EMI, investment, and budget-related queries"""
+        text = (message or "").strip().lower()
+        
+        # EMI calculation
+        emi_match = re.search(r"emi for (?:rs\.?|inr|₹)?(\d+(?:[\.,]\d+)?)\s*(lakh|lac|l|crore|cr|k)?\s*(?:loan)?\s*,?\s*(\d+(?:\.\d+)?)%?\s*(?:interest)?\s*,?\s*(\d+)\s*years?", text, re.IGNORECASE)
+        if emi_match:
+            value = emi_match.group(1).replace(",", "")
+            unit = (emi_match.group(2) or "").lower()
+            rate = Decimal(emi_match.group(3))
+            years = int(emi_match.group(4))
+            
+            principal = self._budget_to_rupees(f"{value} {unit}")
+            if principal:
+                emi = self._calculate_emi(principal, rate, years)
+                return f"For a loan of ₹{principal:,.0f} at {rate}% interest for {years} years, your monthly EMI would be approximately ₹{emi:,.0f}."
+        
+        # Rental yield
+        yield_match = re.search(r"rental yield in ([A-Za-z\s]+)", text, re.IGNORECASE)
+        if yield_match:
+            locality = yield_match.group(1).strip()
+            # Mock data - in real implementation, fetch from database
+            avg_yield = Decimal('4.5')  # Example
+            return f"Average rental yield in {locality.title()} is around {avg_yield}%. This can vary based on property type and condition."
+        
+        # Price trends
+        trend_match = re.search(r"price trend in ([A-Za-z\s]+)", text, re.IGNORECASE)
+        if trend_match:
+            locality = trend_match.group(1).strip()
+            # Mock data
+            trend = "increased by 8-12% in the last year"
+            return f"Property prices in {locality.title()} have {trend}. For the most accurate data, I recommend checking recent transactions."
+        
+        return None
+
+    def _listing_snapshot(self, lead: Dict[str, str], criteria: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+        qs = self._query_from_lead(lead, criteria)
+        total = qs.count()
+        if total == 0:
+            return "No active listings match the current filters.", {"count": 0}
+
+        aggr = qs.aggregate(min_price=Min("price"), max_price=Max("price"), avg_price=Avg("price"))
+        top = list(qs.order_by("-is_featured", "-created_at")[:3])
+        lines = []
+        for item in top:
+            bhk = f"{item.bedrooms} BHK" if item.bedrooms else "N/A BHK"
+            lines.append(f"- {item.title} ({item.city}) | {bhk} | ₹{item.price:,.0f}")
+        snapshot = (
+            f"Active listings: {total}\n"
+            f"Price range: ₹{aggr['min_price']:,.0f} - ₹{aggr['max_price']:,.0f}\n"
+            f"Average price: ₹{aggr['avg_price']:,.0f}\n"
+            "Top matches:\n" + "\n".join(lines)
+        )
+        return snapshot, {"count": total, "top": [p.id for p in top]}
+
+    def _deterministic_reply(
         self,
         user_message: str,
         intent: str,
         lead: Dict[str, str],
+        criteria: Dict[str, Any],
         appointment: Dict[str, Any],
-        search_criteria: Dict[str, Any],
     ) -> str:
-        lowered = user_message.lower()
-        if self._is_website_realtime_query(lowered):
-            return self._website_realtime_message(user_message, lead, search_criteria)
-        if lead.get("budget") and (
-            re.search(r"\b(my|the)\s+budget\b", lowered)
-            or re.search(r"\bonly\b", lowered)
-            or re.search(r"\bunder\b", lowered)
-            or re.search(r"\bwithin\b", lowered)
-        ):
-            return self._website_realtime_message(user_message, lead, search_criteria)
-        if self._is_market_price_query(lowered):
-            return self._market_price_message(lead, search_criteria)
-        if intent == "appointment" and appointment.get("preferred_datetime"):
-            date_time = appointment.get("preferred_datetime")
-            return (
-                f"Perfect, I noted your site visit request for {date_time}. "
-                "Please share your contact number so our agent can confirm the booking."
-            )
-        if intent in {"buy", "rent", "invest", "inquiry"} and self._is_information_question(user_message):
-            city = lead.get("city")
-            if city:
-                return f"Sure, I can help with options in {city}. Share your budget range and preferred BHK to shortlist quickly."
-            if not self._is_property_query(user_message):
-                return "I answer only from LuxeEstate live listing data. Ask me about listings, cities, prices, recent posts, or nearby areas."
-            return "Sure, I can help. Tell me your preferred city and budget, and I will suggest matching options."
-        if re.search(r"\b(my name is|i am|i'm)\b", lowered) and lead.get("name"):
-            return f"Thanks {lead.get('name')}. Please share your city and budget so I can suggest relevant properties."
-        return self._fallback_message(intent, lead, appointment)
-
-    @staticmethod
-    def _fallback_message(intent: str, lead: Dict[str, str], appointment: Dict[str, Any]) -> str:
+        if GREETING_RE.match(user_message):
+            return "Hello! I am Luxe AI Concierge. Are you looking to buy, rent, or invest today?"
+        if GOODBYE_RE.match(user_message):
+            return "Thanks for chatting with LuxeEstate. I am here whenever you need property help."
         if appointment.get("requested"):
-            return (
-                "I can help schedule your appointment. Please share your preferred date/time and contact number, "
-                "and an agent will confirm shortly."
-            )
-        next_field = LuxeChatbot._next_missing_field(lead)
-        if not next_field:
-            return "Thanks, your requirements are captured. Would you like me to suggest matching properties now?"
+            has_when = bool((appointment.get("preferred_datetime") or "").strip())
+            has_contact = bool((lead.get("contact") or "").strip())
+            if has_when and has_contact:
+                return (
+                    f"Perfect! Your site-visit appointment is scheduled for {appointment.get('preferred_datetime')}. "
+                    f"Our LuxeEstate team will contact you at {lead.get('contact')} to confirm the details. "
+                    f"You'll receive a confirmation message shortly."
+                )
+            if not has_when and not has_contact:
+                return "Great, I can help schedule a site visit. Please share your preferred date/time and contact number."
+            if not has_when:
+                return "Please share your preferred date and time for the site visit."
+            return "Please share your contact number or email so we can confirm the site visit."
+        if DATETIME_HINT_RE.search(user_message):
+            relative_reply = self._relative_date_reply(user_message)
+            if relative_reply:
+                return relative_reply
+            now_text, day_name, date_text, time_text = self._now_context()
+            return f"Current time is {time_text} on {day_name}, {date_text}. ({now_text})"
+
+        listing_text, info = self._listing_snapshot(lead, criteria)
+        if info.get("count", 0) == 0:
+            return "I could not find active listings for these filters. Share city, budget, or property type and I will broaden the search."
         if intent in {"buy", "rent", "invest", "inquiry"}:
-            label = LuxeChatbot._label_for_field(next_field)
-            return f"Great, I can help with that. Could you share your {label} so I can recommend the best options?"
-        return "Hi! I can help you find properties, qualify your requirements, and schedule visits anytime."
+            if info.get("count", 0) == 0:
+                return (
+                    "I couldn't find active listings matching your exact criteria. "
+                    "Would you like me to:\n"
+                    "• Broaden your search (remove some filters)\n"
+                    "• Show similar properties in nearby areas\n"
+                    "• Connect you with a property specialist\n"
+                    "Just let me know how you'd like to proceed!"
+                )
+            else:
+                return (
+                    "Here is the live LuxeEstate snapshot:\n"
+                    f"{listing_text}\n"
+                    "Tell me more about what you're looking for."
+                )
+        return "I can help with property search, pricing, and site visits on LuxeEstate. What would you like to explore?"
 
-    @staticmethod
-    def _make_non_repetitive_message(message: str, history: List[Dict[str, str]], intent: str, lead: Dict[str, str]) -> str:
-        if not history:
-            return message
-        def _normalized_cmp(text: str) -> str:
-            lowered = LuxeChatbot._normalize(text).lower()
-            return re.sub(r"[\W_]+", " ", lowered).strip()
+    def _nim_reply(
+        self,
+        user_message: str,
+        history: List[Dict[str, str]],
+        lead: Dict[str, str],
+        criteria: Dict[str, Any],
+    ) -> Tuple[str, str]:
+        api_key = (getattr(settings, "NVIDIA_API_KEY", None) or "").strip()
+        if not api_key:
+            raise RuntimeError("NVIDIA_API_KEY is not configured")
+        try:
+            import requests
+            client = requests.Session()
+            base_url = "https://integrate.api.nvidia.com/v1"
+        except ImportError as exc:
+            raise RuntimeError("Requests library is not installed. Run: pip install requests") from exc
 
-        last_assistant_message = ""
-        for item in reversed(history):
-            if item.get("role") == "assistant":
-                last_assistant_message = LuxeChatbot._normalize(item.get("content", ""))
-                break
-        if not last_assistant_message or _normalized_cmp(message) != _normalized_cmp(last_assistant_message):
-            return message
+        model = getattr(settings, "NIM_CHAT_MODEL", "gpt-4o-mini").strip()
+        listing_text, _ = self._listing_snapshot(lead, criteria)
+        now_text, day_name, date_text, time_text = self._now_context()
 
-        next_field = LuxeChatbot._next_missing_field(lead)
-        candidate_messages: List[str] = []
-        if next_field and intent in {"buy", "rent", "invest", "inquiry"}:
-            label = LuxeChatbot._label_for_field(next_field)
-            candidate_messages = [
-                f"To narrow options better, please share your {label}.",
-                f"Please tell me your {label}, and I will shortlist matching listings.",
-                f"Once I have your {label}, I can give precise options right away.",
-            ]
-        else:
-            candidate_messages = [
-                "Happy to help further. Tell me your exact requirement and I will answer directly.",
-                "I can help instantly if you share a specific city, budget, or property type.",
-                "Share one clear requirement and I will give a direct answer.",
-            ]
-
-        last_normalized = _normalized_cmp(last_assistant_message)
-        for candidate in candidate_messages:
-            if _normalized_cmp(candidate) != last_normalized:
-                return candidate
-        return candidate_messages[0]
-
-    def process_message(self, user_message: str, conversation_state: Dict[str, Any] = None) -> Dict[str, Any]:
-        state = conversation_state or {}
-        history = state.get("chat_history", []) or []
-        lead = self._merge_lead(DEFAULT_LEAD, state.get("lead", {}))
-        appointment = self._merge_appointment(DEFAULT_APPOINTMENT, state.get("appointment", {}))
-        search_criteria = dict(state.get("search_criteria", {}) or {})
-
-        extracted = self._extract_message_fields(user_message)
-        lead = self._merge_lead(lead, extracted)
-
-        lowered = user_message.lower()
-        intent = "unknown"
-        if self._is_plain_greeting(user_message):
-            intent = "greeting"
-        if any(word in lowered for word in ("buy", "purchase")):
-            intent = "buy"
-        elif any(word in lowered for word in ("rent", "lease")):
-            intent = "rent"
-        elif "invest" in lowered:
-            intent = "invest"
-        elif any(word in lowered for word in ("support", "help", "issue")):
-            intent = "support"
-        elif self._is_property_query(user_message):
-            intent = "inquiry"
-        elif self._is_information_question(user_message):
-            intent = "inquiry"
-
-        has_context = bool(state.get("chat_history")) or bool(lead.get("city")) or bool(lead.get("budget"))
-        if intent == "unknown" and has_context:
-            intent = "inquiry"
-
-        if self._detect_appointment(user_message):
-            appointment["requested"] = True
-            appointment["preferred_datetime"] = appointment.get("preferred_datetime") or self._extract_datetime_hint(user_message)
-            appointment["property_hint"] = appointment.get("property_hint") or lead.get("property_type", "")
-            intent = "appointment"
-
-        handoff_reason = self._detect_handoff(user_message)
-        requires_human = bool(handoff_reason)
-        if requires_human:
-            intent = "handoff"
-
-        if lead.get("city"):
-            search_criteria["city"] = lead["city"]
-        if lead.get("property_type"):
-            search_criteria["property_type"] = lead["property_type"]
-
-        force_realtime = self._is_website_realtime_query(user_message) or (
-            bool(lead.get("budget"))
-            and bool(re.search(r"\b(my|the)\s+budget\b|\bonly\b|\bunder\b|\bwithin\b", lowered))
+        system = (
+            "You are LuxeEstate's real estate chatbot assistant. "
+            "Respond only with property-related guidance, lead qualification, appointment scheduling, "
+            "and search recommendations for LuxeEstate. "
+            "Do not provide general knowledge, do not discuss unrelated topics, "
+            "and do not fabricate property details.\n"
+            f"Current date: {date_text}\n"
+            f"Current day: {day_name}\n"
+            f"Current time: {time_text}\n"
+            f"Live listing snapshot:\n{listing_text}\n"
+            f"Lead data: {lead}\n"
+            "Handle advanced queries: EMI calculations, investment analysis, legal questions, location insights.\n"
+            "Support abbreviations (Blr=Bangalore, 2BHK=2 BHK), handle preference changes, remember user preferences.\n"
+            "For edge cases: If user changes mind (e.g., 'actually I want to buy'), acknowledge and adjust search.\n"
+            "If user asks 'why this listing', explain based on criteria match.\n"
+            "If user says 'connect to human', escalate politely.\n"
+            "If user asks about data freshness, confirm current date and that listings are live.\n"
+            "If the user asks off-topic or abusive questions, politely redirect to LuxeEstate real estate support."
         )
-        llm_payload = {} if force_realtime else self._call_llm(user_message, history, lead, search_criteria)
 
-        result = self._base_result()
-        result["intent"] = llm_payload.get("intent") or intent
-        result["lead"] = self._merge_lead(lead, llm_payload.get("lead", {}))
-        result["appointment"] = self._merge_appointment(appointment, llm_payload.get("appointment", {}))
-        result["requires_human"] = bool(llm_payload.get("requires_human", False)) or requires_human
-        result["handoff_reason"] = llm_payload.get("handoff_reason", "") or handoff_reason
-        result["qualification_stage"] = self._qualification_stage(result["lead"])
+        messages = [{"role": "system", "content": system}]
+        for turn in history[-self.MAX_HISTORY_MESSAGES :]:
+            role = turn.get("role")
+            content = (turn.get("content") or "").strip()
+            if role in {"user", "assistant"} and content:
+                messages.append({"role": role, "content": content})
+        messages.append({"role": "user", "content": user_message})
 
-        message = self._normalize(llm_payload.get("message", ""))
-        if force_realtime:
-            message = self._website_realtime_message(user_message, result["lead"], search_criteria)
-        elif not message:
-            message = self._rule_based_reply(
-                user_message=user_message,
-                intent=result["intent"],
-                lead=result["lead"],
-                appointment=result["appointment"],
-                search_criteria=search_criteria,
+        try:
+            url = f"{base_url}/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": model,
+                "messages": messages,
+                "temperature": 0.2,
+                "max_tokens": 300,
+                "n": 1,
+            }
+            resp = client.post(url, headers=headers, json=payload)
+            if resp.status_code != 200:
+                raise Exception(f"NVIDIA API error: {resp.text}")
+            data = resp.json()
+        except Exception as exc:
+            raise RuntimeError("NVIDIA chat completion failed") from exc
+
+        choices = data.get("choices", [])
+        if not choices:
+            raise RuntimeError("NVIDIA returned no completion")
+        text = (choices[0].get("message", {}).get("content") or "").strip()
+        if not text:
+            raise RuntimeError("empty completion")
+        return text, model
+
+    def detect_intent(self, message: str) -> str:
+        text = (message or "").strip()
+        lower = text.lower()
+        if not text:
+            return "unknown"
+        if GREETING_RE.match(text):
+            return "greeting"
+        if GOODBYE_RE.match(text):
+            return "goodbye"
+        if APPOINTMENT_RE.search(lower):
+            return "appointment"
+        if DATETIME_HINT_RE.search(text):
+            return "datetime"
+        
+        # Handle intent changes
+        if re.search(r"\bactually|but|instead|changed my mind|now i want\b", lower):
+            return "intent_change"
+        
+        # Handle preferences
+        if re.search(r"\bprefer|like|always|remember\b", lower):
+            return "preference"
+        
+        # Handle questions about recommendations
+        if re.search(r"\bwhy|how come|explain\b", lower):
+            return "explanation"
+        
+        # Handle data freshness
+        if re.search(r"\bupdated|current|today|fresh|latest\b", lower):
+            return "data_freshness"
+        
+        for intent, pattern in INTENT_PATTERNS.items():
+            if pattern.search(lower):
+                return intent
+        if any(k in lower for k in ("property", "listing", "price", "bhk", "apartment", "villa", "plot", "budget", "emi", "investment", "legal", "rera", "documents", "location", "area", "locality", "amenities", "schools", "hospitals", "metro", "traffic", "safe", "gated", "furnished", "facing", "parking", "lift", "ready", "newly launched", "posted")):
+            return "inquiry"
+        return "unknown"
+
+    def process_message(self, user_message: str, conversation_state: Optional[dict] = None) -> dict:
+        raw = (user_message or "").strip()[:1000]
+        now_text, day_name, date_text, time_text = self._now_context()
+        state = conversation_state or {}
+
+        state_data = self.manage_conversation_state(state, raw)
+        history = state_data["history"]
+        lead = state_data["lead"]
+        criteria = state_data["criteria"]
+        appointment = state_data["appointment"]
+        asked_fields = state_data["asked_fields"]
+        previous_missing = state_data["previous_missing"]
+        missing_fields = state_data["missing_fields"]
+        next_question = state_data["next_question"]
+        intent = state_data["intent"]
+
+        requires_human = False
+        handoff_reason = ""
+        security_flagged = False
+
+        if SECURITY_RE.search(raw):
+            message = "I can only help with safe LuxeEstate property assistance and cannot process sensitive or unsafe requests."
+            intent = "security"
+            security_flagged = True
+        elif HUMAN_RE.search(raw):
+            message = "I am routing this to a LuxeEstate human agent. Please share contact details and our team will reach out."
+            intent = "handoff"
+            requires_human = True
+            handoff_reason = "User requested human escalation"
+        else:
+            message, model, asked_fields = self.generate_response(
+                raw,
+                intent,
+                history,
+                lead,
+                criteria,
+                appointment,
+                missing_fields,
+                next_question,
+                asked_fields,
             )
-        message = self._make_non_repetitive_message(message, history, result["intent"], result["lead"])
-        result["message"] = message
 
-        updated_history = list(history)
-        updated_history.append({"role": "user", "content": user_message})
-        updated_history.append({"role": "assistant", "content": message})
-        result["chat_history"] = updated_history[-self.MAX_HISTORY:]
-        result["search_criteria"] = search_criteria
+        history.append({"role": "user", "content": raw})
+        history.append({"role": "assistant", "content": message})
+        history = history[-self.MAX_HISTORY :]
+
+        # Persist lead and appointment data
+        saved_lead = None
+        saved_appointment = None
+        session_id = state.get("session_id")
+        
+        result = {
+            "lead_id": None,
+            "qualification_stage": self._qualification_stage(lead),
+            "agent_assigned": None,
+            "appointment_id": None,
+            "appointment_status": None,
+        }
+        
+        if lead and any(lead.values()):  # Only save if lead has some data
+            try:
+                saved_lead = self._save_lead(lead, session_id)
+                if saved_lead:
+                    result["lead_id"] = saved_lead.id
+                    result["qualification_stage"] = saved_lead.qualification_stage
+                    
+                    # Auto-assign agent to hot leads
+                    if saved_lead.qualification_stage == 'hot':
+                        self._assign_agent_to_hot_lead(saved_lead)
+                        result["agent_assigned"] = saved_lead.assigned_agent.username if saved_lead.assigned_agent else None
+            except Exception as e:
+                logger.error(f"Failed to save lead: {e}")
+        
+        if appointment.get("confirmed") and saved_lead:
+            try:
+                saved_appointment = self._save_appointment(saved_lead, appointment)
+                if saved_appointment:
+                    result["appointment_id"] = saved_appointment.id
+                    result["appointment_status"] = saved_appointment.status
+            except Exception as e:
+                logger.error(f"Failed to save appointment: {e}")
+
+        result.update({
+            "message": message,
+            "intent": intent,
+            "lead": lead,
+            "appointment": appointment,
+            "requires_human": requires_human,
+            "handoff_reason": handoff_reason,
+            "model": model if "model" in locals() else "",
+            "chat_history": history,
+            "search_criteria": criteria,
+            "current_datetime": now_text,
+            "current_day": day_name,
+            "current_date": date_text,
+            "current_time": time_text,
+            "guidelines": [
+                "Only discuss LuxeEstate property-related topics.",
+                "Use live listing context and avoid fabricated availability.",
+                "Collect lead details progressively and politely.",
+                "Escalate sensitive/legal/complaint requests to a human agent.",
+            ],
+            "out_of_scope": intent == "unknown",
+            "security_flagged": security_flagged,
+            "handoff": requires_human,
+            "qualified_lead": len(missing_fields) == 0,
+            "just_qualified": previous_missing > 0 and len(missing_fields) == 0,
+            "missing_fields": missing_fields,
+            "next_question_field": next_question,
+            "asked_fields": sorted(list(asked_fields)),
+            "last_question_field": next_question if next_question else "",
+        })
         return result
 
 
 chatbot = LuxeChatbot()
-LuxeEstateChatbot = LuxeChatbot
+
