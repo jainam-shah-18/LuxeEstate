@@ -1,92 +1,100 @@
 # LuxeEstate
 
-LuxeEstate is a Django-based real estate platform built for property discovery, agent-buyer communication, AI-assisted search, and payment-enabled listing promotion.
+Professional real estate platform built with Django for property discovery, user engagement, AI-assisted search, and payment-enabled listing promotion.
 
-It combines listing management, user authentication, favorites, chat, analytics, and payment workflows in a single project.
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![Django](https://img.shields.io/badge/Django-6.x-092E20?logo=django&logoColor=white)
+![DRF](https://img.shields.io/badge/API-Django_REST_Framework-red)
+![Channels](https://img.shields.io/badge/Realtime-Django_Channels-6f42c1)
+![Razorpay](https://img.shields.io/badge/Payments-Razorpay-0C2451)
+![Status](https://img.shields.io/badge/Status-Active-success)
+
+---
 
 ## Table of Contents
 
-- [Why This Project Exists](#why-this-project-exists)
-- [What Is Implemented](#what-is-implemented)
-- [How the Platform Is Used](#how-the-platform-is-used)
-- [Project Architecture](#project-architecture)
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Business Use Cases](#business-use-cases)
+- [User Flows](#user-flows)
+- [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
-- [Prerequisites](#prerequisites)
-- [Local Setup (Step-by-Step)](#local-setup-step-by-step)
-- [Environment Variables](#environment-variables)
-- [Payments and Webhooks](#payments-and-webhooks)
-- [AI Features](#ai-features)
+- [Getting Started](#getting-started)
+- [Configuration](#configuration)
+- [Payments and Billing](#payments-and-billing)
+- [AI Capabilities](#ai-capabilities)
 - [Management Commands](#management-commands)
-- [Main URL Map](#main-url-map)
+- [Route Map](#route-map)
+- [Testing and Quality](#testing-and-quality)
+- [Deployment Checklist](#deployment-checklist)
 - [Troubleshooting](#troubleshooting)
-- [Production Notes](#production-notes)
-- [Security Notes](#security-notes)
+- [Security Guidelines](#security-guidelines)
 - [License](#license)
 
-## Why This Project Exists
+---
 
-Traditional property platforms often separate discovery, communication, and monetization. LuxeEstate brings these together:
+## Overview
 
-- Buyers can discover and compare properties quickly.
-- Agents can manage listings and engage interested users.
-- Admins can monitor activity, growth, and revenue.
-- Platform owners can monetize promotions/subscriptions through integrated payments.
+LuxeEstate unifies listing management, customer communication, and revenue workflows in one application. The platform is designed for three core groups:
 
-## What Is Implemented
+- **Buyers/Tenants**: discover, compare, save, and inquire about properties.
+- **Agents/Owners**: publish and manage listings, respond to leads, and promote properties.
+- **Administrators**: track platform growth, engagement, and revenue metrics.
 
-### 1) Authentication and User Accounts
+It includes built-in support for authentication, OTP verification, favorites, messaging, payments, AI tooling, and analytics dashboards.
 
-- Email-based registration/login/logout flows
-- OTP verification and OTP resend flow
-- Profile creation and profile edit screens
-- Password change support
-- Google OAuth support via Django Allauth
-- User role handling through profile data
+---
 
-### 2) Property Discovery and Listing Management
+## Key Features
 
-- Home page and paginated property listing pages
-- Search with filtering utilities and search suggestions
-- Property detail pages with media and metadata
-- Add, edit, and delete property flows for owners/agents
-- "My Properties" dashboard for listing owners
-- City APIs, geocode retry helpers, and nearby-place utilities
+### Authentication and Accounts
 
-### 3) AI-Enhanced Property Experience
+- Email/password registration and login
+- OTP verification and resend support
+- Google OAuth sign-in (Allauth provider integration)
+- Profile completion and profile management
+- Password change flow
 
-- AI description generation endpoint for properties
-- AI chatbot endpoint for user Q&A
-- Search-by-image flow with feature extraction
-- Image-based property ranking using visual/amenity signals
-- Chatbot service with configurable guardrails via environment variables
+### Property Management
 
-### 4) Favorites and Comparison
+- Home and listing pages with pagination
+- Rich property detail pages
+- Add, edit, and delete listing workflow
+- My Properties view for owners/agents
+- Geocoding retry support and nearby places integration
 
-- Add/remove/toggle favorites
-- Favorites list view for signed-in users
-- Property comparison add/list/clear features
-- Comparison table and chart-friendly comparison data builders
+### Search and Discovery
 
-### 5) Messaging and Notifications
+- Keyword and filter-based property search
+- AJAX filter and city endpoints
+- Search suggestions endpoint
+- Property comparison add/list/clear workflows
 
-- Conversation list and conversation detail views
-- Contact-agent flow from property context
-- Send message flow tied to properties
-- Notification retrieval and mark-as-read support
-- Legacy compatibility routes preserved for older links
+### Engagement Features
 
-### 6) Payments, Subscriptions, and Invoicing
+- Favorites add/remove/toggle/list
+- Agent contact and lead conversations
+- Messaging inbox with conversation detail
+- Notification retrieval and read acknowledgements
 
-- Pricing pages and package-driven purchase flow
-- Payment creation and verification endpoints
-- Callback-based verification support
-- Success and failure views for payment outcomes
-- Payment history and invoice detail pages
-- Subscription start/detail/cancel flows
-- Razorpay webhook endpoint (plus alias endpoint)
-- Payment audit logging and webhook event persistence models
+### Payments and Monetization
 
-### 7) Admin Dashboard and Analytics
+- Package-based promotion/purchase flow
+- Payment creation and verification
+- Success/failure result pages
+- Subscription detail and cancellation flow
+- Invoice views and payment history
+- Razorpay webhook processing with event persistence
+- Payment audit logs for lifecycle traceability
+
+### AI Features
+
+- AI-assisted property description generation
+- Conversational chatbot endpoint for property support
+- Search-by-image with visual feature extraction and ranking
+- Configurable AI behavior through environment variables
+
+### Admin Analytics
 
 - Central admin dashboard
 - User analytics
@@ -94,70 +102,80 @@ Traditional property platforms often separate discovery, communication, and mone
 - Revenue analytics
 - Engagement analytics
 
-## How the Platform Is Used
+---
 
-### Buyer/User Journey
+## Business Use Cases
 
-1. Register/login (OTP and OAuth available).
-2. Browse listings and use filters/search.
-3. Open details, compare properties, save favorites.
-4. Contact an agent from the listing.
-5. Continue conversation in messaging area.
+- **Brokerage Website**: operate a full listing and inquiry portal.
+- **Agency CRM Layer**: centralize lead conversations and property actions.
+- **Monetized Listing Platform**: sell subscription or promotional plans.
+- **AI-Enhanced Search Portal**: improve discovery with chatbot and image-based matching.
+
+---
+
+## User Flows
+
+### Buyer/Tenant Journey
+
+1. Register/login (email+OTP or Google OAuth).
+2. Search and filter listings.
+3. Open details and compare shortlisted properties.
+4. Save favorites and contact agents.
+5. Continue discussions in messaging conversations.
 
 ### Agent/Owner Journey
 
 1. Login and complete profile.
-2. Add and manage properties.
-3. Receive user inquiries in messaging.
-4. Promote a property via payment packages.
-5. Track payment status/invoices.
+2. Create and manage listings.
+3. Receive and respond to inquiries.
+4. Promote properties using payment packages.
+5. Monitor payment history and invoices.
 
 ### Admin Journey
 
-1. Access admin dashboard.
-2. Monitor users/properties/revenue/engagement.
-3. Review platform trends and activity.
+1. Open admin dashboard.
+2. Review user/property/revenue/engagement insights.
+3. Track platform performance and growth.
 
-## Project Architecture
+---
+
+## Architecture
 
 ```text
 LuxeEstate_updated/
-├── LuxeEstate/          # Project config, URL routing, ASGI/WSGI, settings
-├── accounts/            # Auth, OTP, profile and user-related flows
-├── properties/          # Listings, search, detail, AI/chatbot, comparison
-├── favorites/           # Saved property functionality
-├── messaging/           # Conversations, messages, notifications
-├── payments/            # Packages, checkout, subscriptions, invoices, webhooks
-├── admin_dashboard/     # Dashboard and analytics views
-├── templates/           # HTML templates
-├── static/              # Source static files
-├── media/               # User-uploaded files (runtime)
+├── LuxeEstate/                # Core settings, URL config, ASGI/WSGI
+├── accounts/                  # Authentication, OTP, profile logic
+├── properties/                # Listings, search, comparison, AI features
+├── favorites/                 # Saved properties module
+├── messaging/                 # Conversations, messages, notifications
+├── payments/                  # Packages, checkout, subscriptions, webhooks
+├── admin_dashboard/           # Admin analytics dashboards
+├── templates/                 # Frontend templates
+├── static/                    # Static source assets (CSS/JS/images)
+├── media/                     # User uploads (runtime generated)
 ├── requirements.txt
 └── .env.example
 ```
 
+---
+
 ## Tech Stack
 
-- Python 3.10+
-- Django 6
-- Django REST Framework
-- Django Allauth
-- Django Channels + Daphne
-- Razorpay Python SDK
-- Nvidia NIM API integration
-- Google OAuth + Maps/Places integration
-- WhiteNoise for static assets
-- SQLite default database (configurable via env)
+| Layer | Tools |
+|---|---|
+| Backend | Python, Django |
+| API | Django REST Framework |
+| Auth | Django Allauth, Google OAuth |
+| Realtime | Django Channels, Daphne |
+| Payments | Razorpay SDK + webhook handlers |
+| AI | Nvidia NIM integrations |
+| Frontend | Django Templates, JavaScript, CSS |
+| Data | SQLite (default), configurable DB backend |
+| Static Delivery | WhiteNoise |
 
-## Prerequisites
+---
 
-- Python 3.10 or newer
-- pip
-- Git
-- (Optional for realtime scale) Redis
-- API credentials if using external integrations (Google, Razorpay, Nvidia)
-
-## Local Setup (Step-by-Step)
+## Getting Started
 
 ### 1) Clone repository
 
@@ -166,7 +184,7 @@ git clone https://github.com/jainam-shah-18/LuxeEstate.git
 cd LuxeEstate
 ```
 
-If your folder name is `LuxeEstate_updated`, run commands in that folder.
+If your local project folder is `LuxeEstate_updated`, run commands there.
 
 ### 2) Create virtual environment
 
@@ -174,7 +192,7 @@ If your folder name is `LuxeEstate_updated`, run commands in that folder.
 python -m venv .venv
 ```
 
-### 3) Activate virtual environment
+### 3) Activate environment
 
 Windows PowerShell:
 
@@ -196,7 +214,7 @@ pip install -r requirements.txt
 
 ### 5) Configure environment file
 
-Windows PowerShell:
+Windows:
 
 ```powershell
 Copy-Item .env.example .env
@@ -208,33 +226,35 @@ macOS/Linux:
 cp .env.example .env
 ```
 
-Fill in `.env` values for your setup.
+Update values in `.env` before running the app.
 
-### 6) Apply migrations
+### 6) Run database migrations
 
 ```bash
 python manage.py migrate
 ```
 
-### 7) Create admin user (optional but recommended)
+### 7) Create superuser (recommended)
 
 ```bash
 python manage.py createsuperuser
 ```
 
-### 8) Run server
+### 8) Start development server
 
 ```bash
 python manage.py runserver
 ```
 
-Open `http://127.0.0.1:8000`.
+Open: `http://127.0.0.1:8000`
 
-## Environment Variables
+---
 
-Below are the most important variables (see `.env.example` for full list and defaults):
+## Configuration
 
-### Core Django
+The project uses environment-driven configuration (`.env`). Important variables:
+
+### Core
 
 - `SECRET_KEY`
 - `DEBUG`
@@ -242,7 +262,7 @@ Below are the most important variables (see `.env.example` for full list and def
 - `DB_ENGINE`
 - `DB_NAME`
 
-### Email/OTP
+### Email and OTP
 
 - `EMAIL_BACKEND`
 - `EMAIL_HOST`
@@ -251,159 +271,191 @@ Below are the most important variables (see `.env.example` for full list and def
 - `EMAIL_HOST_USER`
 - `EMAIL_HOST_PASSWORD`
 - `DEFAULT_FROM_EMAIL`
-- `EMAIL_SMTP_INSECURE_SKIP_VERIFY` (local debugging only)
-- `EMAIL_SMTP_CA_BUNDLE` (optional custom CA path)
 
-### Auth and Site
+Optional local debugging controls:
 
-- `SITE_URL`
-- `SITE_NAME`
+- `EMAIL_SMTP_INSECURE_SKIP_VERIFY`
+- `EMAIL_SMTP_CA_BUNDLE`
+
+### Integrations
+
 - `GOOGLE_OAUTH_CLIENT_ID`
 - `GOOGLE_OAUTH_CLIENT_SECRET`
-
-### Maps and Search Enhancements
-
 - `GOOGLE_MAPS_API_KEY`
 - `GOOGLE_PLACES_API_KEY`
-
-### Payments
-
 - `RAZORPAY_KEY_ID`
 - `RAZORPAY_KEY_SECRET`
 - `RAZORPAY_WEBHOOK_SECRET`
 - `PAYMENT_TEST_MODE`
-
-### AI
-
 - `NVIDIA_API_KEY`
 - `NIM_CHAT_MODEL`
 - `NVIDIA_VISION_MODEL`
 - `AI_CHATBOT_GUIDELINES`
 
-### Channels/Realtime
+### Realtime (Channels)
 
 - `CHANNEL_LAYERS_HOST`
 - `CHANNEL_LAYERS_PORT`
 
-## Payments and Webhooks
+Refer to `.env.example` for all defaults and examples.
 
-### Payment Flow
+---
 
-1. User selects a package/property promotion option.
-2. App creates payment request/order.
-3. Payment is verified through callback/API verification.
-4. Status updates are reflected in payment history/invoice screens.
-5. Audit entries are recorded for critical payment events.
+## Payments and Billing
+
+### Implemented Payment Features
+
+- Package pricing and purchase initiation
+- Payment verify endpoint and callback verification
+- Payment success/failure flows
+- Subscription detail and cancellation
+- Invoice detail and payment history
+- Webhook ingestion and processing
+- Payment event auditing and webhook event storage
 
 ### Razorpay Webhook Setup
 
-Configure your Razorpay dashboard to send events to:
+Configure one of these endpoints in Razorpay dashboard:
 
 - `/payments/webhook/razorpay/`
+- `/payments/webhook/payment-gateway/` (alias)
 
-Alias endpoint also exists:
+Ensure `RAZORPAY_WEBHOOK_SECRET` in `.env` exactly matches dashboard configuration.
 
-- `/payments/webhook/payment-gateway/`
+---
 
-Use the same secret value in dashboard and `.env` for `RAZORPAY_WEBHOOK_SECRET`.
+## AI Capabilities
 
-## AI Features
+### 1) AI Description Generation
 
-### Chatbot
+Generates listing descriptions from available property metadata.
 
-- Endpoint: property chatbot API
-- Uses configured Nvidia model and safety guidelines
-- Designed for property-context assistance
+### 2) AI Chatbot
 
-### AI Description Generation
+Handles property-related guidance with configurable model and policy guardrails.
 
-- Endpoint to generate property descriptions
-- Uses listing metadata as context
+### 3) Search by Image
 
-### Search by Image
+Uploads property images, extracts visual features, and ranks listings by similarity.
 
-- Upload an image
-- Extract visual/property features
-- Rank properties by visual and amenity similarity
+For setup and troubleshooting specifics, see `IMAGE_SEARCH_SETUP.md`.
 
-If image search is not working, verify `NVIDIA_API_KEY` and restart the server.
+---
 
 ## Management Commands
 
-### Send Follow-up Messages
+### Send follow-up actions
 
 ```bash
 python manage.py send_followups
 ```
 
-Runs automated follow-up actions via chatbot service for leads/appointments.
+Triggers chatbot-driven automated follow-up handling for leads and appointments.
 
-### Payment Package Setup Utility
+### Setup payment packages helper
 
 ```bash
 python manage.py setup_payment_packages
 ```
 
-Current command implementation deactivates active promotion packages.
+Current implementation deactivates active payment packages globally.
 
-## Main URL Map
+---
 
-Top-level routes:
+## Route Map
 
-- `/` -> properties module (home/search/listing/details)
-- `/auth/` -> accounts module
-- `/accounts/` -> allauth routes
-- `/favorites/` -> favorites module
-- `/messaging/` -> messaging module
-- `/payments/` -> payment/subscription/webhook module
-- `/dashboard/` -> admin analytics module
-- `/admin/` -> Django admin
+| Route Prefix | Module |
+|---|---|
+| `/` | Properties (home, list, detail, search, compare) |
+| `/auth/` | Accounts (register/login/profile/OTP) |
+| `/accounts/` | Django Allauth |
+| `/favorites/` | Favorite actions and list |
+| `/messaging/` | Conversations and notifications |
+| `/payments/` | Pricing, payment flow, subscriptions, webhooks |
+| `/dashboard/` | Admin analytics |
+| `/admin/` | Django admin |
 
-Static informational pages:
+Static info pages:
 
-- `/about/`, `/terms/`, `/privacy/`, `/cookies/`, `/sitemap/`
+- `/about/`
+- `/terms/`
+- `/privacy/`
+- `/cookies/`
+- `/sitemap/`
+
+---
+
+## Testing and Quality
+
+Recommended pre-release checks:
+
+```bash
+python manage.py check
+python manage.py test
+```
+
+Also validate manually:
+
+- Auth and OTP flows
+- Property create/edit/delete
+- Search and comparison behavior
+- Messaging and notifications
+- Payment success/failure and webhook processing
+- AI chatbot and image search availability
+
+---
+
+## Deployment Checklist
+
+- Set `DEBUG=False`
+- Configure production `ALLOWED_HOSTS`
+- Use secure production `SECRET_KEY`
+- Enable HTTPS and secure cookie settings
+- Use production database (PostgreSQL recommended)
+- Configure persistent media/static strategy
+- Run `python manage.py collectstatic`
+- Configure background job strategy for periodic commands
+- Add monitoring, alerting, and backup policies
+
+---
 
 ## Troubleshooting
 
-### OTP email not arriving
+### OTP/Email issues
 
-- Check email settings in `.env`.
-- In debug mode, OTP may print to console when SMTP is not configured.
+- Verify SMTP credentials in `.env`
+- Check fallback email backend behavior in debug mode
+- Review app logs for TLS/certificate-related messages
 
-### Payment verification issues
+### Payment issues
 
-- Verify Razorpay keys and webhook secret.
-- Confirm webhook target URL is public/reachable.
-- Check payment and webhook logs in admin/database.
+- Re-check Razorpay keys and webhook secret
+- Confirm webhook URL is reachable from internet
+- Review payment/invoice/audit/webhook records in database
 
-### AI features unavailable
+### AI feature issues
 
-- Ensure `NVIDIA_API_KEY` is valid.
-- Verify model env vars are set correctly.
-- Restart server after env changes.
+- Verify `NVIDIA_API_KEY` and model variables
+- Restart server after changing `.env`
+- Use clear, high-quality images for image-based search
 
-### Static files missing in production
+### Static/media issues in production
 
-- Run `python manage.py collectstatic`.
-- Ensure static serving is configured properly.
+- Re-run `collectstatic`
+- Confirm WhiteNoise/static serving config
+- Verify media storage permissions and paths
 
-## Production Notes
+---
 
-- Set `DEBUG=False`.
-- Use strong `SECRET_KEY`.
-- Configure `ALLOWED_HOSTS`.
-- Enable HTTPS and secure cookie settings.
-- Use production DB (PostgreSQL recommended) instead of SQLite.
-- Use Redis-backed channel layer for scaled realtime workloads.
-- Configure logging/monitoring and periodic backups.
+## Security Guidelines
 
-## Security Notes
+- Never commit `.env`, secrets, or private credentials
+- Keep dependencies patched and updated
+- Protect webhook secrets and API keys from frontend exposure
+- Validate uploads and enforce reasonable file limits
+- Review generated AI output before business-critical usage
 
-- Never commit `.env` or secrets.
-- Do not expose webhook secrets or API keys in frontend code.
-- Keep dependencies updated.
-- Validate uploads and enforce size/type limits.
-- Review AI outputs before using them in sensitive decisions.
+---
 
 ## License
 
