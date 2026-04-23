@@ -831,6 +831,8 @@ MIT License — see [LICENSE](LICENSE) for full terms.
 **Built from Ahmedabad, India 🇮🇳**
 
 [![GitHub](https://img.shields.io/badge/GitHub-Connect-181717?style=for-the-badge&logo=github)](https://github.com/jainam-shah-18)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/jainamshah41)
+
 
 </div>
 
