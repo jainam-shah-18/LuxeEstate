@@ -588,6 +588,7 @@ PROPERTY DETAIL PAGE
 ---
 <img width="1920" height="1080" alt="Screenshot (297)" src="https://github.com/user-attachments/assets/45967df2-77ce-4f4c-a911-ee94f0e44fbc" />
 
+'''
 
 ```
 ## 🗺️ Roadmap
