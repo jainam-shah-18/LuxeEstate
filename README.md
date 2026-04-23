@@ -73,10 +73,10 @@
 
 ## 🌊 System Architecture
 
-```
+
 ![Uploading image.png…]()
 
----
+
 
 ## ✨ Key Features
 
