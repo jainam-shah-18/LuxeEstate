@@ -74,7 +74,35 @@
 ## 🌊 System Architecture
 
 
-![Uploading image.png…]()
+<div align="center">
+  <h1>🏰 LuxeEstate Platform Architecture</h1>
+  <p><i>A high-end, AI-powered real estate solution built with Django, NVIDIA NIM, and Google APIs.</i></p>
+
+  <!-- Replace 'YOUR_IMAGE_URL' with the link to the final image I generated for you -->
+  <img src="YOUR_IMAGE_URL" alt="LuxeEstate Architecture Diagram" width="900px">
+</div>
+
+---
+
+## 🛠️ Technical Architecture
+
+LuxeEstate is built on a modern, asynchronous architecture designed for real-time engagement and high-performance AI processing.
+
+### **Frontend & Client**
+- **Framework:** Responsive UI built with [Bootstrap 5](https://getbootstrap.com).
+- **Dynamic Inputs:** Styled with [Django Crispy Forms](https://readthedocs.io).
+- **Maps Integration:** [Google Maps JS SDK](https://google.com) & [Places API](https://google.com) for 18-category POI discovery.
+
+### **Backend Core**
+- **Server:** [Daphne ASGI](https://github.com) for production-grade HTTP and WebSocket handling.
+- **Framework:** [Django](https://djangoproject.com) with 6 dedicated app namespaces (Accounts, Properties, Messaging, etc.).
+- **Real-time:** [Django Channels](https://readthedocs.io) with a Redis channel layer for instant messaging.
+
+### **Data & Intelligence**
+- **Persistence:** [PostgreSQL](https://postgresql.org) (Production) and SQLite (Development).
+- **AI Stack:** Integration with [NVIDIA NIM](https://nvidia.com) for Llama 3.1 LLM and NeVA-22B visual matching.
+- **Payments:** Secure transaction processing via [Razorpay SDK](https://razorpay.com) with webhook validation.
+
 
 
 
