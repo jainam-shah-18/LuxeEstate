@@ -572,12 +572,13 @@ payments_payment
 
 ## 📱 Interface Walkthrough
 
+
 <img width="1600" height="900" alt="image" src="https://github.com/user-attachments/assets/3ceb1bde-94da-42ff-bf22-3d8692f883b9" />
 
 ---
 
 
----
+
 PROPERTY DETAIL PAGE
 ---
 
@@ -589,7 +590,7 @@ PROPERTY DETAIL PAGE
 
 
 ```
-
+---
 ## 🗺️ Roadmap
 
 | Feature | Status |
