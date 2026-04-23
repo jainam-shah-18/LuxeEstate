@@ -574,29 +574,14 @@ payments_payment
 
 <img width="1600" height="900" alt="image" src="https://github.com/user-attachments/assets/3ceb1bde-94da-42ff-bf22-3d8692f883b9" />
 
-PROPERTY DETAIL PAGE
-┌────────────────────────────────────────────────────────────────┐
-│  [← Back]  3BHK Villa · Bopal, Ahmedabad    [❤ Save][Compare] │
-├────────────────────────────────────────────────────────────────┤
-│  ┌─────────────────────────┐  ┌──────────────────────────────┐ │
-│  │   IMAGE GALLERY         │  │  ₹1,20,00,000                │ │
-│  │   [◀ ▶  1 / 8 photos ] │  │  4 BHK · 3 Bath · 2,400 sqft │ │
-│  └─────────────────────────┘  │  Furnished · Available       │ │
-│                               │                              │ │
-│  📊 MARKET INTELLIGENCE       │  [📩 Send Message]          │ │
-│  ┌─────────────────────────┐  │  [💳 Promote Listing]        | │
-│  │ Avg comparable: ₹98 L   │  └──────────────────────────────┘ │
-│  │ ↑ Priced 22% above avg  │                                   │
-│  └─────────────────────────┘                                   │
-│                                                                │
-│  📍 NEARBY (18 categories)                                     │
-│  🏥 City Hospital — 1.2 km   🏫 DPS School — 0.8 km           │
-│  🚇 Bopal Metro   — 0.5 km   🏦 HDFC Bank   — 0.3 km          │
-│  🛒 D-Mart        — 0.7 km   🌳 Riverfront  — 2.1 km          │
-└────────────────────────────────────────────────────────────────┘
-```
 
----
+PROPERTY DETAIL PAGE
+
+<img width="1920" height="1080" alt="Screenshot (296)" src="https://github.com/user-attachments/assets/7453c7b9-0503-4a5f-91f8-bc8ff2405e70" />
+<img width="1920" height="1080" alt="Screenshot (297)" src="https://github.com/user-attachments/assets/45967df2-77ce-4f4c-a911-ee94f0e44fbc" />
+
+
+```
 
 ## 🗺️ Roadmap
 
