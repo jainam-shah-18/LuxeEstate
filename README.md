@@ -32,7 +32,7 @@
 <br/>
 
 > *"Real estate is the best investment in the world because it is the only thing they're not making anymore."*
-> — Will Rogers
+> — Jainam Shah
 >
 > **LuxeEstate** doesn't just list properties — it understands them. Upload a photo, describe your dream home in plain English, or let our AI read your browsing history to surface exactly what you need next.
 
@@ -86,26 +86,26 @@
 │  │  Django HTTP Router          │   │  Django Channels WebSocket       │ │
 │  │  (6 app namespaces)          │   │  InMemory (dev) / Redis (prod)   │ │
 │  └──────────────┬───────────────┘   └─────────────────┬────────────────┘ │
-│                 │                                      │                  │
+│                 │                                      │                 │
 │  ┌──────────────▼──────────────────────────────────────▼───────────────┐ │
 │  │                    Django Application Core                          │ │
 │  │                                                                     │ │
-│  │  accounts        → Auth · OTP · roles · profiles · saved searches  │ │
-│  │  properties      → CRUD · AI search · visual match · compare       │ │
-│  │  favorites       → Save / unsave per user                          │ │
-│  │  messaging       → WebSocket conversations + message history       │ │
-│  │  payments        → Razorpay orders · webhooks · invoices · audit   │ │
-│  │  admin_dashboard → Analytics: users · listings · revenue           │ │
-│  └──────┬──────────────────────────┬────────────────────┬─────────────┘ │
-│         │                          │                    │               │
-│  ┌──────▼──────────┐  ┌────────────▼─────────────┐  ┌──▼────────────┐  │
-│  │  SQLite (dev)   │  │   NVIDIA NIM REST API     │  │  Razorpay SDK │  │
-│  │  PostgreSQL     │  │  Llama 3.1 · NeVA-22B     │  │  + Webhooks   │  │
-│  │  (production)   │  └──────────────────────────┘  └───────────────┘  │
-│  └─────────────────┘                                                    │
+│  │  accounts        → Auth · OTP · roles · profiles · saved searches  │  │
+│  │  properties      → CRUD · AI search · visual match · compare       │  │
+│  │  favorites       → Save / unsave per user                          │  │
+│  │  messaging       → WebSocket conversations + message history       │  │
+│  │  payments        → Razorpay orders · webhooks · invoices · audit   │  │
+│  │  admin_dashboard → Analytics: users · listings · revenue           │  │
+│  └──────┬──────────────────────────┬────────────────────┬─────────────┘  │
+│         │                          │                    │                │
+│  ┌──────▼──────────┐  ┌────────────▼─────────────┐  ┌──▼────────────┐    │
+│  │  SQLite (dev)   │  │   NVIDIA NIM REST API     │  │  Razorpay SDK │   │
+│  │  PostgreSQL     │  │  Llama 3.1 · NeVA-22B     │  │  + Webhooks   │   │
+│  │  (production)   │  └──────────────────────────┘  └───────────────┘    │
+│  └─────────────────┘                                                     │
 │                                                                          │
 │  ┌────────────────────────────────────────────────────────────────────┐  │
-│  │  Google APIs: OAuth 2.0 · Maps JS · Places (18-category POI)      │  │
+│  │  Google APIs: OAuth 2.0 · Maps JS · Places (18-category POI)      │   │
 │  └────────────────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
@@ -586,21 +586,21 @@ payments_payment
 │   HERO SECTION                                                 │
 │   ┌────────────────────────────────────────────────────────┐   │
 │   │  "Find your perfect home"                              │   │
-│   │  [ City / Location ▾ ] [ Type ▾ ] [ Budget ▾ ] [🔍]  │   │
+│   │  [ City / Location ▾ ] [ Type ▾ ] [ Budget ▾ ] [🔍]   │    │
 │   │  [ 📷 Search by photo ]   [ 💬 Ask AI ]               │   │
 │   └────────────────────────────────────────────────────────┘   │
 │                                                                │
 │   FEATURED LISTINGS                                            │
-│   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐        │
-│   │ 🏆 FEAT  │ │          │ │          │ │ 🏆 FEAT  │        │
-│   │  Villa   │ │ Apartment│ │  House   │ │  Office  │        │
-│   │ ₹1.2 Cr  │ │ ₹45 L    │ │ ₹78 L    │ │ ₹2.1 Cr  │        │
-│   │ 4BHK·Goa │ │ 2BHK·Ahm │ │ 3BHK·Mum │ │ Comm·Blr │        │
-│   └──────────┘ └──────────┘ └──────────┘ └──────────┘        │
+│   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐          │
+│   │ 🏆 FEAT  │ │          │ │          │ │ 🏆 FEAT  │         │
+│   │  Villa   │ │ Apartment│ │  House   │ │  Office  │          │
+│   │ ₹1.2 Cr  │ │ ₹45 L    │ │ ₹78 L    │ │ ₹2.1 Cr  │          │
+│   │ 4BHK·Goa │ │ 2BHK·Ahm │ │ 3BHK·Mum │ │ Comm·Blr │          │
+│   └──────────┘ └──────────┘ └──────────┘ └──────────┘          │
 │                                                                │
 │   ┌──────── AI CHATBOT ────────────────────────────────────┐   │
-│   │ 🤖 Hi! Looking for a 2BHK under ₹50L in Ahmedabad?    │   │
-│   │    I found 14 matching properties. Here are the top 3. │  │
+│   │ 🤖 Hi! Looking for a 2BHK under ₹50L in Ahmedabad?    │    |
+│   │    I found 14 matching properties. Here are the top 3. │   │
 │   │    [View All Matches]                                  │   │
 │   └────────────────────────────────────────────────────────┘   │
 └────────────────────────────────────────────────────────────────┘
@@ -611,11 +611,11 @@ PROPERTY DETAIL PAGE
 ├────────────────────────────────────────────────────────────────┤
 │  ┌─────────────────────────┐  ┌──────────────────────────────┐ │
 │  │   IMAGE GALLERY         │  │  ₹1,20,00,000                │ │
-│  │   [◀ ▶  1 / 8 photos ] │  │  4 BHK · 3 Bath · 2,400 sqft│ │
+│  │   [◀ ▶  1 / 8 photos ] │  │  4 BHK · 3 Bath · 2,400 sqft │ │
 │  └─────────────────────────┘  │  Furnished · Available       │ │
 │                               │                              │ │
-│  📊 MARKET INTELLIGENCE       │  [📩 Send Message]           │ │
-│  ┌─────────────────────────┐  │  [💳 Promote Listing]        │ │
+│  📊 MARKET INTELLIGENCE       │  [📩 Send Message]          │ │
+│  ┌─────────────────────────┐  │  [💳 Promote Listing]        | │
 │  │ Avg comparable: ₹98 L   │  └──────────────────────────────┘ │
 │  │ ↑ Priced 22% above avg  │                                   │
 │  └─────────────────────────┘                                   │
