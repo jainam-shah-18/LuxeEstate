@@ -74,41 +74,7 @@
 ## 🌊 System Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                            BROWSER / CLIENT                              │
-│              Bootstrap 5 · Crispy Forms · Google Maps JS SDK             │
-└───────────────────────────────┬──────────────────────────────────────────┘
-                                │  HTTP  +  WebSocket (ws://)
-┌───────────────────────────────▼──────────────────────────────────────────┐
-│                       ASGI SERVER — Daphne                               │
-│                                                                          │
-│  ┌──────────────────────────────┐   ┌──────────────────────────────────┐ │
-│  │  Django HTTP Router          │   │  Django Channels WebSocket       │ │
-│  │  (6 app namespaces)          │   │  InMemory (dev) / Redis (prod)   │ │
-│  └──────────────┬───────────────┘   └─────────────────┬────────────────┘ │
-│                 │                                      │                 │
-│  ┌──────────────▼──────────────────────────────────────▼───────────────┐ │
-│  │                    Django Application Core                          │ │
-│  │                                                                     │ │
-│  │  accounts        → Auth · OTP · roles · profiles · saved searches  │  │
-│  │  properties      → CRUD · AI search · visual match · compare       │  │
-│  │  favorites       → Save / unsave per user                          │  │
-│  │  messaging       → WebSocket conversations + message history       │  │
-│  │  payments        → Razorpay orders · webhooks · invoices · audit   │  │
-│  │  admin_dashboard → Analytics: users · listings · revenue           │  │
-│  └──────┬──────────────────────────┬────────────────────┬─────────────┘  │
-│         │                          │                    │                │
-│  ┌──────▼──────────┐  ┌────────────▼─────────────┐  ┌──▼────────────┐    │
-│  │  SQLite (dev)   │  │   NVIDIA NIM REST API     │  │  Razorpay SDK │   │
-│  │  PostgreSQL     │  │  Llama 3.1 · NeVA-22B     │  │  + Webhooks   │   │
-│  │  (production)   │  └──────────────────────────┘  └───────────────┘    │
-│  └─────────────────┘                                                     │
-│                                                                          │
-│  ┌────────────────────────────────────────────────────────────────────┐  │
-│  │  Google APIs: OAuth 2.0 · Maps JS · Places (18-category POI)      │   │
-│  └────────────────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────────────────┘
-```
+![Uploading image.png…]()
 
 ---
 
