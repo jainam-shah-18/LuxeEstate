@@ -11,480 +11,728 @@
 ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝    ╚══════╝╚══════╝   ╚═╝   ╚═╝  ╚═╝   ╚═╝   ╚══════╝
 ```
 
-### *Redefining Real Estate Discovery — Intelligent. Immersive. Indispensable.*
+### 🏡 *Discover. Compare. Own. Powered by AI.*
+
+<p>
+  <img src="https://img.shields.io/badge/Python-3.14-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/Django-6.0.3-092E20?style=for-the-badge&logo=django&logoColor=white" />
+  <img src="https://img.shields.io/badge/Django_Channels-ASGI_WebSocket-E95420?style=for-the-badge&logo=django&logoColor=white" />
+  <img src="https://img.shields.io/badge/NVIDIA_NIM-Llama_3.1_+_NeVA-76B900?style=for-the-badge&logo=nvidia&logoColor=white" />
+  <img src="https://img.shields.io/badge/Razorpay-Payments-02042B?style=for-the-badge&logo=razorpay&logoColor=white" />
+  <img src="https://img.shields.io/badge/Google_OAuth-2.0-4285F4?style=for-the-badge&logo=google&logoColor=white" />
+</p>
+
+<p>
+  <img src="https://img.shields.io/badge/License-MIT-gold?style=flat-square" />
+  <img src="https://img.shields.io/badge/Made%20with-❤️-red?style=flat-square" />
+  <img src="https://img.shields.io/badge/Ahmedabad-🇮🇳-orange?style=flat-square" />
+  <img src="https://img.shields.io/badge/Status-Production_Ready-brightgreen?style=flat-square" />
+</p>
 
 <br/>
 
-[![Python](https://img.shields.io/badge/Python-3.14-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Django](https://img.shields.io/badge/Django-6.0.3-092E20?style=for-the-badge&logo=django&logoColor=white)](https://djangoproject.com)
-[![Django Channels](https://img.shields.io/badge/Channels-WebSocket-E95420?style=for-the-badge&logo=django&logoColor=white)](https://channels.readthedocs.io)
-[![Redis](https://img.shields.io/badge/Redis-Channel_Layer-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io)
-[![Razorpay](https://img.shields.io/badge/Razorpay-Payments-02042B?style=for-the-badge&logo=razorpay&logoColor=white)](https://razorpay.com)
-[![NVIDIA NIM](https://img.shields.io/badge/NVIDIA_NIM-AI_Engine-76B900?style=for-the-badge&logo=nvidia&logoColor=white)](https://build.nvidia.com)
-[![License](https://img.shields.io/badge/License-MIT-gold?style=for-the-badge)](LICENSE)
+> *"Real estate is the best investment in the world because it is the only thing they're not making anymore."*
+> — Will Rogers
+>
+> **LuxeEstate** doesn't just list properties — it understands them. Upload a photo, describe your dream home in plain English, or let our AI read your browsing history to surface exactly what you need next.
+
+<br/>
+
+---
+
+</div>
+
+## 🧠 What is LuxeEstate?
+
+**LuxeEstate** is a full-stack, AI-augmented real estate platform that combines the engineering rigor of a Django 6 monolith with the intelligence of NVIDIA NIM (Llama 3.1 + NeVA-22B vision). It is far more than a property directory:
+
+- 🔍 **Find homes by photo** — upload an image, extract visual features, match against every listing in the database with a weighted scoring algorithm
+- 💬 **Ask in plain English** — our Llama-powered chatbot converts natural-language queries into structured filters and surfaces matching properties
+- 📊 **Understand the market** — auto-generated comparable pricing and trend summaries per city and property type
+- 🏆 **Promote listings** — Razorpay-backed premium packages push listings to featured slots for 7 to 90 days, with atomic transactions and auto-generated invoices
+- 📡 **Chat in real time** — Django Channels WebSocket keeps buyers and agents connected without page refreshes
+- 🔐 **Stay secure** — Google OAuth 2.0, OTP email verification, role-based access, and `select_for_update()` payment guards
+
+---
+
+## 🎬 Feature Gallery
+
+<div align="center">
+
+| 🖼️ Visual Image Search | 🤖 AI Chatbot | 📊 Market Intelligence | ⚖️ Property Comparison |
+|:---:|:---:|:---:|:---:|
+| Upload photo → weighted feature match | Llama 3.1 with guardrails + lead capture | Comparable pricing + trend signal | Side-by-side amenity + POI diff |
+
+| 💬 Real-Time Chat | 💳 Premium Packages | 🗺️ Maps + 18 POI Types | 👤 Role System |
+|:---:|:---:|:---:|:---:|
+| WebSocket · Channels · Redis | Razorpay · 7/14/30/90 days | Google Maps + OpenStreetMap | buyer · owner · agent · admin |
 
 </div>
 
 ---
 
-## What is LuxeEstate?
-
-LuxeEstate is a **full-stack, AI-augmented real estate platform** built on Django 6 and served over ASGI with Django Channels. It goes far beyond a property listing board: buyers find homes through natural-language AI search, visual image matching, and a Llama-powered chatbot; sellers and agents promote listings via Razorpay-backed premium packages; and administrators govern the ecosystem through a purpose-built analytics dashboard. Every feature — from OTP-gated email verification to real-time WebSocket messaging — is wired together in a single, cohesive monolith with clean app separation.
-
----
-
-## Table of Contents
-
-- [Architecture Overview](#architecture-overview)
-- [Feature Matrix](#feature-matrix)
-- [Tech Stack](#tech-stack)
-- [Data Models](#data-models)
-- [AI & Intelligence Layer](#ai--intelligence-layer)
-- [Authentication & Security](#authentication--security)
-- [Payments](#payments)
-- [Real-Time Messaging](#real-time-messaging)
-- [Getting Started](#getting-started)
-- [Environment Reference](#environment-reference)
-- [Project Structure](#project-structure)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
-
----
-
-## Architecture Overview
+## 🌊 System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        CLIENT (Browser)                             │
-│          Bootstrap 5 · Crispy Forms · Google Maps JS SDK            │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │  HTTP / WebSocket
-┌───────────────────────────────▼─────────────────────────────────────┐
-│                     ASGI SERVER  (Daphne)                           │
-│                                                                     │
-│  ┌──────────────────────┐     ┌─────────────────────────────────┐  │
-│  │  Django HTTP Router  │     │  Django Channels WebSocket      │  │
-│  │  (6 apps + allauth)  │     │  (InMemory / Redis layer)       │  │
-│  └──────────┬───────────┘     └────────────────┬────────────────┘  │
-│             │                                  │                   │
-│  ┌──────────▼───────────────────────────────────▼────────────────┐ │
-│  │                    Django Application Core                    │ │
-│  │  accounts · properties · favorites · messaging · payments     │ │
-│  │  admin_dashboard                                              │ │
-│  └──────────┬───────────────────────────────────────────────────┘ │
-│             │                                                      │
-│  ┌──────────▼──────────┐  ┌──────────────────┐  ┌─────────────┐  │
-│  │   SQLite / Postgres  │  │   NVIDIA NIM API  │  │  Razorpay   │  │
-│  │   (ORM via Django)   │  │  Llama 3.1 · NeVA │  │  Webhooks   │  │
-│  └─────────────────────┘  └──────────────────┘  └─────────────┘  │
-│                                                                     │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  Google APIs: OAuth 2.0 · Maps JS · Places (Nearby POI)     │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                            BROWSER / CLIENT                              │
+│              Bootstrap 5 · Crispy Forms · Google Maps JS SDK             │
+└───────────────────────────────┬──────────────────────────────────────────┘
+                                │  HTTP  +  WebSocket (ws://)
+┌───────────────────────────────▼──────────────────────────────────────────┐
+│                       ASGI SERVER — Daphne                               │
+│                                                                          │
+│  ┌──────────────────────────────┐   ┌──────────────────────────────────┐ │
+│  │  Django HTTP Router          │   │  Django Channels WebSocket       │ │
+│  │  (6 app namespaces)          │   │  InMemory (dev) / Redis (prod)   │ │
+│  └──────────────┬───────────────┘   └─────────────────┬────────────────┘ │
+│                 │                                      │                  │
+│  ┌──────────────▼──────────────────────────────────────▼───────────────┐ │
+│  │                    Django Application Core                          │ │
+│  │                                                                     │ │
+│  │  accounts        → Auth · OTP · roles · profiles · saved searches  │ │
+│  │  properties      → CRUD · AI search · visual match · compare       │ │
+│  │  favorites       → Save / unsave per user                          │ │
+│  │  messaging       → WebSocket conversations + message history       │ │
+│  │  payments        → Razorpay orders · webhooks · invoices · audit   │ │
+│  │  admin_dashboard → Analytics: users · listings · revenue           │ │
+│  └──────┬──────────────────────────┬────────────────────┬─────────────┘ │
+│         │                          │                    │               │
+│  ┌──────▼──────────┐  ┌────────────▼─────────────┐  ┌──▼────────────┐  │
+│  │  SQLite (dev)   │  │   NVIDIA NIM REST API     │  │  Razorpay SDK │  │
+│  │  PostgreSQL     │  │  Llama 3.1 · NeVA-22B     │  │  + Webhooks   │  │
+│  │  (production)   │  └──────────────────────────┘  └───────────────┘  │
+│  └─────────────────┘                                                    │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │  Google APIs: OAuth 2.0 · Maps JS · Places (18-category POI)      │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-The application is structured as six focused Django apps sharing a single database. The ASGI entry point (Daphne) handles both standard HTTP requests and persistent WebSocket connections for real-time chat.
-
 ---
 
-## Feature Matrix
+## ✨ Key Features
 
-| Domain | Capability |
-|---|---|
-| **Discovery** | Full-text search · advanced multi-filter panel · AI semantic search · visual/image-based property matching |
-| **AI Chatbot** | Llama 3.1 (NVIDIA NIM) powered assistant with LuxeEstate-scoped guardrails and lead capture |
-| **Recommendations** | Personalised property suggestions based on user view history and preference profile |
-| **Market Intelligence** | AI-generated market analysis per city/type with comparable pricing signals |
-| **Property Comparison** | Side-by-side multi-property comparison with amenity diff and nearby POI counts |
-| **Maps & POI** | Google Maps embed + OpenStreetMap geocoding + 18-category nearby place data per listing |
-| **Listings** | CRUD for all property types (Apartment, House, Villa, Plot, Commercial, Office, Shop, Farmland) |
-| **Media** | Multi-image upload per property with AI image analysis (NVIDIA NeVA vision model) |
-| **Authentication** | Email/password + Google OAuth 2.0 via django-allauth · OTP email verification · role-based access |
-| **Favourites** | Save/unsave properties with timestamped favourites list |
-| **Messaging** | Real-time WebSocket chat between buyer and agent/owner per property conversation thread |
-| **Payments** | Razorpay-powered premium listing packages (7/14/30/90 days) with webhook verification |
-| **Notifications** | Email follow-up sequences via management command · Django messages framework |
-| **Admin Dashboard** | Analytics: user growth, listing counts, payment revenue, role distribution |
-| **Saved Searches** | Persist search filter sets as named queries per user |
-| **Property Reviews** | Star rating + text review system per property |
+### 🏠 Property Listings — Every Type, Every Detail
 
----
-
-## Tech Stack
-
-### Backend
-| Layer | Technology | Purpose |
+| Property Types | Status Options | Furnishing |
 |---|---|---|
-| Language | **Python 3.14** | Core runtime |
-| Framework | **Django 6.0.3** | HTTP, ORM, admin, templating |
-| ASGI Server | **Daphne + Django Channels** | WebSocket support for real-time messaging |
-| Channel Layer | **InMemoryChannelLayer** (dev) / **channels_redis** (prod) | WebSocket message routing |
-| Auth | **django-allauth** | Email auth + Google OAuth 2.0 + OTP flow |
-| API Layer | **Django REST Framework** | JSON endpoints with session auth, pagination, search/ordering |
-| Static Files | **WhiteNoise** (CompressedManifest) | Zero-config static serving |
-| Forms | **crispy-forms** + **crispy-bootstrap5** | Styled form rendering |
-| Config | **python-decouple** + **python-dotenv** | 12-factor env var management |
+| Apartment · House · Villa · Plot | Available / Sold / Rented | Unfurnished / Semi-Furnished / Furnished |
+| Commercial · Office · Shop · Farmland | — | — |
 
-### AI & External Services
-| Service | SDK / Integration | Feature |
+Each listing stores bedrooms, bathrooms, area (sqft), price, lat/lng, pincode, amenities (JSONField), and a full **18-category nearby POI catalogue** — hospitals, schools, metro stations, banks, ATMs, pharmacies, gyms, parks, restaurants, and more — sourced via Google Places API.
+
+---
+
+### 🤖 AI & Intelligence Layer
+
+LuxeEstate ships **five production AI engines**, all backed by NVIDIA NIM — no local GPU required.
+
+```
+AI Engine Inventory:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. LuxeChatbot                → Llama 3.1 8B · scoped guardrails · lead capture
+  2. ImageFeatureDetector       → avg-hash · edge-density · colour histogram
+  3. VisualPropertySearchEngine → Feature-weighted cosine match (premium: 1.5×)
+  4. PropertyRecommendationEngine → TF-IDF + view history + budget signal scoring
+  5. MarketAnalysisEngine       → Comparable pricing + above/below market signal
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+#### Visual Feature Detection — Amenity Weights
+
+| Feature | Search Weight | Category |
 |---|---|---|
-| **NVIDIA NIM** (Llama 3.1 8B Instruct) | REST API via `requests` | AI chatbot, semantic search, recommendations, market analysis |
-| **NVIDIA NeVA-22B** | REST API via `requests` | Visual image analysis + image-to-property search |
-| **Google OAuth 2.0** | `allauth.socialaccount.providers.google` | Social login |
-| **Google Maps JS API** | Browser SDK | Interactive property maps |
-| **Google Places API** | Server-side + browser | Nearby POI discovery (18 categories) |
-| **OpenStreetMap / Nominatim** | `location_utils.OpenStreetMapAPI` | Geocoding fallback |
-| **Razorpay** | `razorpay` Python SDK + JS checkout | Payment processing + webhook verification |
+| Swimming Pool | **1.5×** | Premium |
+| Garden | **1.5×** | Premium |
+| Gym | **1.5×** | Premium |
+| Modular / Open / Closed Kitchen | 1.0× | Standard |
+| Bedroom · Bathroom · Living Room | 1.0× | Standard |
+| Balcony · Terrace · Parking Space | 1.0× | Standard |
 
-### Frontend
-| Tool | Role |
-|---|---|
-| Bootstrap 5 | Responsive grid and component library |
-| crispy-forms | Django form rendering with Bootstrap 5 pack |
-| Google Maps JS SDK | Map embeds on property detail and route pages |
-| Django template engine | Server-side HTML rendering |
+> Partial credit (0.75×) is awarded for semantically compatible variants — e.g. "open kitchen" satisfies a "kitchen" query via `FEATURE_COMPATIBILITY_GROUPS`.
 
-### Database & Storage
-| Component | Default (Dev) | Production |
-|---|---|---|
-| Database | **SQLite 3** | **PostgreSQL** |
-| Media storage | Local filesystem (`/media/`) | AWS S3 (config ready) |
-| Cache | `LocMemCache` | Redis |
-| Channel layer | `InMemoryChannelLayer` | `channels_redis` |
+#### TF-IDF Recommendation Signals
 
----
-
-## Data Models
-
-### `accounts` App
-
-```python
-class Profile(models.Model):
-    # One-to-one extension of Django's built-in User
-    user                    = OneToOneField(User)
-    role                    = CharField(choices=['buyer','owner','agent','admin'])
-    phone                   = CharField(max_length=15)
-    bio                     = TextField()
-    profile_picture         = ImageField(upload_to='profile_pictures/')
-
-    # OTP / email verification
-    email_verified          = BooleanField(default=False)
-    otp_code                = CharField(max_length=6)
-    otp_created_at          = DateTimeField()
-
-    # Social auth
-    google_id               = CharField(max_length=100, unique=True)
-    is_google_account       = BooleanField()
-
-    # Preferences
-    favorite_cities         = TextField()          # comma-separated
-    preferred_property_type = CharField(max_length=50)
-
-    # Agent-specific
-    rating                  = FloatField(validators=[0–5])
-    total_reviews           = PositiveIntegerField()
-
-    # Metadata
-    last_login_ip           = GenericIPAddressField()
-    created_at / updated_at = DateTimeField()
-
-class UserPropertyView(models.Model):
-    # Tracks which users viewed which properties (unique per user+property pair)
-    user       = ForeignKey(User)
-    property   = ForeignKey(Property)
-    viewed_at  = DateTimeField(auto_now_add=True)
-
-class SavedSearch(models.Model):
-    # Persisted search filter sets
-    user       = ForeignKey(User)
-    name       = CharField(max_length=100)
-    query      = JSONField()               # arbitrary filter dict
-    created_at = DateTimeField()
 ```
-
-### `properties` App
-
-```python
-class Property(models.Model):
-    # Identity
-    title           = CharField(max_length=200, db_index=True)
-    description     = TextField()
-    price           = DecimalField(max_digits=15)
-    property_type   = CharField(choices=['apartment','house','villa','plot',
-                                         'commercial','office','shop','farmland'])
-    status          = CharField(choices=['available','sold','rented'])
-
-    # Location
-    city, state, address, pincode = CharField / TextField
-    latitude, longitude           = FloatField          # for Maps
-    
-    # Specs
-    bedrooms, bathrooms = PositiveIntegerField()
-    area_sqft           = PositiveIntegerField()
-    furnishing          = CharField(choices=['unfurnished','semi-furnished','furnished'])
-    amenities           = JSONField()                   # flexible feature list
-
-    # Relations
-    agent           = ForeignKey(User)                  # listing owner
-
-    # Metrics
-    views_count     = PositiveIntegerField(db_index=True)
-    rating          = FloatField(validators=[0–5])
-    total_reviews   = PositiveIntegerField()
-
-    # AI-enriched nearby POI (18 categories, each a JSONField list)
-    nearby_hospital, nearby_school, nearby_metro, nearby_bank ...
-
-    # Promotion
-    is_featured           = BooleanField()
-    featured_until        = DateTimeField()
-    promotion_package     = ForeignKey(PaymentPackage)
-
-class PropertyImage(models.Model):
-    property    = ForeignKey(Property, related_name='images')
-    image       = ImageField()
-    is_primary  = BooleanField()
-    ai_analysis = JSONField()     # NVIDIA NeVA analysis result
-
-class PropertyReview(models.Model):
-    property   = ForeignKey(Property)
-    reviewer   = ForeignKey(User)
-    rating     = IntegerField(validators=[1–5])
-    comment    = TextField()
-    created_at = DateTimeField()
-```
-
-### `messaging` App
-
-```python
-class Conversation(models.Model):
-    # Property-scoped 1-to-1 conversation thread
-    property   = ForeignKey(Property)
-    initiator  = ForeignKey(User, related_name='initiated_conversations')
-    recipient  = ForeignKey(User, related_name='received_conversations')
-    is_active  = BooleanField(default=True)
-    # unique_together: (property, initiator, recipient)
-
-class Message(models.Model):
-    conversation = ForeignKey(Conversation)
-    sender       = ForeignKey(User)
-    recipient    = ForeignKey(User)
-    message      = TextField()
-    is_read      = BooleanField(default=False)
-    read_at      = DateTimeField()
-    image        = ImageField(upload_to='message_attachments/%Y/%m/%d/')
-    message_type = CharField(choices=['text','image','document'])
-```
-
-### `payments` App
-
-```python
-class PaymentPackage(models.Model):
-    name          = CharField(max_length=100)
-    description   = TextField()
-    price         = DecimalField()
-    duration_days = IntegerField(choices=[7, 14, 30, 90])
-    features      = JSONField()         # feature bullet list
-    is_active     = BooleanField()
-
-class Payment(models.Model):
-    user                 = ForeignKey(User)
-    package              = ForeignKey(PaymentPackage)
-    property             = ForeignKey(Property)
-    amount               = DecimalField()
-    razorpay_order_id    = CharField(unique=True)
-    razorpay_payment_id  = CharField(unique=True)
-    razorpay_signature   = CharField(max_length=256)
-    status               = CharField(choices=['pending','completed','failed',
-                                              'cancelled','refunded'])
-    payment_method       = CharField(default='razorpay')
-```
-
-### `favorites` App
-
-```python
-class Favorite(models.Model):
-    user       = ForeignKey(User)
-    property   = ForeignKey(Property)
-    created_at = DateTimeField(auto_now_add=True)
-    # unique_together: (user, property)
+Signals consumed by PropertyRecommendationEngine.get_recommendations():
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  UserPropertyView (last 35 views)   → location + type affinity
+  Profile.favorite_cities             → city boost score
+  Profile.preferred_property_type     → type match boost
+  Median viewed price ± 35% spread    → budget window + distance score
+  TF-IDF on title + description       → content similarity vector
+  + city + property_type + ai_tags
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ---
 
-## AI & Intelligence Layer
-
-All AI features live in `properties/ai_utils.py` (58 KB), `properties/chatbot_service.py` (46 KB), and `properties/image_search_service.py` (41 KB). They call NVIDIA NIM REST endpoints — no locally-hosted models required.
-
-### AI Chatbot (`chatbot_service.py`)
-- Powered by **Llama 3.1 8B Instruct** via NVIDIA NIM
-- Scoped strictly to LuxeEstate listing data via configurable `AI_CHATBOT_GUIDELINES` (pipe-separated rules injected as a system prompt)
-- Built-in guardrails: refuses to fabricate prices, legal status, payment confirmations, or ask for OTP/CVV
-- Lead capture: extracts buyer intent signals from conversation and surfaces relevant listings
-- Configured via `NIM_CHAT_MODEL` and `NVIDIA_API_KEY` env vars
-
-### Semantic Property Search (`ai_utils.py → search_suggestion_engine`)
-- Converts natural-language queries into structured filter sets using Llama
-- Normalises feature vocabulary (e.g. "open kitchen" → kitchen feature group) via `FEATURE_COMPATIBILITY_GROUPS`
-
-### Visual Image Search (`image_search_service.py`)
-- Upload a reference photo to find visually similar properties
-- Uses **NVIDIA NeVA-22B** vision model to extract a feature vector from uploaded images
-- Matches against the `ai_analysis` JSONField stored per `PropertyImage` at upload time
-- Seeded by `manage.py analyze_images` management command
-
-### Recommendation Engine (`ai_utils.py → recommendation_engine`)
-- Reads `UserPropertyView` history for the current user
-- Feeds view history + profile preferences to Llama for a ranked recommendation list
-
-### Market Analysis Engine (`ai_utils.py → market_analysis_engine`)
-- Generates a city/property-type market summary (demand signals, price benchmarks, investment outlook) via Llama
-- Cached per city+type to avoid repeated inference calls
-
-### Property Comparison Engine (`ai_utils.py → comparison_engine`)
-- Structured side-by-side diff of two or more properties
-- AI narrative summary highlighting the key trade-offs
-
----
-
-## Authentication & Security
-
-LuxeEstate uses **django-allauth** for the complete auth lifecycle with several hardened extensions:
+### 🔐 Authentication & Security
 
 | Mechanism | Implementation |
 |---|---|
-| Email/password login | allauth `ACCOUNT_AUTHENTICATION_METHOD = 'email'` |
-| Google OAuth 2.0 | `allauth.socialaccount.providers.google` with custom `SocialAccountAdapter` |
-| OTP email verification | 6-digit OTP generated on `Profile`, verified server-side with configurable attempt limits and cooldown (`OTP_VERIFY_MAX_ATTEMPTS`, `OTP_VERIFY_WINDOW_SECONDS`, `OTP_RESEND_COOLDOWN_SECONDS`) |
-| Role-based access | `Profile.role` (`buyer`, `owner`, `agent`, `admin`) enforced at view layer |
-| Session security | `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE` toggled via env vars |
-| HTTPS enforcement | `SECURE_SSL_REDIRECT` + `SECURE_HSTS_SECONDS` configurable for production |
-| CORS | `corsheaders.middleware.CorsMiddleware` with `CORS_ALLOWED_ORIGINS` whitelist |
-| Static security headers | Django's `SecurityMiddleware` |
-| IP tracking | `last_login_ip` persisted on `Profile` for audit trails |
-| SMTP resilience | Custom `smtp_backend.EmailBackend` wraps Django's SMTP backend with Certifi CA bundle and optional insecure-skip-verify escape hatch (dev only) |
-| Secrets management | All secrets in `.env` via `python-decouple`; zero hardcoded credentials in source |
+| Email / Password | `allauth` — email as auth identifier, no separate username field |
+| Google OAuth 2.0 | `allauth.socialaccount.providers.google` + custom `SocialAccountAdapter` |
+| OTP Email Verification | 6-digit OTP on `Profile`, configurable max attempts / cooldown / expiry |
+| Role-Based Access | `buyer` · `owner` · `agent` · `admin` enforced at view layer |
+| HMAC Payment Verification | Razorpay HMAC-SHA256 signature verified server-side before fulfilment |
+| Atomic Transactions | `select_for_update()` on payment rows — prevents double-credit |
+| CORS | `corsheaders` middleware with `CORS_ALLOWED_ORIGINS` whitelist |
+| SMTP Hardening | Custom backend uses Certifi CA bundle; insecure-skip-verify gated to dev |
+| IP Tracking | `last_login_ip` persisted on `Profile` for audit trails |
+| Zero Hardcoded Secrets | All credentials via `python-decouple` + `.env` |
 
 ---
 
-## Payments
-
-Premium listing promotion is powered by **Razorpay**.
-
-**Flow:**
+### 💳 Payments — Razorpay Integration
 
 ```
-User selects package
-    → Django creates Razorpay order (server-side, razorpay-python SDK)
-    → Razorpay JS Checkout renders in browser
-    → User completes payment (UPI / card / netbanking)
-    → Browser posts payment_id + signature to Django verify endpoint
-    → Django verifies HMAC-SHA256 signature using RAZORPAY_WEBHOOK_SECRET
-    → On success: Payment record → 'completed', Property → is_featured=True, featured_until set
-    → Razorpay webhook endpoint provides secondary server-to-server confirmation
+User picks a package (7 / 14 / 30 / 90 days)
+      │
+      ▼
+Django creates Razorpay order (server-side SDK, amount in paise)
+      │
+      ▼
+Razorpay JS Checkout (UPI / Card / Netbanking / Wallet)
+      │
+      ▼
+Browser posts { payment_id · order_id · signature } → verify endpoint
+      │
+      ▼
+Django HMAC-SHA256 verification via RAZORPAY_WEBHOOK_SECRET
+      │
+      ├─ ✅ SUCCESS
+      │     → select_for_update() payment row (atomic)
+      │     → Payment.mark_completed()
+      │     → Invoice auto-generated  (INV-YYYYMMDD-{id})
+      │     → Property.is_featured = True, featured_until = now + N days
+      │     → PaymentAuditLog entry written
+      │
+      └─ ❌ FAILURE → status = 'failed' · audit log · user redirected
+            │
+      ▼
+Razorpay Webhook (server-to-server) → idempotent secondary confirmation
 ```
 
-**Packages** (seeded via admin or fixtures):
-
-| Tier | Duration | Outcome |
+| Package | Duration | Outcome |
 |---|---|---|
 | Starter | 7 days | Featured badge on listing card |
-| Standard | 14 days | Featured badge + priority search rank |
-| Premium | 30 days | Featured badge + priority rank + homepage slot |
+| Standard | 14 days | Featured badge + priority in search results |
+| Premium | 30 days | Featured + priority + homepage slot |
 | Elite | 90 days | All Premium benefits for three months |
 
 ---
 
-## Real-Time Messaging
+### 📡 Real-Time Messaging (Django Channels)
 
-Buyer ↔ Agent/Owner conversations use **Django Channels** over WebSocket:
-
-- Each property spawns at most one `Conversation` per buyer/agent pair (`unique_together` constraint)
-- Messages are persisted to the `Message` model for full history
-- The channel layer defaults to `InMemoryChannelLayer` in development; swap to `channels_redis` for multi-process production deployments by setting `CHANNEL_LAYERS_HOST` + `CHANNEL_LAYERS_PORT`
-- Supports text, image attachments, and a `message_type` enum for future document sharing
-- Unread tracking via `is_read` / `read_at` fields
+```
+Buyer opens property detail page
+    │
+    ▼
+Conversation model created — unique_together (property, initiator, recipient)
+    │
+    ▼
+WebSocket connection → Channels routing → InMemoryChannelLayer / Redis
+    │
+    ▼
+Messages persisted to Message model (text · image · document)
+    │
+    ▼
+is_read + read_at fields → unread badge counts
+    │
+    ▼
+Full history available on reconnect (DB-backed, not ephemeral)
+```
 
 ---
 
-## Getting Started
+## 🛠️ Tech Stack
+
+<div align="center">
+
+### Backend & Framework
+![Python](https://img.shields.io/badge/Python_3.14-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Django](https://img.shields.io/badge/Django_6.0.3-092E20?style=for-the-badge&logo=django&logoColor=white)
+![Daphne](https://img.shields.io/badge/Daphne-ASGI-E95420?style=for-the-badge&logo=django&logoColor=white)
+![DRF](https://img.shields.io/badge/Django_REST_Framework-red?style=for-the-badge&logo=django)
+![Channels](https://img.shields.io/badge/Django_Channels-WebSocket-092E20?style=for-the-badge&logo=django)
+
+### AI & Vision
+![NVIDIA](https://img.shields.io/badge/NVIDIA_NIM-Llama_3.1_8B-76B900?style=for-the-badge&logo=nvidia&logoColor=white)
+![NeVA](https://img.shields.io/badge/NVIDIA_NeVA--22B-Vision_AI-76B900?style=for-the-badge&logo=nvidia&logoColor=white)
+![sklearn](https://img.shields.io/badge/scikit--learn-TF--IDF-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)
+![Pillow](https://img.shields.io/badge/Pillow-Image_Processing-3776AB?style=for-the-badge&logo=python&logoColor=white)
+
+### Auth & Payments
+![allauth](https://img.shields.io/badge/django--allauth-OAuth_+_OTP-092E20?style=for-the-badge&logo=django)
+![Google](https://img.shields.io/badge/Google_OAuth_2.0-4285F4?style=for-the-badge&logo=google&logoColor=white)
+![Razorpay](https://img.shields.io/badge/Razorpay-02042B?style=for-the-badge&logo=razorpay&logoColor=white)
+
+### Frontend & Static
+![Bootstrap](https://img.shields.io/badge/Bootstrap_5-7952B3?style=for-the-badge&logo=bootstrap&logoColor=white)
+![Google Maps](https://img.shields.io/badge/Google_Maps_JS-4285F4?style=for-the-badge&logo=googlemaps&logoColor=white)
+![WhiteNoise](https://img.shields.io/badge/WhiteNoise-Static_Files-lightgrey?style=for-the-badge)
+
+### Infrastructure
+![Redis](https://img.shields.io/badge/Redis-Channel_Layer-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![AWS S3](https://img.shields.io/badge/AWS_S3-Media_Storage-FF9900?style=for-the-badge&logo=amazons3&logoColor=white)
+
+</div>
+
+---
+
+## 📁 Project Structure
+
+```
+LuxeEstate_updated/
+│
+├── 🔧 LuxeEstate/                     # Django project package
+│   ├── settings.py                    # Centralised settings via python-decouple
+│   ├── urls.py                        # Root URL dispatcher (8 app namespaces)
+│   ├── asgi.py                        # ASGI entry — Daphne + Channels routing
+│   ├── routing.py                     # WebSocket URL patterns
+│   └── smtp_backend.py                # Hardened SMTP (Certifi CA bundle)
+│
+├── 👤 accounts/                       # Auth · profiles · OTP · roles
+│   ├── models.py                      # Profile · UserPropertyView · SavedSearch
+│   ├── views.py                       # Register · login · OTP verify · agent list
+│   ├── forms.py                       # Registration + profile edit forms
+│   ├── adapters.py                    # Custom allauth SocialAccountAdapter
+│   ├── utils.py                       # OTP generation + throttle helpers
+│   └── templatetags/social_helpers.py
+│
+├── 🏠 properties/                     # Core listing domain
+│   ├── models.py                      # Property · PropertyImage · PropertyReview
+│   ├── views.py                       # CRUD · search · compare · visual search
+│   ├── ai_utils.py                    # 🧠 Five AI engines (58 KB)
+│   │   ├── ImageFeatureDetector       #   avg-hash · edge-density · colour histogram
+│   │   ├── VisualPropertySearchEngine #   weighted feature match + partial credit
+│   │   ├── PropertyRecommendationEngine #  TF-IDF + view history + budget scoring
+│   │   ├── MarketAnalysisEngine       #   comparable pricing + trend direction
+│   │   ├── PropertyComparisonEngine   #   structured side-by-side diff
+│   │   └── SearchSuggestionEngine     #   autocomplete from titles + ai_tags
+│   ├── chatbot_service.py             # 🤖 LuxeChatbot — Llama 3.1 (46 KB)
+│   │   ├── Guardrail system           #   scoped to listing data; refuses OTP/CVV asks
+│   │   ├── Lead extraction            #   name · email · phone · budget · intent regex
+│   │   └── Budget parser              #   "50 lakh" / "2 crore" → Decimal in ₹
+│   ├── image_search_service.py        # 🖼️ NeVA-22B visual search (41 KB)
+│   ├── location_utils.py              # OpenStreetMap / Nominatim geocoding wrapper
+│   ├── payment_utils.py               # Promotion package application helpers
+│   └── management/commands/
+│       ├── analyze_images.py          # Seed ai_analysis on all PropertyImage rows
+│       ├── geocode_properties.py      # Backfill lat/lng via Nominatim
+│       └── send_followups.py          # Email follow-up sequences
+│
+├── ⭐ favorites/                      # Save / unsave (unique per user + property)
+├── 💬 messaging/                      # Channels WebSocket + DB message persistence
+├── 💳 payments/                       # Razorpay · packages · invoices · audit log
+│   └── models.py                      # PaymentPackage · Payment · Subscription
+│                                      # Invoice · PaymentAuditLog · PaymentWebhookEvent
+├── 📊 admin_dashboard/                # Analytics: users · listings · revenue · roles
+│
+├── 📄 templates/                      # App-scoped Django HTML templates
+├── 🎨 static/                         # CSS, JS, images
+├── 📷 media/                          # User-uploaded files (dev local)
+├── 📝 logs/django.log
+│
+├── 📐 docs/figures/
+│   ├── fig_1_1_use_case_auth_listing.png
+│   ├── fig_1_2_activity_property_search.png
+│   ├── fig_1_3_use_case_chatbot_leads.png
+│   ├── fig_1_4_activity_payment_messaging.png
+│   └── fig_1_5_use_case_admin_analytics.png
+│
+├── manage.py
+├── .env.example
+└── .env                               # Local secrets — never committed
+```
+
+---
+
+## 💻 Code Walkthrough
+
+### 🖼️ Visual Property Search Engine
+
+```python
+# properties/ai_utils.py
+
+class VisualPropertySearchEngine:
+    """Match properties by visual amenity features extracted from a query image."""
+
+    PREMIUM_FEATURES = {'swimming pool', 'garden', 'gym'}   # weight = 1.5×
+
+    def rank_matches(self, query_features: list[str], properties) -> list[dict]:
+        query_features = focus_visual_query_features(query_features)
+        ranked = []
+
+        for prop in properties:
+            prop_features = self.extract_property_features(prop)   # from ai_analysis JSONField
+            score, total_weight, matched = 0.0, 0.0, []
+
+            for feature in query_features:
+                weight = 1.5 if feature in self.PREMIUM_FEATURES else 1.0
+
+                if feature in prop_features:
+                    score += weight
+                    matched.append(feature)
+                elif FEATURE_COMPATIBILITY_GROUPS.get(feature, set()) & prop_features:
+                    score += weight * 0.75          # partial credit for semantic relatives
+                    matched.append(feature)
+
+                total_weight += weight
+
+            # Only rank if ALL query features are at least partially satisfied
+            if matched and len(matched) == len(query_features):
+                ranked.append({
+                    'property_id': prop.id,
+                    'score': round(score / max(total_weight, 1.0), 4),
+                    'matched_features': sorted(matched),
+                })
+
+        return sorted(ranked, key=lambda x: x['score'], reverse=True)
+```
+
+---
+
+### 🤖 AI Chatbot — Lead Extraction & Budget Parser
+
+```python
+# properties/chatbot_service.py
+
+class LuxeChatbot:
+    """Llama 3.1-powered assistant scoped strictly to LuxeEstate listing data."""
+
+    def _budget_to_rupees(self, budget_text: str) -> Decimal | None:
+        """Convert '50 lakh', '2 crore', '500k' → exact Decimal in ₹."""
+        m = re.search(
+            r"(\d+(?:\.\d+)?)\s*(lakh|lac|l|crore|cr|k|thousand|million|m)?",
+            budget_text, re.IGNORECASE
+        )
+        if not m:
+            return None
+        value = Decimal(m.group(1))
+        multipliers = {
+            'k': 1_000,      'thousand': 1_000,
+            'lakh': 100_000, 'lac': 100_000,   'l': 100_000,
+            'crore': 10_000_000, 'cr': 10_000_000,
+            'million': 1_000_000, 'm': 1_000_000,
+        }
+        return value * Decimal(str(multipliers.get((m.group(2) or '').lower(), 1)))
+
+    def _extract_lead_fields(self, message: str) -> dict:
+        """Extract name, contact, budget, and purchase intent from one message."""
+        out = {}
+        if name := re.search(
+            r"\b(?:my name is|i am|i'm)\s+([A-Za-z][A-Za-z ]{1,40})\b",
+            message, re.IGNORECASE
+        ):
+            out['name'] = name.group(1).strip().title()
+
+        if email := re.search(r"[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}", message):
+            out['contact'] = email.group(0)
+        elif phone := re.search(r"(?:\+91|0)?\s*([1-9]\d{9})\b", message):
+            out['contact'] = phone.group(1)
+
+        if budget_text := self._extract_budget_text(message):
+            out['budget'] = str(self._budget_to_rupees(budget_text))
+
+        return out
+```
+
+---
+
+### 💳 Razorpay — Atomic Payment Completion
+
+```python
+# payments/views.py
+
+def _complete_payment_transaction(payment, *, razorpay_payment_id=None, razorpay_signature=None):
+    """
+    Atomically mark a payment completed and auto-generate the invoice.
+    select_for_update() prevents double-credit in concurrent webhook + browser callbacks.
+    """
+    with transaction.atomic():
+        locked = (
+            Payment.objects
+            .select_for_update()
+            .select_related('package', 'property')
+            .get(pk=payment.pk)
+        )
+
+        if razorpay_payment_id:
+            locked.razorpay_payment_id = razorpay_payment_id
+        if razorpay_signature:
+            locked.razorpay_signature = razorpay_signature
+        locked.save(update_fields=['razorpay_payment_id', 'razorpay_signature', 'updated_at'])
+
+        if locked.status != 'completed':
+            locked.mark_completed()         # sets is_featured=True + featured_until on Property
+            locked.refresh_from_db()
+
+        invoice_number = f"INV-{timezone.now().strftime('%Y%m%d')}-{locked.id}"
+        invoice, created = Invoice.objects.get_or_create(
+            payment=locked,
+            defaults={
+                'invoice_number': invoice_number,
+                'due_date': timezone.now() + timedelta(days=30),
+                'subtotal': locked.amount,
+                'total': locked.amount,
+                'is_paid': True,
+                'paid_at': timezone.now(),
+            },
+        )
+        return locked, invoice, created
+```
+
+---
+
+### 📈 TF-IDF Recommendation Engine
+
+```python
+# properties/ai_utils.py
+
+class PropertyRecommendationEngine:
+    """Personalised recommendations from view history + profile preferences."""
+
+    def __init__(self):
+        self.vectorizer = TfidfVectorizer(max_features=100, stop_words='english')
+
+    def get_user_preferences(self, user) -> dict:
+        views = UserPropertyView.objects.filter(user=user).select_related('property')[:35]
+        viewed_prices = [float(v.property.price) for v in views if v.property.price]
+        location_history = [v.property.city.lower().strip() for v in views if v.property.city]
+
+        if viewed_prices:
+            median_price = float(np.median(np.array(viewed_prices)))
+            spread = max(median_price * 0.35, 1_000_000)
+        else:
+            median_price, spread = None, 0
+
+        return {
+            'favorite_cities': user.profile.favorite_cities.split(',') if
+                               user.profile.favorite_cities else [],
+            'preferred_type':  user.profile.preferred_property_type,
+            'location_history': location_history,
+            'median_viewed_price': median_price,
+            'price_range': {
+                'min': max(0.0, median_price - spread),
+                'max': median_price + spread,
+            } if median_price else {'min': 0, 'max': float('inf')},
+        }
+
+    def _budget_score(self, pref_price: float, prop_price: float) -> float:
+        """Return 0.0–1.0 based on distance from user's median viewed price."""
+        if not pref_price or not prop_price:
+            return 0.4
+        return max(1.0 - min(abs(prop_price - pref_price) / max(pref_price, 1), 1.0), 0.0)
+```
+
+---
+
+## 🗃️ Data Models
+
+```
+accounts_profile
+  ├── user (OneToOne → auth.User)
+  ├── role [buyer | owner | agent | admin]
+  ├── otp_code · otp_created_at · email_verified
+  ├── google_id · is_google_account
+  ├── favorite_cities (comma-separated) · preferred_property_type
+  ├── rating (0–5) · total_reviews
+  └── last_login_ip · created_at · updated_at
+
+properties_property
+  ├── title · description · price · property_type · status · furnishing
+  ├── city · state · address · pincode · latitude · longitude
+  ├── bedrooms · bathrooms · area_sqft
+  ├── amenities (JSONField)
+  ├── nearby_* × 18 POI categories (each a JSONField list)
+  ├── views_count (db_index) · rating · total_reviews
+  ├── is_featured · featured_until · promotion_package (FK)
+  └── agent (FK → auth.User)
+
+properties_propertyimage
+  ├── property (FK) · image · is_primary
+  └── ai_analysis (JSONField)         ← populated by manage.py analyze_images
+
+messaging_conversation
+  ├── property (FK) · initiator (FK) · recipient (FK)
+  └── unique_together: (property, initiator, recipient)
+
+messaging_message
+  ├── conversation (FK) · sender · recipient · message
+  ├── is_read · read_at
+  └── message_type [text | image | document]
+
+payments_payment
+  ├── user · package (FK) · property (FK)
+  ├── amount · razorpay_order_id (unique) · razorpay_payment_id (unique)
+  ├── razorpay_signature · status [pending | completed | failed | cancelled | refunded]
+  └── related: PaymentAuditLog · Invoice · Subscription · PaymentWebhookEvent
+```
+
+---
+
+## 📱 Interface Walkthrough
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│  🏡 LuxeEstate            [Search...] [Login] [List Property]  │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│   HERO SECTION                                                 │
+│   ┌────────────────────────────────────────────────────────┐   │
+│   │  "Find your perfect home"                              │   │
+│   │  [ City / Location ▾ ] [ Type ▾ ] [ Budget ▾ ] [🔍]  │   │
+│   │  [ 📷 Search by photo ]   [ 💬 Ask AI ]               │   │
+│   └────────────────────────────────────────────────────────┘   │
+│                                                                │
+│   FEATURED LISTINGS                                            │
+│   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐        │
+│   │ 🏆 FEAT  │ │          │ │          │ │ 🏆 FEAT  │        │
+│   │  Villa   │ │ Apartment│ │  House   │ │  Office  │        │
+│   │ ₹1.2 Cr  │ │ ₹45 L    │ │ ₹78 L    │ │ ₹2.1 Cr  │        │
+│   │ 4BHK·Goa │ │ 2BHK·Ahm │ │ 3BHK·Mum │ │ Comm·Blr │        │
+│   └──────────┘ └──────────┘ └──────────┘ └──────────┘        │
+│                                                                │
+│   ┌──────── AI CHATBOT ────────────────────────────────────┐   │
+│   │ 🤖 Hi! Looking for a 2BHK under ₹50L in Ahmedabad?    │   │
+│   │    I found 14 matching properties. Here are the top 3. │  │
+│   │    [View All Matches]                                  │   │
+│   └────────────────────────────────────────────────────────┘   │
+└────────────────────────────────────────────────────────────────┘
+
+PROPERTY DETAIL PAGE
+┌────────────────────────────────────────────────────────────────┐
+│  [← Back]  3BHK Villa · Bopal, Ahmedabad    [❤ Save][Compare] │
+├────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────┐  ┌──────────────────────────────┐ │
+│  │   IMAGE GALLERY         │  │  ₹1,20,00,000                │ │
+│  │   [◀ ▶  1 / 8 photos ] │  │  4 BHK · 3 Bath · 2,400 sqft│ │
+│  └─────────────────────────┘  │  Furnished · Available       │ │
+│                               │                              │ │
+│  📊 MARKET INTELLIGENCE       │  [📩 Send Message]           │ │
+│  ┌─────────────────────────┐  │  [💳 Promote Listing]        │ │
+│  │ Avg comparable: ₹98 L   │  └──────────────────────────────┘ │
+│  │ ↑ Priced 22% above avg  │                                   │
+│  └─────────────────────────┘                                   │
+│                                                                │
+│  📍 NEARBY (18 categories)                                     │
+│  🏥 City Hospital — 1.2 km   🏫 DPS School — 0.8 km           │
+│  🚇 Bopal Metro   — 0.5 km   🏦 HDFC Bank   — 0.3 km          │
+│  🛒 D-Mart        — 0.7 km   🌳 Riverfront  — 2.1 km          │
+└────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🗺️ Roadmap
+
+| Feature | Status |
+|---|---|
+| Core listing CRUD with multi-image upload | ✅ Complete |
+| Google OAuth 2.0 + OTP email verification | ✅ Complete |
+| AI chatbot — Llama 3.1 via NVIDIA NIM | ✅ Complete |
+| Visual image-to-listing search via NeVA-22B | ✅ Complete |
+| TF-IDF property recommendations | ✅ Complete |
+| Market comparable analysis | ✅ Complete |
+| Razorpay premium packages + invoicing | ✅ Complete |
+| Django Channels real-time WebSocket messaging | ✅ Complete |
+| Side-by-side property comparison | ✅ Complete |
+| 18-category nearby POI via Google Places | ✅ Complete |
+| Admin analytics dashboard | ✅ Complete |
+| UML documentation (5 diagrams) | ✅ Complete |
+| PostgreSQL + Redis production configuration | ✅ Ready |
+| AWS S3 media storage configuration | ✅ Ready |
+| Celery async task queue | 🚧 In Progress |
+| Property price prediction ML model | 📋 Planned |
+| Mobile app (React Native) | 📋 Planned |
+| Saved search email alert digests | 📋 Planned |
+| Multi-city geo-clustering recommendations | 📋 Planned |
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- Python 3.11+
-- `git`
-- (Optional) Redis — only needed for multi-worker WebSocket in production
+| Tool | Version |
+|---|---|
+| Python | ≥ 3.11 |
+| pip | ≥ 23.x |
+| Redis | Only needed for multi-worker WebSocket in production |
 
-### 1. Clone & enter
+### 1️⃣ Clone the Repository
 
 ```bash
 git clone https://github.com/your-org/LuxeEstate.git
 cd LuxeEstate/LuxeEstate_updated
 ```
 
-### 2. Create virtual environment
+### 2️⃣ Create Virtual Environment
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 ```
 
-### 3. Install dependencies
+### 3️⃣ Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment
+### 4️⃣ Configure Environment
 
 ```bash
 cp .env.example .env
-# Open .env and fill in the required values (see Environment Reference below)
+# Fill in the values from the Environment Reference table below
 ```
 
-At minimum you need `SECRET_KEY`. All other services degrade gracefully in development (AI features return empty results; payments use Razorpay test keys; emails print to console).
+> **Minimum required:** only `SECRET_KEY`. All external services degrade gracefully — AI returns empty results, payments use test mode, emails print to console.
 
-### 5. Database setup
+### 5️⃣ Database Setup
 
 ```bash
 python manage.py migrate
 python manage.py createsuperuser
 ```
 
-### 6. (Optional) Seed Google social app
+### 6️⃣ Register Google Social App (Optional)
 
 ```bash
 python create_social_app.py
+# Reads GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET from .env
 ```
 
-This registers a `SocialApp` for Google OAuth using `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` from your `.env`.
-
-### 7. (Optional) Analyse existing property images
+### 7️⃣ Seed AI Image Analysis (Optional)
 
 ```bash
 python manage.py analyze_images
+# Runs NVIDIA NeVA-22B against all PropertyImage rows → stores ai_analysis JSONField
 ```
 
-Runs NVIDIA NeVA against all uploaded `PropertyImage` records and stores the vision analysis in `ai_analysis` for visual search.
-
-### 8. Collect static files (production only)
+### 8️⃣ Backfill Geocoordinates (Optional)
 
 ```bash
-python manage.py collectstatic --no-input
+python manage.py geocode_properties
+# Nominatim lookup for any Property missing latitude/longitude
 ```
 
-### 9. Run the development server
+### 9️⃣ Run the Development Server
 
 ```bash
 python manage.py runserver
 ```
 
-The application is served at `http://localhost:8000`.
+> 🌐 Open `http://localhost:8000`
 
 ---
 
-## Environment Reference
+## ⚙️ Environment Reference
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
@@ -493,162 +741,107 @@ The application is served at `http://localhost:8000`.
 | `ALLOWED_HOSTS` | | `localhost,127.0.0.1` | Comma-separated hostnames |
 | `DB_ENGINE` | | `sqlite3` | `django.db.backends.postgresql` for Postgres |
 | `DB_NAME` | | `db.sqlite3` | Database name or file path |
-| `EMAIL_HOST_USER` | | `""` | SMTP sender — if empty, OTPs print to console |
+| `EMAIL_HOST_USER` | | `""` | SMTP sender — blank → OTPs print to console |
 | `EMAIL_HOST_PASSWORD` | | `""` | SMTP app password |
-| `GOOGLE_OAUTH_CLIENT_ID` | | `""` | Google OAuth app client ID |
-| `GOOGLE_OAUTH_CLIENT_SECRET` | | `""` | Google OAuth app client secret |
-| `GOOGLE_MAPS_API_KEY` | | `""` | Google Maps JS API key (map embeds) |
-| `GOOGLE_PLACES_API_KEY` | | `""` | Google Places API key (nearby POI) |
+| `GOOGLE_OAUTH_CLIENT_ID` | | `""` | Google OAuth client ID |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | | `""` | Google OAuth client secret |
+| `GOOGLE_MAPS_API_KEY` | | `""` | Google Maps JS API (map embeds) |
+| `GOOGLE_PLACES_API_KEY` | | `""` | Google Places API (nearby POI) |
 | `RAZORPAY_KEY_ID` | | `""` | Razorpay publishable key |
 | `RAZORPAY_KEY_SECRET` | | `""` | Razorpay secret key |
-| `RAZORPAY_WEBHOOK_SECRET` | | `""` | Webhook HMAC secret |
+| `RAZORPAY_WEBHOOK_SECRET` | | `""` | HMAC webhook verification secret |
 | `NIM_API_KEY` | | `""` | NVIDIA NIM API key (all AI features) |
-| `NVIDIA_MODEL` | | `meta/llama-3.1-8b-instruct` | NIM chat model ID |
-| `NVIDIA_VISION_MODEL` | | `nvidia/neva-22b` | NIM vision model ID |
-| `CHANNEL_LAYERS_HOST` | | `""` | Redis host for WebSocket (blank = InMemory) |
+| `NVIDIA_MODEL` | | `meta/llama-3.1-8b-instruct` | NIM chat model |
+| `NVIDIA_VISION_MODEL` | | `nvidia/neva-22b` | NIM vision model |
+| `CHANNEL_LAYERS_HOST` | | `""` | Redis host — blank → InMemoryChannelLayer |
 | `CHANNEL_LAYERS_PORT` | | `6379` | Redis port |
-| `SITE_URL` | | `http://localhost:8000` | Base URL (used in email links) |
-| `SECURE_SSL_REDIRECT` | | `False` | Set `True` behind HTTPS in production |
-| `OTP_VERIFY_MAX_ATTEMPTS` | | `5` | Max OTP verification attempts per window |
-| `OTP_VERIFY_WINDOW_SECONDS` | | `600` | OTP validity window (seconds) |
-| `OTP_RESEND_COOLDOWN_SECONDS` | | `60` | Minimum gap between OTP resend requests |
+| `SITE_URL` | | `http://localhost:8000` | Base URL for email links |
+| `SECURE_SSL_REDIRECT` | | `False` | `True` behind HTTPS in production |
+| `OTP_VERIFY_MAX_ATTEMPTS` | | `5` | Max OTP attempts per window |
+| `OTP_VERIFY_WINDOW_SECONDS` | | `600` | OTP validity window in seconds |
+| `OTP_RESEND_COOLDOWN_SECONDS` | | `60` | Min gap between OTP resend requests |
 | `LOG_LEVEL` | | `INFO` | Python logging level |
 
 ---
 
-## Project Structure
-
-```
-LuxeEstate_updated/
-│
-├── LuxeEstate/                  # Django project package
-│   ├── settings.py              # Centralised settings with decouple
-│   ├── urls.py                  # Root URL dispatcher
-│   ├── asgi.py                  # ASGI entry point (Daphne + Channels)
-│   ├── wsgi.py                  # WSGI entry point (gunicorn fallback)
-│   ├── routing.py               # Django Channels WebSocket routing
-│   └── smtp_backend.py          # Hardened SMTP backend (Certifi CA)
-│
-├── accounts/                    # Auth, profiles, roles, OTP
-│   ├── models.py                # Profile, UserPropertyView, SavedSearch
-│   ├── views.py                 # Register, login, OTP, profile, agent list
-│   ├── forms.py                 # Registration and profile forms
-│   ├── adapters.py              # Custom allauth SocialAccountAdapter
-│   ├── utils.py                 # OTP generation helpers
-│   └── templatetags/            # social_helpers tag library
-│
-├── properties/                  # Core listing domain
-│   ├── models.py                # Property, PropertyImage, PropertyReview
-│   ├── views.py                 # CRUD, search, compare, visual search, AI endpoints
-│   ├── ai_utils.py              # Semantic search, recommendations, market analysis
-│   ├── chatbot_service.py       # Llama-powered chatbot service
-│   ├── image_search_service.py  # NeVA-based visual property search
-│   ├── location_utils.py        # OpenStreetMap geocoding wrapper
-│   ├── payment_utils.py         # Promotion package application helpers
-│   └── management/commands/     # analyze_images, geocode_properties, send_followups
-│
-├── favorites/                   # Save/unsave properties
-├── messaging/                   # WebSocket conversations + message persistence
-├── payments/                    # Razorpay integration + package management
-├── admin_dashboard/             # Admin analytics views
-│
-├── templates/                   # Django HTML templates (app-scoped)
-├── static/                      # CSS, JS, images
-├── media/                       # User-uploaded files (dev)
-├── logs/                        # django.log
-│
-├── docs/
-│   └── figures/                 # UML diagrams (use-case, activity, sequence)
-│       ├── fig_1_1_use_case_auth_listing.png
-│       ├── fig_1_2_activity_property_search.png
-│       ├── fig_1_3_use_case_chatbot_leads.png
-│       ├── fig_1_4_activity_payment_messaging.png
-│       └── fig_1_5_use_case_admin_analytics.png
-│
-├── manage.py
-├── .env.example
-└── .env                         # Local secrets — never committed
-```
-
----
-
-## Deployment
+## 🚢 Deployment
 
 ### Production Checklist
 
-Before going live, ensure every item below is addressed:
-
 ```
-[ ] DEBUG=False in .env
-[ ] SECRET_KEY is a long, random, unique value
-[ ] ALLOWED_HOSTS includes your domain(s)
-[ ] SECURE_SSL_REDIRECT=True (behind HTTPS terminator)
+[ ] DEBUG=False
+[ ] SECRET_KEY — long, random, unique string
+[ ] ALLOWED_HOSTS — only your domain(s)
+[ ] SECURE_SSL_REDIRECT=True           (behind HTTPS terminator)
 [ ] SESSION_COOKIE_SECURE=True
 [ ] CSRF_COOKIE_SECURE=True
-[ ] SECURE_HSTS_SECONDS=31536000 (after confirming HTTPS is stable)
-[ ] DB_ENGINE=django.db.backends.postgresql with dedicated DB credentials
-[ ] CHANNEL_LAYERS_HOST=<redis-host> (for multi-worker WebSocket)
-[ ] Media files offloaded to AWS S3 (AWS_* vars configured)
+[ ] SECURE_HSTS_SECONDS=31536000       (after confirming HTTPS is stable)
+[ ] DB_ENGINE=django.db.backends.postgresql  (dedicated credentials)
+[ ] CHANNEL_LAYERS_HOST=<redis-host>   (multi-worker WebSocket)
+[ ] AWS_* vars configured              (media storage offloaded to S3)
 [ ] python manage.py collectstatic --no-input
-[ ] python manage.py migrate --run-syncdb
-[ ] Razorpay webhook URL registered and RAZORPAY_WEBHOOK_SECRET set
-[ ] CORS_ALLOWED_ORIGINS locked to your actual frontend origins
+[ ] python manage.py migrate
+[ ] Razorpay webhook URL registered in Razorpay dashboard
+[ ] CORS_ALLOWED_ORIGINS locked to production frontend origins
 ```
 
-### Recommended Stack
+### Recommended Production Stack
 
 ```
-Nginx (TLS termination + static serving)
-    → Daphne (ASGI, all HTTP + WebSocket)
-        → Django application
-    ← PostgreSQL (primary DB)
-    ← Redis (channel layer + optional cache)
-    ← AWS S3 (media storage)
+Nginx (TLS termination · static file serving via WhiteNoise / S3)
+    └─► Daphne (ASGI — HTTP + WebSocket on a single port)
+            └─► Django (6 app modules)
+    ◄──────────► PostgreSQL    (primary database)
+    ◄──────────► Redis         (channel layer + optional cache)
+    ◄──────────► AWS S3        (media storage)
+    ◄──────────► NVIDIA NIM    (AI inference — external REST API)
+    ◄──────────► Razorpay      (payments — external REST API)
+    ◄──────────► Google APIs   (OAuth 2.0 · Maps · Places)
 ```
 
-### Docker (one-liner dev environment)
+---
+
+## 🤝 Contributing
 
 ```bash
-docker compose up --build
+# Fork, then:
+git checkout -b feature/your-feature
+git commit -m 'feat: describe your change clearly'
+git push origin feature/your-feature
+# Open a Pull Request against main
 ```
 
-A `docker-compose.yml` with Django + Redis services is a natural addition — contributions welcome.
+- Follow Django conventions and PEP 8
+- Add or update tests for any changed behaviour
+- Never commit `.env` or credentials of any kind
+- Report security vulnerabilities privately via email, not a public issue
 
 ---
 
-## UML Diagrams
+## 📄 License
 
-System behaviour is documented in `docs/figures/`:
-
-| Diagram | Description |
-|---|---|
-| `fig_1_1_use_case_auth_listing.png` | Use case: authentication and property listing flows |
-| `fig_1_2_activity_property_search.png` | Activity: property search (filters + AI semantic) |
-| `fig_1_3_use_case_chatbot_leads.png` | Use case: AI chatbot and lead capture |
-| `fig_1_4_activity_payment_messaging.png` | Activity: Razorpay payment and real-time messaging |
-| `fig_1_5_use_case_admin_analytics.png` | Use case: admin dashboard and analytics |
+MIT License — see [LICENSE](LICENSE) for full terms.
 
 ---
 
-## Contributing
+## 👨‍💻 Author
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Follow existing code style — Django conventions, PEP 8, descriptive commit messages
-4. Add or update tests for any changed behaviour
-5. Open a pull request against `main` with a clear description of the change
+<div align="center">
 
-Please report security vulnerabilities privately via email rather than opening a public issue.
+**Built from Ahmedabad, India 🇮🇳**
 
----
+[![GitHub](https://img.shields.io/badge/GitHub-your--handle-181717?style=for-the-badge&logo=github)](https://github.com/your-handle)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?style=for-the-badge&logo=linkedin)](https://linkedin.com/in/your-profile)
 
-## License
-
-This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for full terms.
+</div>
 
 ---
 
 <div align="center">
+
+**⭐ Star this repo if LuxeEstate impressed you! ⭐**
+
+*Because every home deserves an intelligent search engine. 🏡*
 
 *Built with Django 6 · Powered by NVIDIA NIM · Payments via Razorpay*
 
