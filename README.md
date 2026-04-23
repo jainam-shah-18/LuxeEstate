@@ -575,9 +575,16 @@ payments_payment
 <img width="1600" height="900" alt="image" src="https://github.com/user-attachments/assets/3ceb1bde-94da-42ff-bf22-3d8692f883b9" />
 
 
+
+
+
 PROPERTY DETAIL PAGE
 
+
+
 <img width="1920" height="1080" alt="Screenshot (296)" src="https://github.com/user-attachments/assets/7453c7b9-0503-4a5f-91f8-bc8ff2405e70" />
+
+
 <img width="1920" height="1080" alt="Screenshot (297)" src="https://github.com/user-attachments/assets/45967df2-77ce-4f4c-a911-ee94f0e44fbc" />
 
 
