@@ -572,32 +572,7 @@ payments_payment
 
 ## 📱 Interface Walkthrough
 
-```
-┌────────────────────────────────────────────────────────────────┐
-│  🏡 LuxeEstate            [Search...] [Login] [List Property]  │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
-│   HERO SECTION                                                 │
-│   ┌────────────────────────────────────────────────────────┐   │
-│   │  "Find your perfect home"                              │   │
-│   │  [ City / Location ▾ ] [ Type ▾ ] [ Budget ▾ ] [🔍]   │    │
-│   │  [ 📷 Search by photo ]   [ 💬 Ask AI ]               │   │
-│   └────────────────────────────────────────────────────────┘   │
-│                                                                │
-│   FEATURED LISTINGS                                            │
-│   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐          │
-│   │ 🏆 FEAT  │ │          │ │          │ │ 🏆 FEAT  │         │
-│   │  Villa   │ │ Apartment│ │  House   │ │  Office  │          │
-│   │ ₹1.2 Cr  │ │ ₹45 L    │ │ ₹78 L    │ │ ₹2.1 Cr  │          │
-│   │ 4BHK·Goa │ │ 2BHK·Ahm │ │ 3BHK·Mum │ │ Comm·Blr │          │
-│   └──────────┘ └──────────┘ └──────────┘ └──────────┘          │
-│                                                                │
-│   ┌──────── AI CHATBOT ────────────────────────────────────┐   │
-│   │ 🤖 Hi! Looking for a 2BHK under ₹50L in Ahmedabad?    │    |
-│   │    I found 14 matching properties. Here are the top 3. │   │
-│   │    [View All Matches]                                  │   │
-│   └────────────────────────────────────────────────────────┘   │
-└────────────────────────────────────────────────────────────────┘
+<img width="1600" height="900" alt="image" src="https://github.com/user-attachments/assets/3ceb1bde-94da-42ff-bf22-3d8692f883b9" />
 
 PROPERTY DETAIL PAGE
 ┌────────────────────────────────────────────────────────────────┐
