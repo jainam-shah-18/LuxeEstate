@@ -79,7 +79,7 @@
   <p><i>A high-end, AI-powered real estate solution built with Django, NVIDIA NIM, and Google APIs.</i></p>
 
   <!-- Replace 'YOUR_IMAGE_URL' with the link to the final image I generated for you -->
-  <img src="YOUR_IMAGE_URL" alt="LuxeEstate Architecture Diagram" width="900px">
+  <img src="https://lens.usercontent.google.com/banana?agsi=CmdnbG9iYWw6OjAwMDA1NWNmZWM3MDAyNmQ6MDAwMDAwZWI6MToxOWVjZDE1MjM0MWFjOWJjOjAwMDA1NWNmZWM3MDAyNmQ6MDAwMDAxODdhNjIwMzM2ODowMDA2NTAxY2I3YTI5NTJmEAIYAQ==" alt="LuxeEstate Architecture Diagram" width="900px">
 </div>
 
 ---
