@@ -17,3 +17,4 @@ razorpay>=1.0.0
 numpy>=2.0.0
 scikit-learn==1.7.2
 scipy==1.14.1
+fastapi==0.115.0
