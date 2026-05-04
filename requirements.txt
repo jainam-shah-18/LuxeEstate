@@ -1,4 +1,7 @@
-Django==5.2.13
+fastapi==0.115.0
+uvicorn==0.30.0
+
+django==5.2.13
 django-allauth==0.57.2
 channels==4.0.0
 daphne==4.0.0
@@ -14,7 +17,5 @@ whitenoise==6.6.0
 python-dotenv==1.0.0
 certifi>=2024.2.2
 razorpay>=1.0.0
-numpy>=2.0.0
-scikit-learn==1.7.2
-scipy==1.14.1
-fastapi==0.115.0
+numpy==1.26.4
+scikit-learn==1.4.2
