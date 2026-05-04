@@ -1,4 +1,4 @@
-# LuxeEstate
+# LuxeEstate - Premium Real Estate Platform
 
 Professional real estate platform built with Django for property discovery, user engagement, AI-assisted search, and payment-enabled listing promotion.
 
@@ -7,6 +7,7 @@ Professional real estate platform built with Django for property discovery, user
 ![DRF](https://img.shields.io/badge/API-Django_REST_Framework-red)
 ![Channels](https://img.shields.io/badge/Realtime-Django_Channels-6f42c1)
 ![Razorpay](https://img.shields.io/badge/Payments-Razorpay-0C2451)
+![NVIDIA_NIM](https://img.shields.io/badge/AI-NVIDIA_NIM-76B900)
 ![Status](https://img.shields.io/badge/Status-Active-success)
 
 ---
@@ -14,22 +15,20 @@ Professional real estate platform built with Django for property discovery, user
 ## Table of Contents
 
 - [Overview](#overview)
-- [Key Features](#key-features)
-- [Business Use Cases](#business-use-cases)
-- [User Flows](#user-flows)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
-- [Configuration](#configuration)
-- [Payments and Billing](#payments-and-billing)
-- [AI Capabilities](#ai-capabilities)
-- [Management Commands](#management-commands)
-- [Route Map](#route-map)
-- [Testing and Quality](#testing-and-quality)
-- [Deployment Checklist](#deployment-checklist)
+- [🌟 Features](#-features)
+- [🛠️ Tech Stack](#️-tech-stack)
+- [📋 Project Structure](#-project-structure)
+- [🚀 Quick Start](#-quick-start)
+- [⚙️ Configuration](#️-configuration)
+- [🤖 AI & Chatbot Integration](#-ai--chatbot-integration)
+- [💳 Payments and Billing](#-payments-and-billing)
+- [🔐 Security Features](#-security-features)
+- [📚 Documentation](#-documentation)
+- [🧪 Testing](#-testing)
+- [📦 Deployment](#-deployment)
+- [🤝 Contributing](#-contributing)
+- [📝 License](#-license)
 - [Troubleshooting](#troubleshooting)
-- [Security Guidelines](#security-guidelines)
-- [License](#license)
 
 ---
 
@@ -45,273 +44,463 @@ It includes built-in support for authentication, OTP verification, favorites, me
 
 ---
 
-## Key Features
+## 🌟 Features
 
-### Authentication and Accounts
+### Core Platform
+- **Property Management**: Browse, search, and manage premium real estate listings
+- **Advanced Filtering**: Filter properties by location, price, amenities, and more
+- **Favorites System**: Save and manage favorite properties
+- **User Profiles**: Comprehensive user profiles with authentication and customization
+- **Admin Dashboard**: Full administrative control and analytics
+- **Home and listing pages** with pagination
+- **Rich property detail pages**
+- **Add, edit, and delete** listing workflow
+- **My Properties view** for owners/agents
+- **Geocoding retry support** and nearby places integration
 
+### AI & Chatbot Integration
+- **NVIDIA NIM Integration**: Advanced AI model integration for intelligent property recommendations
+- **Intelligent Chatbot**: AI-powered conversational chatbot for property inquiries and customer support
+- **Smart Property Search**: AI-enhanced property discovery and matching
+- **Image Search**: Advanced image-based property search capabilities
+- **Configurable AI behavior** through environment variables
+- **Chatbot system prompt management** for flexible behavior control
+
+### Communication & Messaging
+- **Real-time Messaging**: WebSocket-based instant messaging between users
+- **Conversation Management**: Organized conversation threads
+- **Message History**: Full message tracking and archiving
+- **User Notifications**: Real-time notification system
+- **Agent contact and lead** conversations
+
+### Payments & Subscriptions
+- **Payment Integration**: Secure payment processing with Razorpay
+- **Subscription Packages**: Multiple tier packages for different user levels
+- **Payment History**: Transaction tracking and management
+- **Invoice Generation**: Automated invoice creation
+- **Package-based promotion** purchase flow
+- **Subscription detail and cancellation** flow
+- **Webhook processing** with event persistence
+
+### Search & Discovery
+- **Keyword and filter-based** property search
+- **AJAX filter and city** endpoints
+- **Search suggestions** endpoint
+- **Property comparison** add/list/clear workflows
+- **Search by image** with visual feature extraction
+
+### Authentication & Accounts
 - Email/password registration and login
 - OTP verification and resend support
 - Google OAuth sign-in (Allauth provider integration)
-- Profile completion and profile management
+- Profile completion and management
 - Password change flow
+- Social authentication options
 
-### Property Management
-
-- Home and listing pages with pagination
-- Rich property detail pages
-- Add, edit, and delete listing workflow
-- My Properties view for owners/agents
-- Geocoding retry support and nearby places integration
-
-### Search and Discovery
-
-- Keyword and filter-based property search
-- AJAX filter and city endpoints
-- Search suggestions endpoint
-- Property comparison add/list/clear workflows
-
-### Engagement Features
-
-- Favorites add/remove/toggle/list
-- Agent contact and lead conversations
-- Messaging inbox with conversation detail
-- Notification retrieval and read acknowledgements
-
-### Payments and Monetization
-
-- Package-based promotion/purchase flow
-- Payment creation and verification
-- Success/failure result pages
-- Subscription detail and cancellation flow
-- Invoice views and payment history
-- Razorpay webhook processing with event persistence
-- Payment audit logs for lifecycle traceability
-
-### AI Features
-
-- AI-assisted property description generation
-- Conversational chatbot endpoint for property support
-- Search-by-image with visual feature extraction and ranking
-- Configurable AI behavior through environment variables
-
-### Admin Analytics
-
-- Central admin dashboard
-- User analytics
-- Property analytics
-- Revenue analytics
-- Engagement analytics
+### Additional Features
+- **SEO Optimization**: Sitemap, robots.txt, and SEO-friendly URLs
+- **Privacy & Security**: GDPR-compliant privacy policy, terms of service, cookie management
+- **Mobile Responsive**: Fully responsive design for all devices
+- **Email Notifications**: Automated email system for user updates
+- **Central admin dashboard** with analytics
+- **User, Property, Revenue, and Engagement analytics**
 
 ---
 
-## Business Use Cases
+## 🔐 Security Features
 
-- **Brokerage Website**: operate a full listing and inquiry portal.
-- **Agency CRM Layer**: centralize lead conversations and property actions.
-- **Monetized Listing Platform**: sell subscription or promotional plans.
-- **AI-Enhanced Search Portal**: improve discovery with chatbot and image-based matching.
-
----
-
-## User Flows
-
-### Buyer/Tenant Journey
-
-1. Register/login (email+OTP or Google OAuth).
-2. Search and filter listings.
-3. Open details and compare shortlisted properties.
-4. Save favorites and contact agents.
-5. Continue discussions in messaging conversations.
-
-### Agent/Owner Journey
-
-1. Login and complete profile.
-2. Create and manage listings.
-3. Receive and respond to inquiries.
-4. Promote properties using payment packages.
-5. Monitor payment history and invoices.
-
-### Admin Journey
-
-1. Open admin dashboard.
-2. Review user/property/revenue/engagement insights.
-3. Track platform performance and growth.
+- **CSRF Protection**: All forms protected against Cross-Site Request Forgery
+- **XSS Prevention**: Template escaping against Cross-Site Scripting
+- **SQL Injection Prevention**: Django ORM parameterized queries
+- **Secure Password Hashing**: PBKDF2 algorithm with salt
+- **HTTPS Ready**: Production HTTPS configuration
+- **Environment Variable Isolation**: Secrets stored in `.env` (not committed)
+- **Rate Limiting**: API endpoint rate limiting
+- **Secure Session Management**: Secure cookie settings
+- **OAuth Integration**: Google OAuth for secure authentication
+- **Webhook Validation**: Signature verification for Razorpay webhooks
 
 ---
 
-## Architecture
+## 📚 Documentation
 
-```text
-LuxeEstate_updated/
-├── LuxeEstate/                # Core settings, URL config, ASGI/WSGI
-├── accounts/                  # Authentication, OTP, profile logic
-├── properties/                # Listings, search, comparison, AI features
-├── favorites/                 # Saved properties module
-├── messaging/                 # Conversations, messages, notifications
-├── payments/                  # Packages, checkout, subscriptions, webhooks
-├── admin_dashboard/           # Admin analytics dashboards
-├── templates/                 # Frontend templates
-├── static/                    # Static source assets (CSS/JS/images)
-├── media/                     # User uploads (runtime generated)
-├── requirements.txt
-└── .env.example
+Comprehensive documentation guides are available:
+
+- [CHATBOT_INTEGRATION.md](CHATBOT_INTEGRATION.md) - Chatbot setup, configuration, and API details
+- [CHATBOT_GUIDE.md](CHATBOT_GUIDE.md) - End-user chatbot guide and workflows
+- [NVIDIA_NIM_SETUP.md](NVIDIA_NIM_SETUP.md) - AI model integration and NVIDIA NIM setup
+- [QUICK_START.md](QUICK_START.md) - Quick start guide for new developers
+- [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - Detailed implementation overview
+- [VERIFICATION.md](VERIFICATION.md) - Testing checklist and verification procedures
+- [.env.example](.env.example) - Environment configuration template
+
+---
+
+## 🧪 Testing
+
+### Run Tests
+
+```bash
+python manage.py test
 ```
 
+### Pre-Release Checks
+
+```bash
+python manage.py check
+python manage.py test accounts
+python manage.py test properties
+python manage.py test messaging
+python manage.py test payments
+python manage.py test favorites
+```
+
+### Manual Testing Recommendations
+
+- Authentication and OTP flows
+- Property create/edit/delete operations
+- Search, filtering, and comparison features
+- Messaging and real-time notifications
+- Payment success/failure and webhook processing
+- AI chatbot functionality
+- Image-based property search
+- Admin dashboard analytics
+- Email delivery verification
+
+See [VERIFICATION.md](VERIFICATION.md) for comprehensive testing checklist.
+
 ---
 
-## Tech Stack
+## 📦 Deployment
+
+### Development Server
+
+```bash
+python manage.py runserver
+```
+
+### Production Deployment Checklist
+
+- Set `DEBUG=False` in `.env`
+- Configure production `ALLOWED_HOSTS`
+- Use secure production `SECRET_KEY` (generate new one)
+- Enable HTTPS and secure cookie settings
+  ```python
+  CSRF_COOKIE_SECURE = True
+  SESSION_COOKIE_SECURE = True
+  ```
+- Use PostgreSQL or MySQL instead of SQLite
+- Configure persistent media/static file storage (S3 recommended)
+- Run `python manage.py collectstatic --noinput`
+- Configure background job strategy for periodic tasks
+- Add monitoring, alerting, and backup policies
+- Set up proper logging and error tracking
+- Configure email service for production
+- Enable HSTS headers
+- Set up rate limiting and DDoS protection
+
+### Using Gunicorn (Recommended)
+
+```bash
+pip install gunicorn
+gunicorn LuxeEstate.wsgi:application --bind 0.0.0.0:8000
+```
+
+### Docker Deployment (Optional)
+
+Create `Dockerfile` and `docker-compose.yml` for containerized deployment.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Make your changes following code style guidelines
+4. Write/update tests for new functionality
+5. Commit changes (`git commit -m 'Add AmazingFeature'`)
+6. Push to branch (`git push origin feature/AmazingFeature`)
+7. Open a Pull Request with detailed description
+
+---
+
+## 📝 License
+
+This repository is intended for educational, development, and commercial use.
+Refer to LICENSE file for specific terms.
+
+---
+
+## 📞 Support & Community
+
+- **Issues**: Report bugs via [GitHub Issues](https://github.com/jainam-shah-18/LuxeEstate/issues)
+- **Discussions**: Join [GitHub Discussions](https://github.com/jainam-shah-18/LuxeEstate/discussions)
+- **Documentation**: See docs/ folder for detailed guides
+
+---
+
+## 👥 Authors
+
+- **Jainam Shah** - Project Lead & Architecture
+- Contributors and community members
+
+---
+
+## 📈 Roadmap
+
+**In Development:**
+- [ ] Advanced analytics dashboard enhancements
+- [ ] Mobile app (iOS/Android)
+- [ ] Machine learning property recommendations
+- [ ] Virtual property tours with 360°
+- [ ] Multi-language chatbot support
+- [ ] Mobile push notifications
+
+**Planned Features:**
+- [ ] Video walkthrough system
+- [ ] Blockchain property verification
+- [ ] Advanced reporting suite
+- [ ] CRM integration
+- [ ] API marketplace
+
+---
+
+## Management Commands
+
+### Send Follow-up Messages
+
+```bash
+python manage.py send_followups
+```
+
+Triggers chatbot-driven automated follow-up handling for leads and appointments.
+
+### Setup Payment Packages
+
+```bash
+python manage.py setup_payment_packages
+```
+
+Helper command for payment package initialization and management.
+
+---
+
+## Route Map
+
+| Route Prefix | Module | Purpose |
+|---|---|---|
+| `/` | Properties | Home, listings, details, search, comparison |
+| `/auth/` | Accounts | Registration, login, OTP, profile |
+| `/accounts/` | Django Allauth | Social authentication, account management |
+| `/favorites/` | Favorites | Save/manage favorite properties |
+| `/messaging/` | Messaging | Conversations, real-time messaging |
+| `/payments/` | Payments | Pricing, checkout, subscriptions, webhooks |
+| `/dashboard/` | Admin Dashboard | Analytics and metrics |
+| `/admin/` | Django Admin | Administrative interface |
+| `/api/` | REST API | API endpoints for mobile/external apps |
+
+**Static Info Pages:**
+- `/about/` - About LuxeEstate
+- `/terms/` - Terms of Service
+- `/privacy/` - Privacy Policy
+- `/cookies/` - Cookie Policy
+- `/sitemap/` - XML sitemap for SEO
+
+---
+
+## 🛠️ Tech Stack
+
+### Backend
+- **Framework**: Django 6.x
+- **Database**: SQLite (Development) / PostgreSQL (Production Ready)
+- **API**: Django REST Framework
+- **Real-time**: Django Channels with WebSocket support
+- **Authentication**: Django Allauth with social OAuth
+- **AI Integration**: NVIDIA NIM API
+
+### Frontend
+- **Template Engine**: Django Templates
+- **Styling**: CSS3, Bootstrap
+- **JavaScript**: AJAX, WebSockets
+- **Image Processing**: Pillow
+
+### Infrastructure & Services
+- **Email**: SMTP configuration with fallback
+- **Media Storage**: Local file system (scalable to S3)
+- **Logging**: Python logging with file rotation
+- **Static Files**: WhiteNoise for production serving
+- **Payments**: Razorpay integration with webhooks
+- **Maps/Geocoding**: Google Maps & Places API
 
 | Layer | Tools |
 |---|---|
-| Backend | Python, Django |
+| Backend | Python, Django 6.x |
 | API | Django REST Framework |
 | Auth | Django Allauth, Google OAuth |
 | Realtime | Django Channels, Daphne |
 | Payments | Razorpay SDK + webhook handlers |
-| AI | Nvidia NIM integrations |
+| AI | NVIDIA NIM integrations |
 | Frontend | Django Templates, JavaScript, CSS |
 | Data | SQLite (default), configurable DB backend |
 | Static Delivery | WhiteNoise |
 
 ---
 
-## Getting Started
+## 📋 Project Structure
 
-### 1) Clone repository
-
-```bash
-git clone https://github.com/jainam-shah-18/LuxeEstate.git
-cd LuxeEstate
 ```
-
-If your local project folder is `LuxeEstate_updated`, run commands there.
-
-### 2) Create virtual environment
-
-```bash
-python -m venv .venv
+LuxeEstate/
+├── accounts/              # User authentication, OTP, profile management
+├── properties/            # Property listings, search, AI features, chatbot
+├── messaging/            # Real-time WebSocket messaging system
+├── payments/             # Payment processing, subscriptions, webhooks
+├── favorites/            # Favorite properties tracking
+├── admin_dashboard/      # Administrator analytics interface
+├── LuxeEstate/           # Main project settings, ASGI/WSGI config
+├── static/               # CSS, JavaScript assets
+├── staticfiles/          # Collected static files for production
+├── templates/            # HTML templates
+├── media/               # User-uploaded property images
+├── logs/                # Application log files
+├── docs/                # Documentation and guides
+├── manage.py            # Django management script
+├── requirements.txt     # Python dependencies
+├── .env                 # Environment variables (not committed)
+└── README.md           # This file
 ```
-
-### 3) Activate environment
-
-Windows PowerShell:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-macOS/Linux:
-
-```bash
-source .venv/bin/activate
-```
-
-### 4) Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 5) Configure environment file
-
-Windows:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-macOS/Linux:
-
-```bash
-cp .env.example .env
-```
-
-Update values in `.env` before running the app.
-
-### 6) Run database migrations
-
-```bash
-python manage.py migrate
-```
-
-### 7) Create superuser (recommended)
-
-```bash
-python manage.py createsuperuser
-```
-
-### 8) Start development server
-
-```bash
-python manage.py runserver
-```
-
-Open: `http://127.0.0.1:8000`
 
 ---
 
-## Configuration
+## 🚀 Quick Start
 
-The project uses environment-driven configuration (`.env`). Important variables:
+### Prerequisites
+- Python 3.10+
+- pip or conda package manager
+- Git
 
-### Core
+### Installation
 
-- `SECRET_KEY`
-- `DEBUG`
-- `ALLOWED_HOSTS`
-- `DB_ENGINE`
-- `DB_NAME`
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/jainam-shah-18/LuxeEstate.git
+   cd LuxeEstate
+   ```
 
-### Email and OTP
+2. **Create virtual environment**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
-- `EMAIL_BACKEND`
-- `EMAIL_HOST`
-- `EMAIL_PORT`
-- `EMAIL_USE_TLS`
-- `EMAIL_HOST_USER`
-- `EMAIL_HOST_PASSWORD`
-- `DEFAULT_FROM_EMAIL`
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Optional local debugging controls:
+4. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
 
-- `EMAIL_SMTP_INSECURE_SKIP_VERIFY`
-- `EMAIL_SMTP_CA_BUNDLE`
+5. **Run migrations**
+   ```bash
+   python manage.py migrate
+   ```
 
-### Integrations
+6. **Create superuser (admin account)**
+   ```bash
+   python manage.py createsuperuser
+   ```
 
-- `GOOGLE_OAUTH_CLIENT_ID`
-- `GOOGLE_OAUTH_CLIENT_SECRET`
-- `GOOGLE_MAPS_API_KEY`
-- `GOOGLE_PLACES_API_KEY`
-- `RAZORPAY_KEY_ID`
-- `RAZORPAY_KEY_SECRET`
-- `RAZORPAY_WEBHOOK_SECRET`
-- `PAYMENT_TEST_MODE`
-- `NVIDIA_API_KEY`
-- `NIM_CHAT_MODEL`
-- `NVIDIA_VISION_MODEL`
-- `AI_CHATBOT_GUIDELINES`
+7. **Start development server**
+   ```bash
+   python manage.py runserver
+   ```
 
-### Realtime (Channels)
-
-- `CHANNEL_LAYERS_HOST`
-- `CHANNEL_LAYERS_PORT`
-
-Refer to `.env.example` for all defaults and examples.
+8. **Access the application**
+   - Main site: `http://localhost:8000`
+   - Admin dashboard: `http://localhost:8000/admin`
 
 ---
 
-## Payments and Billing
+## ⚙️ Configuration
+
+### Environment Variables (.env)
+
+Core Settings:
+```
+DEBUG=True
+SECRET_KEY=your-secret-key-here
+ALLOWED_HOSTS=localhost,127.0.0.1
+```
+
+Database:
+```
+DB_ENGINE=django.db.backends.sqlite3
+DB_NAME=db.sqlite3
+```
+
+Email Configuration:
+```
+EMAIL_BACKEND=smtp_backend.CustomEmailBackend
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=your-email@gmail.com
+EMAIL_HOST_PASSWORD=your-app-password
+DEFAULT_FROM_EMAIL=noreply@luxeestate.com
+```
+
+NVIDIA NIM Configuration:
+```
+NVIDIA_API_KEY=your-nvidia-api-key
+NIM_CHAT_MODEL=meta/llama-2-7b-chat-q8_0
+NVIDIA_VISION_MODEL=nvidia/neva-22b
+AI_CHATBOT_GUIDELINES=Professional property assistance guidelines
+```
+
+Social Authentication:
+```
+GOOGLE_OAUTH_CLIENT_ID=your-google-client-id
+GOOGLE_OAUTH_CLIENT_SECRET=your-google-client-secret
+GOOGLE_MAPS_API_KEY=your-google-maps-key
+GOOGLE_PLACES_API_KEY=your-google-places-key
+```
+
+Payment Configuration:
+```
+RAZORPAY_KEY_ID=your-razorpay-key
+RAZORPAY_KEY_SECRET=your-razorpay-secret
+RAZORPAY_WEBHOOK_SECRET=your-webhook-secret
+PAYMENT_TEST_MODE=True
+```
+
+Realtime Communication:
+```
+CHANNEL_LAYERS_HOST=localhost
+CHANNEL_LAYERS_PORT=6379
+```
+
+For complete list, see [.env.example](.env.example)
+
+---
+
+## 💳 Payments and Billing
 
 ### Implemented Payment Features
 
-- Package pricing and purchase initiation
-- Payment verify endpoint and callback verification
-- Payment success/failure flows
-- Subscription detail and cancellation
-- Invoice detail and payment history
-- Webhook ingestion and processing
-- Payment event auditing and webhook event storage
+- **Package Pricing**: Tiered subscription and promotion packages
+- **Payment Processing**: Secure Razorpay integration
+- **Payment Verification**: Real-time payment status confirmation
+- **Success/Failure Flows**: Comprehensive payment result pages
+- **Subscription Management**: Detail views and cancellation workflows
+- **Invoice Management**: Automated invoice generation and viewing
+- **Webhook Processing**: Razorpay webhook ingestion and processing
+- **Payment Auditing**: Complete payment lifecycle tracking
+- **Event Persistence**: Webhook event storage for audit trails
 
 ### Razorpay Webhook Setup
 
@@ -322,23 +511,58 @@ Configure one of these endpoints in Razorpay dashboard:
 
 Ensure `RAZORPAY_WEBHOOK_SECRET` in `.env` exactly matches dashboard configuration.
 
+### Payment Packages
+
+The platform supports multiple subscription tiers:
+- Basic, Premium, Elite packages
+- Property listing promotions
+- Featured property placements
+- Custom package creation via admin
+
 ---
 
-## AI Capabilities
+## 🤖 AI & Chatbot Integration
 
-### 1) AI Description Generation
+### NVIDIA NIM Integration
 
-Generates listing descriptions from available property metadata.
+LuxeEstate leverages NVIDIA's NIM (NVIDIA Inference Microservice) for advanced AI capabilities:
 
-### 2) AI Chatbot
+**Features:**
+- **Meta Llama 2 7B Chat**: Conversational property assistance
+- **NVIDIA NEVA 22B**: Advanced image understanding for property images
+- **Configurable System Prompts**: Flexible chatbot behavior via `AI_CHATBOT_GUIDELINES`
+- **Real-time Inference**: Low-latency AI responses
 
-Handles property-related guidance with configurable model and policy guardrails.
+**Setup:**
+1. Obtain NVIDIA API Key from [api.nvidia.com](https://api.nvidia.com)
+2. Configure in `.env`:
+   ```
+   NVIDIA_API_KEY=nvapi-xxxxx...
+   NIM_CHAT_MODEL=meta/llama-2-7b-chat-q8_0
+   NVIDIA_VISION_MODEL=nvidia/neva-22b
+   ```
+3. Refer to [NVIDIA_NIM_SETUP.md](NVIDIA_NIM_SETUP.md) for detailed setup
 
-### 3) Search by Image
+### Chatbot Features
 
-Uploads property images, extracts visual features, and ranks listings by similarity.
+- **Property Inquiries**: Answer questions about listings
+- **Smart Recommendations**: AI-powered property suggestions
+- **Lead Qualification**: Automated lead assessment
+- **Follow-up Automation**: Scheduled follow-up messages
+- **Multi-turn Conversations**: Context-aware dialogues
+- **Configurable Behavior**: System prompt customization
 
-For setup and troubleshooting specifics, see `IMAGE_SEARCH_SETUP.md`.
+### AI Capabilities
+
+1. **Description Generation**: Auto-generate property descriptions from metadata
+2. **Image Search**: Visual similarity matching across listings
+3. **Chatbot Support**: Conversational AI for customer support
+4. **Smart Matching**: AI-powered property-to-buyer matching
+
+For detailed guides:
+- [CHATBOT_INTEGRATION.md](CHATBOT_INTEGRATION.md) - Setup & configuration
+- [CHATBOT_GUIDE.md](CHATBOT_GUIDE.md) - User guide
+- [NVIDIA_NIM_SETUP.md](NVIDIA_NIM_SETUP.md) - AI model setup
 
 ---
 
@@ -385,78 +609,122 @@ Static info pages:
 
 ---
 
-## Testing and Quality
-
-Recommended pre-release checks:
-
-```bash
-python manage.py check
-python manage.py test
-```
-
-Also validate manually:
-
-- Auth and OTP flows
-- Property create/edit/delete
-- Search and comparison behavior
-- Messaging and notifications
-- Payment success/failure and webhook processing
-- AI chatbot and image search availability
-
----
-
-## Deployment Checklist
-
-- Set `DEBUG=False`
-- Configure production `ALLOWED_HOSTS`
-- Use secure production `SECRET_KEY`
-- Enable HTTPS and secure cookie settings
-- Use production database (PostgreSQL recommended)
-- Configure persistent media/static strategy
-- Run `python manage.py collectstatic`
-- Configure background job strategy for periodic commands
-- Add monitoring, alerting, and backup policies
-
----
-
 ## Troubleshooting
 
-### OTP/Email issues
+### OTP/Email Issues
 
-- Verify SMTP credentials in `.env`
-- Check fallback email backend behavior in debug mode
-- Review app logs for TLS/certificate-related messages
+**Problem**: Emails not being sent
+- **Solution**: Verify SMTP credentials in `.env`
+- Check Gmail app-specific password (if using Gmail)
+- Enable "Less secure apps" if using older email providers
+- Review app logs for TLS/certificate errors
+- Test with debug email backend locally
 
-### Payment issues
+**Command to test email:**
+```bash
+python manage.py shell
+from django.core.mail import send_mail
+send_mail('Test', 'Test message', 'from@example.com', ['to@example.com'])
+```
 
-- Re-check Razorpay keys and webhook secret
-- Confirm webhook URL is reachable from internet
-- Review payment/invoice/audit/webhook records in database
+### Payment Issues
 
-### AI feature issues
+**Problem**: Webhook not processing
+- Re-check Razorpay keys and webhook secret in `.env`
+- Confirm webhook URL is reachable from internet (test with ngrok)
+- Check payment webhook logs in database
+- Verify signature calculation matches Razorpay format
 
-- Verify `NVIDIA_API_KEY` and model variables
-- Restart server after changing `.env`
-- Use clear, high-quality images for image-based search
+**Problem**: Payment verification failing
+- Ensure `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` are correct
+- Check payment status in Razorpay dashboard
+- Review database payment records for status
 
-### Static/media issues in production
+### AI/Chatbot Issues
 
-- Re-run `collectstatic`
-- Confirm WhiteNoise/static serving config
-- Verify media storage permissions and paths
+**Problem**: Chatbot not responding
+- Verify `NVIDIA_API_KEY` is correct and active
+- Check NVIDIA NIM API status
+- Review chatbot logs for API errors
+- Ensure `NIM_CHAT_MODEL` is valid
+- Test API key: `curl -H "Authorization: Bearer $NVIDIA_API_KEY" https://integrate.api.nvidia.com/v1/models`
+
+**Problem**: Image search not working
+- Verify `NVIDIA_VISION_MODEL` is configured
+- Check image file size and format (JPEG, PNG recommended)
+- Review image processing logs
+- Ensure vision model API key is active
+
+### Static/Media Files Issues
+
+**Problem**: Static files not loading in production
+- Re-run `python manage.py collectstatic --noinput`
+- Verify static files directory permissions
+- Check WhiteNoise configuration
+- Review web server static file serving config (nginx, Apache)
+
+**Problem**: Media uploads not working
+- Check media directory permissions
+- Verify `MEDIA_URL` and `MEDIA_ROOT` settings
+- Ensure disk space available
+- Check file upload size limits in settings
+
+### Database Issues
+
+**Problem**: Migration failures
+```bash
+# Check migration status
+python manage.py showmigrations
+
+# Migrate specific app
+python manage.py migrate accounts
+
+# View specific migration
+python manage.py sqlmigrate accounts 0001_initial
+```
+
+**Problem**: Foreign key constraint errors
+- Ensure related objects exist before creation
+- Check data integrity in admin interface
+- Review recent model changes
+
+### WebSocket/Messaging Issues
+
+**Problem**: Real-time messaging not working
+- Verify Django Channels is installed: `pip list | grep channels`
+- Check `CHANNEL_LAYERS` configuration in settings
+- Ensure Redis is running (if using Redis backend)
+- Test WebSocket connection: Check browser console for connection errors
+- Review Daphne/ASGI server logs
+
+### General Debugging
+
+Enable verbose logging:
+```python
+# In settings.py
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+}
+```
+
+Check application logs:
+```bash
+tail -f logs/django.log
+python manage.py runserver --verbosity 2
+```
 
 ---
 
-## Security Guidelines
+**Last Updated**: May 4, 2026
 
-- Never commit `.env`, secrets, or private credentials
-- Keep dependencies patched and updated
-- Protect webhook secrets and API keys from frontend exposure
-- Validate uploads and enforce reasonable file limits
-- Review generated AI output before business-critical usage
-
----
-
-## License
-
-This repository is currently intended for educational and development use.
+For more information and latest updates, visit the [GitHub repository](https://github.com/jainam-shah-18/LuxeEstate)

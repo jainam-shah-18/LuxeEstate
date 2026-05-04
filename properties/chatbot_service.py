@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import re
+import requests
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional, Tuple
@@ -19,8 +20,10 @@ from typing import Any, Dict, List, Optional, Tuple
 from django.conf import settings
 from django.db.models import Avg, Max, Min, QuerySet
 from django.utils import timezone
+from django.contrib.auth.models import User
 
 from .models import Property, Lead, Appointment
+from .chatbot_system_prompt import CHATBOT_SYSTEM_PROMPT, is_out_of_scope, get_scope_redirect
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +53,8 @@ GREETING_RE = re.compile(
 GOODBYE_RE = re.compile(r"^\s*(bye|goodbye|exit|quit|stop|see you)\s*[!.,\s]*$", re.IGNORECASE)
 DATETIME_HINT_RE = re.compile(
     r"\b("
-    r"time|date|day|today|tomorrow|yesterday|"
+    r"time|date|day|today|tomorrow|yesterday|current|now|"
+    r"what\s+(?:is|'s|time)|current\s+time|what\s+time|what\s+date|"
     r"jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|"
     r"aug|august|sep|sept|september|oct|october|nov|november|dec|december|"
     r"\d{1,2}\s*(?:/|-)\s*\d{1,2}(?:\s*(?:/|-)\s*\d{2,4})?"
@@ -59,6 +63,50 @@ DATETIME_HINT_RE = re.compile(
 )
 
 PROPERTY_TYPES = {"apartment", "house", "villa", "plot", "commercial", "office", "shop", "farmland"}
+
+# Comprehensive city abbreviations and alias mappings
+CITY_ABBREVIATIONS = {
+    # Major cities
+    "blr": "Bangalore",
+    "bangalore": "Bangalore",
+    "mumbai": "Mumbai",
+    "delhi": "Delhi",
+    "ncr": "Delhi",
+    "pune": "Pune",
+    "delhi": "Delhi",
+    "hyderabad": "Hyderabad",
+    "hyd": "Hyderabad",
+    "ahmedabad": "Ahmedabad",
+    "ahmd": "Ahmedabad",
+    "surat": "Surat",
+    "vadodara": "Vadodara",
+    "jaipur": "Jaipur",
+    "lucknow": "Lucknow",
+    "kanpur": "Kanpur",
+    "nagpur": "Nagpur",
+    "indore": "Indore",
+    "thane": "Thane",
+    "bhopal": "Bhopal",
+    "visakhapatnam": "Visakhapatnam",
+    "vizag": "Visakhapatnam",
+    "kochi": "Kochi",
+    "cochin": "Kochi",
+    "kolkata": "Kolkata",
+    "calcutta": "Kolkata",
+    "noida": "Noida",
+    "gurgaon": "Gurgaon",
+    "gurugram": "Gurgaon",
+    "goa": "North Goa",  # Map "Goa" to "North Goa"
+    "north goa": "North Goa",
+    "south goa": "South Goa",
+    # Popular localities
+    "whitefield": "Whitefield",
+    "manyata": "Manyata",
+    "indiranagar": "Indiranagar",
+    "koramangala": "Koramangala",
+    "banjara hills": "Banjara Hills",
+}
+
 INTENT_PATTERNS = {
     "rent": re.compile(r"\b(rent|rental|lease|on rent)\b", re.IGNORECASE),
     "invest": re.compile(r"\b(invest|investment|roi|yield|appreciation)\b", re.IGNORECASE),
@@ -84,6 +132,14 @@ class LuxeChatbot:
     MAX_HISTORY = 24
     MAX_HISTORY_MESSAGES = 12
 
+    def __init__(self):
+        """Initialize chatbot with persistent requests session for API calls"""
+        self.http_client = requests.Session()
+        # Configure session for better connection handling
+        self.http_client.headers.update({
+            'User-Agent': 'LuxeEstate-Chatbot/1.0'
+        })
+
     def _now_context(self) -> Tuple[str, str, str, str]:
         now = timezone.localtime(timezone.now())
         tz_name = now.strftime("%Z") or "IST"
@@ -92,6 +148,14 @@ class LuxeChatbot:
             now.strftime("%A"),
             now.strftime("%d %B %Y"),
             now.strftime("%I:%M %p"),
+        )
+
+    def _tomorrow_context(self) -> Tuple[str, str]:
+        """Get tomorrow's date and day name"""
+        tomorrow = timezone.localtime(timezone.now()) + timedelta(days=1)
+        return (
+            tomorrow.strftime("%d %B %Y"),
+            tomorrow.strftime("%A"),
         )
 
     def _relative_date_reply(self, user_message: str) -> Optional[str]:
@@ -134,8 +198,15 @@ class LuxeChatbot:
         )
         if not m:
             return ""
+        
         value = m.group(1).replace(",", "")
         unit = (m.group(2) or "").lower()
+        
+        # If no unit is found, check if the number is large enough to be a raw value
+        # or if it's likely a partial match we should ignore
+        if not unit and len(value) < 4:
+            return ""
+            
         return f"{value} {unit}".strip()
 
     def _budget_to_rupees(self, budget_text: str) -> Optional[Decimal]:
@@ -187,38 +258,15 @@ class LuxeChatbot:
             re.IGNORECASE,
         )
         if city_match:
-            city = city_match.group(1).strip().title()
-            # Handle abbreviations
-            abbreviations = {
-                "Blr": "Bangalore",
-                "Mumbai": "Mumbai",
-                "Delhi": "Delhi",
-                "Pune": "Pune",
-                "Chennai": "Chennai",
-                "Kolkata": "Kolkata",
-                "Hyderabad": "Hyderabad",
-                "Noida": "Noida",
-                "Gurgaon": "Gurgaon",
-                "Ahmedabad": "Ahmedabad",
-                "Whitefield": "Whitefield",
-                "Manyata": "Manyata",
-            }
-            out["location"] = abbreviations.get(city, city)
+            city = city_match.group(1).strip()
+            # Normalize and map city name using comprehensive abbreviations
+            city_normalized = CITY_ABBREVIATIONS.get(city.lower(), city)
+            out["location"] = city_normalized
         elif re.match(r"^\s*[A-Za-z][A-Za-z\s]{2,30}\s*$", text) and " " not in text.strip() and not GREETING_RE.match(text) and not GOODBYE_RE.match(text):
-            city = text.strip().title()
-            abbreviations = {
-                "Blr": "Bangalore",
-                "Mumbai": "Mumbai",
-                "Delhi": "Delhi",
-                "Pune": "Pune",
-                "Chennai": "Chennai",
-                "Kolkata": "Kolkata",
-                "Hyderabad": "Hyderabad",
-                "Noida": "Noida",
-                "Gurgaon": "Gurgaon",
-                "Ahmedabad": "Ahmedabad",
-            }
-            out["location"] = abbreviations.get(city, city)
+            city = text.strip()
+            # Normalize and map city name using comprehensive abbreviations
+            city_normalized = CITY_ABBREVIATIONS.get(city.lower(), city)
+            out["location"] = city_normalized
 
         ptype = re.search(r"\b(flat|apartment|villa|plot|house|home|office|shop|commercial|farmland)\b", lower)
         if ptype:
@@ -303,54 +351,16 @@ class LuxeChatbot:
         }
 
     def _handle_faq(self, message: str) -> Optional[str]:
-        """Handle common FAQs automatically"""
-        text = (message or "").strip().lower()
+        """
+        DEPRECATED: All FAQ handling moved to NVIDIA NIM for real-time, AI-generated responses.
+        This method is kept for backward compatibility but always returns None.
+        """
+        # EMI calculations are the ONLY exception - these are mathematical, not content
+        emi_response = self._handle_budget_queries(message)
+        if emi_response:
+            return emi_response
         
-        faqs = {
-            "how to buy": "To buy a property on LuxeEstate: 1) Search for properties, 2) Contact the agent, 3) Schedule site visits, 4) Make an offer, 5) Complete legal paperwork. I can help with steps 1-3!",
-            "how to sell": "To sell your property: 1) Create a listing with photos and details, 2) Set competitive pricing, 3) Respond to inquiries, 4) Show the property, 5) Negotiate and close. Contact our team for professional assistance.",
-            "pricing": "Property prices vary by location, type, and condition. I can show you current market rates and help find properties within your budget.",
-            "loan": "For home loans, I recommend consulting licensed banks or NBFCs. They offer various schemes for different buyer types. I can help you find properties that fit common loan amounts.",
-            "legal": "All LuxeEstate transactions involve proper legal documentation. We ensure clear titles and transparent processes. For specific legal advice, consult a qualified lawyer.",
-            "commission": "Agent commissions vary but typically range from 1-2% of the property value. LuxeEstate ensures transparent fee structures.",
-            "verification": "We verify all property documents and agent credentials. Every listing goes through our quality check process.",
-            "support": "I'm here 24/7 to help with property searches, lead qualification, and appointment scheduling. For complex issues, I can connect you with human experts.",            # Legal & Verification
-            "rera": "RERA registration ensures project transparency. Check the RERA website or ask the developer for the registration number. All LuxeEstate projects are RERA compliant.",
-            "documents": "Key documents to verify: Sale deed, title deed, encumbrance certificate, property tax receipts, and NOC from society/builder.",
-            "oc/cc": "OC (Occupation Certificate) allows legal occupation. CC (Completion Certificate) confirms construction completion. Always verify these before booking.",
-            "freehold": "Freehold means you own the land and building. Leasehold means ownership for a fixed period. Freehold is generally preferred for long-term investment.",
-            "encumbrance": "An encumbrance-free property has no legal claims, liens, or disputes. Always get an encumbrance certificate from the sub-registrar.",
-            "sale agreement": "Sale agreement is a contract outlining terms. Sale deed is the final transfer document registered with the government.",
-            "home loan pre-approval": "Pre-approval gives you a clear budget and strengthens your offer. It shows sellers you're a serious buyer.",
-            "taxes": "Stamp duty and registration charges vary by state (typically 5-8%). Property tax is annual, based on property value.",
-            # Location & Lifestyle
-            "best areas": "I can help identify family-friendly areas based on schools, hospitals, and connectivity. Share your city and preferences for specific recommendations.",
-            "metro": "Properties near metro stations offer excellent connectivity. I can show listings within 1-2 km of metro lines in major cities.",
-            "schools": "I can find properties near top-rated schools. Popular areas include [city-specific recommendations].",
-            "hospitals": "Medical facilities are crucial. I can locate properties near reputed hospitals and healthcare centers.",
-            "traffic": "Low-traffic areas typically have good infrastructure. I can suggest localities with efficient public transport and road networks.",
-            "it parks": "Tech hubs offer convenience for working professionals. I can show properties near major IT parks and business districts.",
-            "long-term living": "Consider factors like infrastructure, amenities, future development, and community. I can provide insights on specific localities.",
-            "amenities": "Nearby amenities include schools, hospitals, malls, parks, and transport. I can check proximity for specific properties.",
-            "safe neighborhoods": "Safety is paramount. I can recommend areas with good security, lighting, and community watch programs.",
-            "lifestyle comparison": "I can compare localities based on cost of living, connectivity, amenities, and growth potential.",
-            # Investment
-            "good investment": "Look for properties in growing areas with good rental demand. I can analyze potential ROI based on location and type.",
-            "rental yield": "Rental yield varies by location (typically 3-6%). I can estimate based on current market rates.",
-            "appreciation": "Areas with infrastructure development show higher appreciation. I can share historical trends for specific localities.",
-            "buy now or wait": "Market timing depends on economic conditions. Generally, buying in a stable market is advisable. I can provide current market insights.",
-            "roi comparison": "2BHK vs 3BHK ROI depends on rental rates and capital appreciation. I can compare based on current data.",
-            "maintenance costs": "Budget 0.5-1% of property value annually for maintenance, depending on property age and type.",        }
-        
-        for keyword, response in faqs.items():
-            if keyword in text:
-                return response
-        
-        # Handle budget queries
-        budget_response = self._handle_budget_queries(message)
-        if budget_response:
-            return budget_response
-        
+        # All other queries must go through NVIDIA NIM
         return None
 
     def handle_fallback(self, intent: str, user_message: str) -> str:
@@ -367,17 +377,54 @@ class LuxeChatbot:
         else:
             return "cold"
 
-    def _save_lead(self, lead: Dict[str, str], session_id: Optional[str] = None):
-        """Stub method for saving leads - not implemented"""
-        return None
+    def _save_lead(self, lead_data: Dict[str, str], session_id: Optional[str] = None):
+        """Save lead to database"""
+        try:
+            lead, created = Lead.objects.update_or_create(
+                session_id=session_id,
+                defaults={
+                    "name": lead_data.get("name"),
+                    "contact": lead_data.get("contact"),
+                    "intent": lead_data.get("intent"),
+                    "budget": lead_data.get("budget"),
+                    "location": lead_data.get("location"),
+                    "property_type": lead_data.get("property_type"),
+                    "bhk": lead_data.get("bhk"),
+                }
+            )
+            lead.update_qualification()
+            return lead
+        except Exception as e:
+            logger.error(f"Error saving lead: {e}")
+            return None
 
-    def _save_appointment(self, lead, appointment: Dict[str, Any]):
-        """Stub method for saving appointments - not implemented"""
-        return None
+    def _save_appointment(self, lead, appointment_data: Dict[str, Any]):
+        """Save appointment to database"""
+        try:
+            # Simple date parsing for the stub
+            # In a real app, use a more robust parser like dateutil
+            dt_str = appointment_data.get("preferred_datetime", "")
+            # Mocking a datetime for now as parsing arbitrary strings is complex
+            # In production, use a proper parser
+            scheduled_dt = timezone.now() + timedelta(days=1) 
+            
+            appointment = Appointment.objects.create(
+                lead=lead,
+                scheduled_datetime=scheduled_dt,
+                notes=f"Requested via chatbot: {appointment_data.get('property_hint')}"
+            )
+            return appointment
+        except Exception as e:
+            logger.error(f"Error saving appointment: {e}")
+            return None
 
     def _assign_agent_to_hot_lead(self, lead):
-        """Stub method for assigning agents - not implemented"""
-        pass
+        """Assign an available agent to a hot lead"""
+        if lead.qualification_stage == 'hot' and not lead.assigned_agent:
+            agent = User.objects.filter(is_staff=True).first()
+            if agent:
+                lead.assigned_agent = agent
+                lead.save(update_fields=['assigned_agent'])
 
     def manage_conversation_state(self, conversation_state: Optional[dict], user_message: str) -> Dict[str, Any]:
         raw = (user_message or "").strip()[:1000]
@@ -448,56 +495,24 @@ class LuxeChatbot:
         next_question: str,
         asked_fields: set,
     ) -> Tuple[str, str, set]:
-        if intent == "greeting":
-            return "Hello! I am Luxe AI Concierge. Are you looking to buy, rent, or invest today?", "", asked_fields
+        """Generate response using NVIDIA NIM ONLY - all responses from real-time AI, no hardcoded fallbacks"""
         
-        if intent == "goodbye":
-            return "Thanks for chatting with LuxeEstate. I am here whenever you need property help.", "", asked_fields
-        
-        if intent == "appointment" or appointment.get("requested"):
-            return self._deterministic_reply(raw, intent, lead, criteria, appointment), "", asked_fields
-
-        if intent == "intent_change":
-            return f"I understand you've changed your mind. Let's focus on {lead.get('intent', 'your property needs')}. What specific requirements do you have?", "", asked_fields
-        
-        if intent == "preference":
-            return f"Noted! I'll remember your preferences for future recommendations. {self._listing_snapshot(lead, criteria)[0]}", "", asked_fields
-        
-        if intent == "explanation":
-            return "I recommend properties based on your specified criteria (location, budget, type, etc.) and current market availability. All listings are live and verified.", "", asked_fields
-        
-        if intent == "data_freshness":
-            now_text, day_name, date_text, time_text = self._now_context()
-            return f"All property data is current as of {date_text} at {time_text}. Listings are updated in real-time from our database.", "", asked_fields
-
-        if intent == "unknown":
-            # Check for common FAQs
-            faq_response = self._handle_faq(raw)
-            if faq_response:
-                return faq_response
-            return self.handle_fallback(intent, raw), "", asked_fields
-
+        message = ""
+        model = ""
         try:
             message, model = self._nim_reply(raw, history, lead, criteria)
+            logger.info(f"Successfully generated response using NVIDIA NIM model: {model}")
+            return message, model, asked_fields
         except Exception as exc:
-            logger.info("NVIDIA NIM unavailable, using deterministic fallback: %s", exc)
-            message = self._deterministic_reply(raw, intent, lead, criteria, appointment)
-            model = ""
-
-        if next_question and intent in {"unknown", "inquiry", "buy", "rent", "invest"}:
-            prompts = {
-                "intent": "Are you looking to buy, rent, or invest in a property?",
-                "location": "Which city or locality do you prefer?",
-                "property_type": "Which property type should I look for (apartment, villa, plot, office, etc.)?",
-                "budget": "What budget range should I target?",
-                "name": "May I have your name so our LuxeEstate team can follow up?",
-                "contact": "Please share your phone number or email for follow-up.",
-            }
-            if next_question not in asked_fields:
-                followup = prompts.get(next_question, "")
-                if followup:
-                    message = f"{message} {followup}".strip()
-                    asked_fields.add(next_question)
+            error_msg = str(exc)
+            logger.error(f"NVIDIA NIM failed - no hardcoded fallback will be used: {error_msg}")
+            # Return error to user indicating AI service issue - NO hardcoded fallback allowed
+            message = (
+                f"⚠️ AI service temporarily unavailable ({error_msg}). "
+                "Please check NVIDIA_API_KEY and NIM configuration in .env file."
+            )
+            model = "error"
+        
         return message, model, asked_fields
 
     def _merge(self, base: Dict[str, Any], update: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, Any]:
@@ -516,7 +531,7 @@ class LuxeChatbot:
         return [f for f in LEAD_ORDER if not (lead or {}).get(f)]
 
     def send_automated_followups(self):
-        """Send automated follow-ups for leads and appointments (to be called by management command)"""
+        """Send automated follow-ups for leads and appointments"""
         now = timezone.now()
         
         # Send reminders for upcoming appointments
@@ -533,64 +548,46 @@ class LuxeChatbot:
                 logger.info(f"Sent reminder for appointment {appointment.id}")
             except Exception as e:
                 logger.error(f"Failed to send reminder for appointment {appointment.id}: {e}")
-        
-        # Follow up on cold leads after 7 days
-        cold_leads = Lead.objects.filter(
-            qualification_stage='cold',
-            created_at__lte=now - timezone.timedelta(days=7),
-            status='new'
-        )
-        
-        for lead in cold_leads:
-            # TODO: Send follow-up message via email/SMS
-            logger.info(f"Follow-up needed for cold lead {lead.id}")
-        
-        # Escalate hot leads without appointments after 24 hours
-        hot_leads_no_appointment = Lead.objects.filter(
-            qualification_stage='hot',
-            created_at__lte=now - timezone.timedelta(hours=24),
-            status='qualified'
-        ).exclude(appointments__isnull=False)
-        
-        for lead in hot_leads_no_appointment:
-            # TODO: Escalate to human agent or send urgent follow-up
-            logger.info(f"Hot lead {lead.id} needs urgent follow-up")
 
     def _query_from_lead(self, lead: Dict[str, str], criteria: Dict[str, Any]) -> QuerySet:
-        qs = Property.objects.filter(is_active=True, status="available")
+        qs = Property.objects.filter(is_active=True)
+        
+        # Normalize and filter by location/city
         location = (criteria.get("location") or criteria.get("city") or lead.get("location") or "").strip()
         if location:
-            qs = qs.filter(city__icontains=location)
+            # Normalize location using CITY_ABBREVIATIONS mapping
+            normalized_location = CITY_ABBREVIATIONS.get(location.lower(), location)
+            # Use case-insensitive match to handle any casing variations
+            qs = qs.filter(city__iexact=normalized_location)
+        
+        # Filter by property type
         ptype = (criteria.get("property_type") or lead.get("property_type") or "").strip().lower()
         normalized_type = self._normalize_property_type(ptype)
         if normalized_type:
             qs = qs.filter(property_type=normalized_type)
+        
+        # Filter by BHK/bedrooms
         bhk_text = (criteria.get("bhk") or lead.get("bhk") or "").strip().lower()
         bhk_num = re.search(r"(\d+)", bhk_text)
         if bhk_num:
             qs = qs.filter(bedrooms=int(bhk_num.group(1)))
 
+        # Filter by budget
         budget_rupees = self._budget_to_rupees(criteria.get("budget") or lead.get("budget") or "")
         if budget_rupees:
             qs = qs.filter(price__lte=budget_rupees)
 
-        # Additional filters
-        if lead.get("ready_to_move") == "yes":
-            qs = qs.filter(possession_status="ready")
+        # Filter by furnishing
         if lead.get("furnished"):
             qs = qs.filter(furnishing__icontains=lead["furnished"])
-        if lead.get("facing"):
-            qs = qs.filter(facing__icontains=lead["facing"].split()[0])  # e.g., east from east-facing
-        if lead.get("amenities"):
-            amenities_list = [a.strip() for a in lead["amenities"].split(",")]
-            for amenity in amenities_list:
-                qs = qs.filter(amenities__icontains=amenity)
-        if lead.get("posted_within_days"):
-            days = int(lead["posted_within_days"])
-            qs = qs.filter(created_at__gte=timezone.now() - timedelta(days=days))
+        
+        # Filter by minimum area
         if lead.get("min_area_sqft"):
-            sqft = int(lead["min_area_sqft"])
-            qs = qs.filter(area__gte=sqft)
+            try:
+                sqft = int(lead["min_area_sqft"])
+                qs = qs.filter(area_sqft__gte=sqft)
+            except (ValueError, TypeError):
+                pass
 
         return qs
 
@@ -602,12 +599,6 @@ class LuxeChatbot:
             return principal / months
         emi = principal * monthly_rate * (1 + monthly_rate) ** months / ((1 + monthly_rate) ** months - 1)
         return emi.quantize(Decimal('0.01'))
-
-    def _estimate_rental_yield(self, property_price: Decimal, monthly_rent: Decimal) -> Decimal:
-        """Estimate annual rental yield"""
-        if property_price == 0:
-            return Decimal('0')
-        return (monthly_rent * 12 / property_price * 100).quantize(Decimal('0.01'))
 
     def _handle_budget_queries(self, message: str) -> Optional[str]:
         """Handle EMI, investment, and budget-related queries"""
@@ -625,22 +616,6 @@ class LuxeChatbot:
             if principal:
                 emi = self._calculate_emi(principal, rate, years)
                 return f"For a loan of ₹{principal:,.0f} at {rate}% interest for {years} years, your monthly EMI would be approximately ₹{emi:,.0f}."
-        
-        # Rental yield
-        yield_match = re.search(r"rental yield in ([A-Za-z\s]+)", text, re.IGNORECASE)
-        if yield_match:
-            locality = yield_match.group(1).strip()
-            # Mock data - in real implementation, fetch from database
-            avg_yield = Decimal('4.5')  # Example
-            return f"Average rental yield in {locality.title()} is around {avg_yield}%. This can vary based on property type and condition."
-        
-        # Price trends
-        trend_match = re.search(r"price trend in ([A-Za-z\s]+)", text, re.IGNORECASE)
-        if trend_match:
-            locality = trend_match.group(1).strip()
-            # Mock data
-            trend = "increased by 8-12% in the last year"
-            return f"Property prices in {locality.title()} have {trend}. For the most accurate data, I recommend checking recent transactions."
         
         return None
 
@@ -672,6 +647,9 @@ class LuxeChatbot:
         criteria: Dict[str, Any],
         appointment: Dict[str, Any],
     ) -> str:
+        now_text, day_name, date_text, time_text = self._now_context()
+        tomorrow_date, tomorrow_day = self._tomorrow_context()
+        
         if GREETING_RE.match(user_message):
             return "Hello! I am Luxe AI Concierge. Are you looking to buy, rent, or invest today?"
         if GOODBYE_RE.match(user_message):
@@ -680,42 +658,38 @@ class LuxeChatbot:
             has_when = bool((appointment.get("preferred_datetime") or "").strip())
             has_contact = bool((lead.get("contact") or "").strip())
             if has_when and has_contact:
+                # Format appointment confirmation with proper date context
+                apt_datetime = appointment.get('preferred_datetime', '')
+                if 'tomorrow' in apt_datetime.lower():
+                    apt_datetime = apt_datetime.replace('tomorrow', f'{tomorrow_day}, {tomorrow_date}')
+                elif 'today' in apt_datetime.lower():
+                    apt_datetime = apt_datetime.replace('today', f'{day_name}, {date_text}')
+                
                 return (
-                    f"Perfect! Your site-visit appointment is scheduled for {appointment.get('preferred_datetime')}. "
+                    f"Perfect! Your site-visit appointment is scheduled for {apt_datetime}. "
                     f"Our LuxeEstate team will contact you at {lead.get('contact')} to confirm the details. "
                     f"You'll receive a confirmation message shortly."
                 )
             if not has_when and not has_contact:
                 return "Great, I can help schedule a site visit. Please share your preferred date/time and contact number."
             if not has_when:
-                return "Please share your preferred date and time for the site visit."
+                return f"Please share your preferred date and time for the site visit. (Today is {day_name}, {date_text}. Tomorrow is {tomorrow_day}, {tomorrow_date})"
             return "Please share your contact number or email so we can confirm the site visit."
         if DATETIME_HINT_RE.search(user_message):
             relative_reply = self._relative_date_reply(user_message)
             if relative_reply:
                 return relative_reply
-            now_text, day_name, date_text, time_text = self._now_context()
-            return f"Current time is {time_text} on {day_name}, {date_text}. ({now_text})"
+            return f"Current time is {time_text} on {day_name}, {date_text}. ({now_text}) Tomorrow is {tomorrow_day}, {tomorrow_date}."
 
         listing_text, info = self._listing_snapshot(lead, criteria)
         if info.get("count", 0) == 0:
             return "I could not find active listings for these filters. Share city, budget, or property type and I will broaden the search."
         if intent in {"buy", "rent", "invest", "inquiry"}:
-            if info.get("count", 0) == 0:
-                return (
-                    "I couldn't find active listings matching your exact criteria. "
-                    "Would you like me to:\n"
-                    "• Broaden your search (remove some filters)\n"
-                    "• Show similar properties in nearby areas\n"
-                    "• Connect you with a property specialist\n"
-                    "Just let me know how you'd like to proceed!"
-                )
-            else:
-                return (
-                    "Here is the live LuxeEstate snapshot:\n"
-                    f"{listing_text}\n"
-                    "Tell me more about what you're looking for."
-                )
+            return (
+                "Here is the live LuxeEstate snapshot:\n"
+                f"{listing_text}\n"
+                "Tell me more about what you're looking for."
+            )
         return "I can help with property search, pricing, and site visits on LuxeEstate. What would you like to explore?"
 
     def _nim_reply(
@@ -725,50 +699,65 @@ class LuxeChatbot:
         lead: Dict[str, str],
         criteria: Dict[str, Any],
     ) -> Tuple[str, str]:
+        """
+        Generate response using NVIDIA NIM API.
+        Supports both NVIDIA Cloud API and self-hosted NIM endpoints.
+        """
+        # Get API configuration from settings
         api_key = (getattr(settings, "NVIDIA_API_KEY", None) or "").strip()
         if not api_key:
-            raise RuntimeError("NVIDIA_API_KEY is not configured")
-        try:
-            import requests
-            client = requests.Session()
-            base_url = "https://integrate.api.nvidia.com/v1"
-        except ImportError as exc:
-            raise RuntimeError("Requests library is not installed. Run: pip install requests") from exc
+            logger.warning("NVIDIA_API_KEY is not configured. Set NVIDIA_API_KEY in .env file for AI enhancements.")
+            raise RuntimeError("NVIDIA_API_KEY not configured. Chatbot will use deterministic fallback responses.")
+        
+        # Get NIM endpoint configuration (support both cloud and self-hosted)
+        nim_endpoint = getattr(settings, "NVIDIA_NIM_ENDPOINT", "https://integrate.api.nvidia.com/v1").strip()
+        model = getattr(settings, "NIM_CHAT_MODEL", "meta/llama-3.1-8b-instruct").strip()
+        
+        logger.debug(f"NIM Configuration - Model: {model}, Endpoint: {nim_endpoint}, API Key present: {bool(api_key)}")
+        
+        # Validate configuration
+        if not model:
+            raise RuntimeError("NIM_CHAT_MODEL is not configured")
+        
+        # Use persistent HTTP client for better connection pooling
+        if not self.http_client:
+            self.http_client = requests.Session()
 
-        model = getattr(settings, "NIM_CHAT_MODEL", "gpt-4o-mini").strip()
         listing_text, _ = self._listing_snapshot(lead, criteria)
         now_text, day_name, date_text, time_text = self._now_context()
+        tomorrow_date, tomorrow_day = self._tomorrow_context()
 
-        system = (
-            "You are LuxeEstate's real estate chatbot assistant. "
-            "Respond only with property-related guidance, lead qualification, appointment scheduling, "
-            "and search recommendations for LuxeEstate. "
-            "Do not provide general knowledge, do not discuss unrelated topics, "
-            "and do not fabricate property details.\n"
-            f"Current date: {date_text}\n"
-            f"Current day: {day_name}\n"
-            f"Current time: {time_text}\n"
+        # Get available cities from database
+        available_cities = sorted(set(Property.objects.filter(
+            is_active=True, status="available"
+        ).values_list('city', flat=True)))
+        cities_context = f"Available cities: {', '.join(available_cities)}" if available_cities else "No cities available yet"
+
+        # Build comprehensive system prompt with actual context
+        system = CHATBOT_SYSTEM_PROMPT.replace(
+            "{context_will_be_injected_here}",
+            f"CURRENT DATE & TIME CONTEXT:\n"
+            f"- Today: {date_text} ({day_name})\n"
+            f"- Current Time: {time_text}\n"
+            f"- Tomorrow: {tomorrow_date} ({tomorrow_day})\n"
+            f"- Full Context: {now_text}\n\n"
+            f"{cities_context}\n"
             f"Live listing snapshot:\n{listing_text}\n"
-            f"Lead data: {lead}\n"
-            "Handle advanced queries: EMI calculations, investment analysis, legal questions, location insights.\n"
-            "Support abbreviations (Blr=Bangalore, 2BHK=2 BHK), handle preference changes, remember user preferences.\n"
-            "For edge cases: If user changes mind (e.g., 'actually I want to buy'), acknowledge and adjust search.\n"
-            "If user asks 'why this listing', explain based on criteria match.\n"
-            "If user says 'connect to human', escalate politely.\n"
-            "If user asks about data freshness, confirm current date and that listings are live.\n"
-            "If the user asks off-topic or abusive questions, politely redirect to LuxeEstate real estate support."
+            f"Lead profile: {lead}"
         )
 
+        # Build message history
         messages = [{"role": "system", "content": system}]
-        for turn in history[-self.MAX_HISTORY_MESSAGES :]:
+        for turn in history[-self.MAX_HISTORY_MESSAGES:]:
             role = turn.get("role")
             content = (turn.get("content") or "").strip()
             if role in {"user", "assistant"} and content:
                 messages.append({"role": role, "content": content})
         messages.append({"role": "user", "content": user_message})
 
+        # Call NVIDIA NIM API with proper error handling
         try:
-            url = f"{base_url}/chat/completions"
+            url = f"{nim_endpoint.rstrip('/')}/chat/completions"
             headers = {
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
@@ -777,22 +766,46 @@ class LuxeChatbot:
                 "model": model,
                 "messages": messages,
                 "temperature": 0.2,
-                "max_tokens": 300,
-                "n": 1,
+                "max_tokens": 500,
+                "top_p": 0.9,
             }
-            resp = client.post(url, headers=headers, json=payload)
+            
+            logger.debug(f"Calling NVIDIA NIM at {url} with model {model}")
+            resp = self.http_client.post(url, headers=headers, json=payload, timeout=30)
+            
             if resp.status_code != 200:
-                raise Exception(f"NVIDIA API error: {resp.text}")
+                error_detail = resp.text
+                logger.error(f"NVIDIA NIM API error (status {resp.status_code}): {error_detail}")
+                if resp.status_code == 401:
+                    raise Exception("NVIDIA NIM API authentication failed. Verify NVIDIA_API_KEY in .env is correct and not expired.")
+                elif resp.status_code == 404:
+                    raise Exception("NVIDIA NIM model not found. Verify NIM_CHAT_MODEL in .env (e.g., 'meta/llama-3.1-8b-instruct').")
+                elif resp.status_code == 429:
+                    raise Exception("NVIDIA NIM API rate limited. Too many requests. Please wait and retry.")
+                else:
+                    raise Exception(f"NVIDIA NIM API returned {resp.status_code}: {error_detail[:200]}")
+            
             data = resp.json()
+        except requests.exceptions.Timeout:
+            logger.error("NVIDIA NIM API request timed out (30s) - endpoint may be slow, unreachable, or experiencing high load")
+            raise RuntimeError("NVIDIA NIM API request timed out (30s). Endpoint unreachable or experiencing delays.")
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Connection error to NVIDIA NIM at {nim_endpoint}: {e}")
+            raise RuntimeError(f"Failed to connect to NVIDIA NIM endpoint ({nim_endpoint}): {e}")
         except Exception as exc:
-            raise RuntimeError("NVIDIA chat completion failed") from exc
+            logger.error(f"NVIDIA NIM call failed: {exc}")
+            raise RuntimeError(f"NVIDIA NIM chat completion failed: {exc}") from exc
 
+        # Extract and validate response
         choices = data.get("choices", [])
         if not choices:
-            raise RuntimeError("NVIDIA returned no completion")
+            raise RuntimeError("NVIDIA NIM returned no completion choices")
+        
         text = (choices[0].get("message", {}).get("content") or "").strip()
         if not text:
-            raise RuntimeError("empty completion")
+            raise RuntimeError("NVIDIA NIM returned empty completion")
+        
+        logger.info(f"NVIDIA NIM response generated ({len(text)} chars)")
         return text, model
 
     def detect_intent(self, message: str) -> str:
@@ -800,6 +813,11 @@ class LuxeChatbot:
         lower = text.lower()
         if not text:
             return "unknown"
+        
+        # Check for out-of-scope topics first (CRITICAL - must be before property intents)
+        if is_out_of_scope(message):
+            return "out_of_scope"
+        
         if GREETING_RE.match(text):
             return "greeting"
         if GOODBYE_RE.match(text):
@@ -835,6 +853,7 @@ class LuxeChatbot:
     def process_message(self, user_message: str, conversation_state: Optional[dict] = None) -> dict:
         raw = (user_message or "").strip()[:1000]
         now_text, day_name, date_text, time_text = self._now_context()
+        tomorrow_date, tomorrow_day = self._tomorrow_context()
         state = conversation_state or {}
 
         state_data = self.manage_conversation_state(state, raw)
@@ -851,16 +870,23 @@ class LuxeChatbot:
         requires_human = False
         handoff_reason = ""
         security_flagged = False
+        out_of_scope_flagged = False
 
         if SECURITY_RE.search(raw):
             message = "I can only help with safe LuxeEstate property assistance and cannot process sensitive or unsafe requests."
             intent = "security"
             security_flagged = True
+            model = ""
         elif HUMAN_RE.search(raw):
             message = "I am routing this to a LuxeEstate human agent. Please share contact details and our team will reach out."
             intent = "handoff"
             requires_human = True
             handoff_reason = "User requested human escalation"
+            model = ""
+        elif intent == "out_of_scope":
+            message = get_scope_redirect(raw)
+            out_of_scope_flagged = True
+            model = ""
         else:
             message, model, asked_fields = self.generate_response(
                 raw,
@@ -891,7 +917,7 @@ class LuxeChatbot:
             "appointment_status": None,
         }
         
-        if lead and any(lead.values()):  # Only save if lead has some data
+        if lead and any(lead.values()):
             try:
                 saved_lead = self._save_lead(lead, session_id)
                 if saved_lead:
@@ -921,31 +947,32 @@ class LuxeChatbot:
             "appointment": appointment,
             "requires_human": requires_human,
             "handoff_reason": handoff_reason,
-            "model": model if "model" in locals() else "",
+            "model": model,
             "chat_history": history,
             "search_criteria": criteria,
             "current_datetime": now_text,
             "current_day": day_name,
             "current_date": date_text,
             "current_time": time_text,
+            "tomorrow_date": tomorrow_date,
+            "tomorrow_day": tomorrow_day,
             "guidelines": [
                 "Only discuss LuxeEstate property-related topics.",
                 "Use live listing context and avoid fabricated availability.",
                 "Collect lead details progressively and politely.",
                 "Escalate sensitive/legal/complaint requests to a human agent.",
             ],
-            "out_of_scope": intent == "unknown",
+            "out_of_scope": out_of_scope_flagged,
             "security_flagged": security_flagged,
             "handoff": requires_human,
             "qualified_lead": len(missing_fields) == 0,
             "just_qualified": previous_missing > 0 and len(missing_fields) == 0,
             "missing_fields": missing_fields,
             "next_question_field": next_question,
-            "asked_fields": sorted(list(asked_fields)),
+            "asked_fields": list(asked_fields),
             "last_question_field": next_question if next_question else "",
         })
         return result
 
 
 chatbot = LuxeChatbot()
-

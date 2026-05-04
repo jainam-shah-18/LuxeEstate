@@ -250,8 +250,9 @@ RAZORPAY_WEBHOOK_SECRET = config('RAZORPAY_WEBHOOK_SECRET', default='')
 # Payment Test Mode (use Razorpay checkout with test keys when False)
 PAYMENT_TEST_MODE = config('PAYMENT_TEST_MODE', default=False, cast=bool)
 
-NVIDIA_API_KEY = config('NIM_API_KEY', default='')
-NIM_CHAT_MODEL = config('NVIDIA_MODEL', default='meta/llama-3.1-8b-instruct')
+NVIDIA_API_KEY = config('NVIDIA_API_KEY', default='')
+NIM_CHAT_MODEL = config('NIM_CHAT_MODEL', default='meta/llama-3.1-8b-instruct')
+NVIDIA_NIM_ENDPOINT = config('NVIDIA_NIM_ENDPOINT', default='https://integrate.api.nvidia.com/v1')
 NVIDIA_VISION_MODEL = config('NVIDIA_VISION_MODEL', default='nvidia/neva-22b')
 AI_CHATBOT_GUIDELINES = config(
     'AI_CHATBOT_GUIDELINES',
