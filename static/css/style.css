@@ -800,6 +800,31 @@ button {
     padding-left: 3.4rem;
 }
 
+.telegram-connect-wrapper {
+    margin-left: auto;
+    margin-right: 10px;
+}
+
+.telegram-connect-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #229ED9;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 600;
+    transition: 0.3s ease;
+}
+
+.telegram-connect-btn:hover {
+    background: #1b8ac7;
+    color: white;
+    transform: translateY(-1px);
+}
+
 .upload-card {
     position: relative;
     display: grid;

@@ -266,6 +266,12 @@ AI_CHATBOT_GUIDELINES = config(
     cast=lambda v: [item.strip() for item in str(v).split('|') if item.strip()],
 )
 
+# Telegram Bot Configuration
+
+TELEGRAM_BOT_TOKEN    = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+TELEGRAM_BOT_USERNAME = os.environ.get('TELEGRAM_BOT_USERNAME', '')
+TELEGRAM_WEBHOOK_SECRET = os.environ.get('TELEGRAM_WEBHOOK_SECRET', '')
+
 # Social Auth - Google OAuth
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
@@ -314,3 +320,6 @@ LOGGING = {
         'level': config('LOG_LEVEL', default='INFO'),
     },
 }
+
+
+

@@ -278,8 +278,12 @@
     
     {% block extra_js %}{% endblock %}
     
+    
     <!-- Live assistant (NVIDIA NIM + live listings) -->
     <div class="ai-concierge-widget luxe-live-chat" id="aiConciergeWidget" data-chat-endpoint="{% url 'properties:chatbot_response' %}">
+        <div class="telegram-connect-wrapper">
+    </a>
+</div>
         <button type="button" id="aiConciergeToggle" class="ai-concierge-toggle luxe-chat-fab" aria-label="Open live assistant">
             <span class="ai-toggle-ping" aria-hidden="true"></span>
             <i class="fas fa-comments"></i>
@@ -294,6 +298,19 @@
                         <p class="luxe-chat-sub">Listings, visits &amp; search — here to help</p>
                     </div>
                 </div>
+                <!-- Telegram Button -->
+    <div class="telegram-connect-wrapper">
+        <a
+            id="telegramConnectBtn"
+            class="telegram-connect-btn"
+            href="https://t.me/LuxeEstateAIBot"
+            target="_blank"
+            rel="noopener noreferrer">
+            <i class="fab fa-telegram-plane"></i>
+            Telegram
+        </a>
+    </div>
+
                 <button type="button" id="aiConciergeClose" class="ai-concierge-close luxe-chat-close" aria-label="Close chat">
                     <i class="fas fa-times"></i>
                 </button>

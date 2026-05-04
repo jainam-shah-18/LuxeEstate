@@ -23,7 +23,7 @@ urlpatterns = [
     path('privacy/', TemplateView.as_view(template_name='privacy.html'), name='privacy'),
     path('cookies/', TemplateView.as_view(template_name='cookies.html'), name='cookies'),
     path('sitemap/', TemplateView.as_view(template_name='sitemap.html'), name='sitemap'),
-]
+    path('api/telegram/', include('properties.telegram_urls')),]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
