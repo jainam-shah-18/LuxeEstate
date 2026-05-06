@@ -1,6 +1,6 @@
 # LuxeEstate - Premium Real Estate Platform
 
-Professional real estate platform built with Django for property discovery, user engagement, AI-assisted search, and payment-enabled listing promotion.
+Professional real estate platform built with Django for property discovery, user engagement, AI-assisted search, payment-enabled listing promotion, and Telegram chatbot integration.
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-6.x-092E20?logo=django&logoColor=white)
@@ -8,6 +8,7 @@ Professional real estate platform built with Django for property discovery, user
 ![Channels](https://img.shields.io/badge/Realtime-Django_Channels-6f42c1)
 ![Razorpay](https://img.shields.io/badge/Payments-Razorpay-0C2451)
 ![NVIDIA_NIM](https://img.shields.io/badge/AI-NVIDIA_NIM-76B900)
+![Telegram](https://img.shields.io/badge/Bot-Telegram-2CA5E0?logo=telegram&logoColor=white)
 ![Status](https://img.shields.io/badge/Status-Active-success)
 
 ---
@@ -15,19 +16,19 @@ Professional real estate platform built with Django for property discovery, user
 ## Table of Contents
 
 - [Overview](#overview)
-- [🌟 Features](#-features)
-- [🛠️ Tech Stack](#️-tech-stack)
-- [📋 Project Structure](#-project-structure)
-- [🚀 Quick Start](#-quick-start)
-- [⚙️ Configuration](#️-configuration)
-- [🤖 AI & Chatbot Integration](#-ai--chatbot-integration)
-- [💳 Payments and Billing](#-payments-and-billing)
-- [🔐 Security Features](#-security-features)
-- [📚 Documentation](#-documentation)
-- [🧪 Testing](#-testing)
-- [📦 Deployment](#-deployment)
-- [🤝 Contributing](#-contributing)
-- [📝 License](#-license)
+- [Features](#-features)
+- [Telegram Chatbot](#-telegram-chatbot)
+- [Tech Stack](#️-tech-stack)
+- [Project Structure](#-project-structure)
+- [Quick Start](#-quick-start)
+- [Configuration](#️-configuration)
+- [AI & Chatbot Integration](#-ai--chatbot-integration)
+- [Payments and Billing](#-payments-and-billing)
+- [Security Features](#-security-features)
+- [Testing](#-testing)
+- [Deployment](#-deployment)
+- [Contributing](#-contributing)
+- [License](#-license)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -40,7 +41,7 @@ LuxeEstate unifies listing management, customer communication, and revenue workf
 - **Agents/Owners**: publish and manage listings, respond to leads, and promote properties.
 - **Administrators**: track platform growth, engagement, and revenue metrics.
 
-It includes built-in support for authentication, OTP verification, favorites, messaging, payments, AI tooling, and analytics dashboards.
+It includes built-in support for authentication, OTP verification, favorites, messaging, payments, AI tooling, Telegram chatbot, and analytics dashboards.
 
 ---
 
@@ -65,6 +66,24 @@ It includes built-in support for authentication, OTP verification, favorites, me
 - **Image Search**: Advanced image-based property search capabilities
 - **Configurable AI behavior** through environment variables
 - **Chatbot system prompt management** for flexible behavior control
+
+### Telegram Chatbot
+- **Full Telegram Bot Integration**: Real-time property assistance via Telegram
+- **City-based Property Search**: Find properties by city name
+- **Amenities Info**: Ask about amenities for any property
+- **Nearby Places**: Get nearby hospitals, schools, malls, metro, etc.
+- **Distance & Travel Times**: Distance in km with travel time by Walking, Cycling, Bus, Driving, Train, and Flight
+- **Price Queries**: Get property prices in Lakhs/Crores
+- **Area/Sqft Info**: Property size details
+- **BHK/Bedroom Details**: Room configuration info
+- **Furnishing Status**: Furnished/unfurnished details
+- **Payment Methods**: Full payment options info
+- **Appointment Scheduling**: Book site visits with date/time
+- **Contact Number Handling**: Save contact for appointment confirmation
+- **Date & Time Queries**: Current date, time, tomorrow's date, yesterday
+- **Small Talk Handling**: Greetings, farewells, thank you responses
+- **Stale State Reset**: Automatically resets filters when switching cities
+- **Pasted Property Title Support**: Ask questions about a specific property by pasting its title
 
 ### Communication & Messaging
 - **Real-time Messaging**: WebSocket-based instant messaging between users
@@ -107,6 +126,53 @@ It includes built-in support for authentication, OTP verification, favorites, me
 
 ---
 
+## 🤖 Telegram Chatbot
+
+### What You Can Ask
+
+| Question Type | Example |
+|---|---|
+| Property search | "show me properties in Mumbai" |
+| Amenities | "what amenities are available in Pune" |
+| Nearby places | "nearby places in Ahmedabad" |
+| Distance & travel | "distance to hospital in Hyderabad" |
+| Travel by mode | "distance by bus train walking in Kochi" |
+| Price | "what is the price of properties in Mumbai" |
+| Area/Sqft | "how many square feet in Kochi property" |
+| BHK/Bedrooms | "how many bedrooms in Kolkata" |
+| Furnishing | "furnished properties in Pune" |
+| Payment methods | "what are the payment methods" |
+| Appointment | "schedule appointment on 6th May at 5pm for this property: ..." |
+| Contact | "my contact number is 9876543210" |
+| Date/Time | "today is which day?" / "what is the current time?" |
+| Tomorrow | "tomorrow is which date?" |
+| Greetings | "hi", "hello", "bye", "thank you", "ok bye" |
+
+### Travel Modes Supported
+For every nearby place with a known distance, the bot shows:
+- **Walking** (5 km/h)
+- **Cycling** (15 km/h)
+- **Bus** (25 km/h)
+- **Driving** (40 km/h)
+- **Train** (60 km/h)
+- **Flight** (800 km/h + 90 min airport overhead, for 150+ km)
+
+### Telegram Bot Setup
+
+1. Create a bot via [@BotFather](https://t.me/BotFather) on Telegram
+2. Add to `.env`:
+   ```
+   TELEGRAM_BOT_TOKEN=your-bot-token
+   SITE_URL=https://yourdomain.com
+   ```
+3. Set webhook:
+   ```bash
+   python manage.py setup_telegram_webhook
+   ```
+4. Webhook endpoint: `/telegram/webhook/`
+
+---
+
 ## 🔐 Security Features
 
 - **CSRF Protection**: All forms protected against Cross-Site Request Forgery
@@ -119,20 +185,6 @@ It includes built-in support for authentication, OTP verification, favorites, me
 - **Secure Session Management**: Secure cookie settings
 - **OAuth Integration**: Google OAuth for secure authentication
 - **Webhook Validation**: Signature verification for Razorpay webhooks
-
----
-
-## 📚 Documentation
-
-Comprehensive documentation guides are available:
-
-- [CHATBOT_INTEGRATION.md](CHATBOT_INTEGRATION.md) - Chatbot setup, configuration, and API details
-- [CHATBOT_GUIDE.md](CHATBOT_GUIDE.md) - End-user chatbot guide and workflows
-- [NVIDIA_NIM_SETUP.md](NVIDIA_NIM_SETUP.md) - AI model integration and NVIDIA NIM setup
-- [QUICK_START.md](QUICK_START.md) - Quick start guide for new developers
-- [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - Detailed implementation overview
-- [VERIFICATION.md](VERIFICATION.md) - Testing checklist and verification procedures
-- [.env.example](.env.example) - Environment configuration template
 
 ---
 
@@ -163,11 +215,10 @@ python manage.py test favorites
 - Messaging and real-time notifications
 - Payment success/failure and webhook processing
 - AI chatbot functionality
+- Telegram chatbot all question types
 - Image-based property search
 - Admin dashboard analytics
 - Email delivery verification
-
-See [VERIFICATION.md](VERIFICATION.md) for comprehensive testing checklist.
 
 ---
 
@@ -206,10 +257,6 @@ pip install gunicorn
 gunicorn LuxeEstate.wsgi:application --bind 0.0.0.0:8000
 ```
 
-### Docker Deployment (Optional)
-
-Create `Dockerfile` and `docker-compose.yml` for containerized deployment.
-
 ---
 
 ## 🤝 Contributing
@@ -237,7 +284,6 @@ Refer to LICENSE file for specific terms.
 
 - **Issues**: Report bugs via [GitHub Issues](https://github.com/jainam-shah-18/LuxeEstate/issues)
 - **Discussions**: Join [GitHub Discussions](https://github.com/jainam-shah-18/LuxeEstate/discussions)
-- **Documentation**: See docs/ folder for detailed guides
 
 ---
 
@@ -275,15 +321,17 @@ Refer to LICENSE file for specific terms.
 python manage.py send_followups
 ```
 
-Triggers chatbot-driven automated follow-up handling for leads and appointments.
-
 ### Setup Payment Packages
 
 ```bash
 python manage.py setup_payment_packages
 ```
 
-Helper command for payment package initialization and management.
+### Setup Telegram Webhook
+
+```bash
+python manage.py setup_telegram_webhook
+```
 
 ---
 
@@ -300,6 +348,7 @@ Helper command for payment package initialization and management.
 | `/dashboard/` | Admin Dashboard | Analytics and metrics |
 | `/admin/` | Django Admin | Administrative interface |
 | `/api/` | REST API | API endpoints for mobile/external apps |
+| `/telegram/` | Telegram Bot | Webhook endpoint for Telegram bot |
 
 **Static Info Pages:**
 - `/about/` - About LuxeEstate
@@ -319,6 +368,7 @@ Helper command for payment package initialization and management.
 - **Real-time**: Django Channels with WebSocket support
 - **Authentication**: Django Allauth with social OAuth
 - **AI Integration**: NVIDIA NIM API
+- **Telegram Bot**: python-telegram-bot / Telegram Webhook API
 
 ### Frontend
 - **Template Engine**: Django Templates
@@ -342,6 +392,7 @@ Helper command for payment package initialization and management.
 | Realtime | Django Channels, Daphne |
 | Payments | Razorpay SDK + webhook handlers |
 | AI | NVIDIA NIM integrations |
+| Telegram | Telegram Bot API (webhook) |
 | Frontend | Django Templates, JavaScript, CSS |
 | Data | SQLite (default), configurable DB backend |
 | Static Delivery | WhiteNoise |
@@ -352,23 +403,29 @@ Helper command for payment package initialization and management.
 
 ```
 LuxeEstate/
-├── accounts/              # User authentication, OTP, profile management
-├── properties/            # Property listings, search, AI features, chatbot
-├── messaging/            # Real-time WebSocket messaging system
-├── payments/             # Payment processing, subscriptions, webhooks
-├── favorites/            # Favorite properties tracking
-├── admin_dashboard/      # Administrator analytics interface
-├── LuxeEstate/           # Main project settings, ASGI/WSGI config
-├── static/               # CSS, JavaScript assets
-├── staticfiles/          # Collected static files for production
-├── templates/            # HTML templates
-├── media/               # User-uploaded property images
-├── logs/                # Application log files
-├── docs/                # Documentation and guides
-├── manage.py            # Django management script
-├── requirements.txt     # Python dependencies
-├── .env                 # Environment variables (not committed)
-└── README.md           # This file
+├── accounts/                        # User authentication, OTP, profile management
+├── properties/                      # Property listings, search, AI features, chatbot
+│   ├── chatbot_service.py           # Core chatbot logic with all question handlers
+│   ├── chatbot_system_prompt.py     # AI system prompt and scope rules
+│   ├── telegram_bot.py              # Telegram update/callback handler
+│   ├── telegram_integration.py      # Telegram session management
+│   ├── telegram_views.py            # Telegram webhook view
+│   ├── telegram_urls.py             # Telegram URL routing
+│   └── management/commands/
+│       └── setup_telegram_webhook.py
+├── messaging/                       # Real-time WebSocket messaging system
+├── payments/                        # Payment processing, subscriptions, webhooks
+├── favorites/                       # Favorite properties tracking
+├── admin_dashboard/                 # Administrator analytics interface
+├── LuxeEstate/                      # Main project settings, ASGI/WSGI config
+├── static/                          # CSS, JavaScript assets
+├── templates/                       # HTML templates
+├── media/                           # User-uploaded property images
+├── logs/                            # Application log files
+├── manage.py                        # Django management script
+├── requirements.txt                 # Python dependencies
+├── .env                             # Environment variables (not committed)
+└── README.md                        # This file
 ```
 
 ---
@@ -457,9 +514,15 @@ DEFAULT_FROM_EMAIL=noreply@luxeestate.com
 NVIDIA NIM Configuration:
 ```
 NVIDIA_API_KEY=your-nvidia-api-key
-NIM_CHAT_MODEL=meta/llama-2-7b-chat-q8_0
+NIM_CHAT_MODEL=meta/llama-3.1-8b-instruct
 NVIDIA_VISION_MODEL=nvidia/neva-22b
 AI_CHATBOT_GUIDELINES=Professional property assistance guidelines
+```
+
+Telegram Bot:
+```
+TELEGRAM_BOT_TOKEN=your-telegram-bot-token
+SITE_URL=https://yourdomain.com
 ```
 
 Social Authentication:
@@ -483,8 +546,6 @@ Realtime Communication:
 CHANNEL_LAYERS_HOST=localhost
 CHANNEL_LAYERS_PORT=6379
 ```
-
-For complete list, see [.env.example](.env.example)
 
 ---
 
@@ -511,14 +572,6 @@ Configure one of these endpoints in Razorpay dashboard:
 
 Ensure `RAZORPAY_WEBHOOK_SECRET` in `.env` exactly matches dashboard configuration.
 
-### Payment Packages
-
-The platform supports multiple subscription tiers:
-- Basic, Premium, Elite packages
-- Property listing promotions
-- Featured property placements
-- Custom package creation via admin
-
 ---
 
 ## 🤖 AI & Chatbot Integration
@@ -528,7 +581,7 @@ The platform supports multiple subscription tiers:
 LuxeEstate leverages NVIDIA's NIM (NVIDIA Inference Microservice) for advanced AI capabilities:
 
 **Features:**
-- **Meta Llama 2 7B Chat**: Conversational property assistance
+- **Meta Llama 3.1 8B Instruct**: Conversational property assistance
 - **NVIDIA NEVA 22B**: Advanced image understanding for property images
 - **Configurable System Prompts**: Flexible chatbot behavior via `AI_CHATBOT_GUIDELINES`
 - **Real-time Inference**: Low-latency AI responses
@@ -538,94 +591,35 @@ LuxeEstate leverages NVIDIA's NIM (NVIDIA Inference Microservice) for advanced A
 2. Configure in `.env`:
    ```
    NVIDIA_API_KEY=nvapi-xxxxx...
-   NIM_CHAT_MODEL=meta/llama-2-7b-chat-q8_0
+   NIM_CHAT_MODEL=meta/llama-3.1-8b-instruct
    NVIDIA_VISION_MODEL=nvidia/neva-22b
    ```
-3. Refer to [NVIDIA_NIM_SETUP.md](NVIDIA_NIM_SETUP.md) for detailed setup
-
-### Chatbot Features
-
-- **Property Inquiries**: Answer questions about listings
-- **Smart Recommendations**: AI-powered property suggestions
-- **Lead Qualification**: Automated lead assessment
-- **Follow-up Automation**: Scheduled follow-up messages
-- **Multi-turn Conversations**: Context-aware dialogues
-- **Configurable Behavior**: System prompt customization
-
-### AI Capabilities
-
-1. **Description Generation**: Auto-generate property descriptions from metadata
-2. **Image Search**: Visual similarity matching across listings
-3. **Chatbot Support**: Conversational AI for customer support
-4. **Smart Matching**: AI-powered property-to-buyer matching
-
-For detailed guides:
-- [CHATBOT_INTEGRATION.md](CHATBOT_INTEGRATION.md) - Setup & configuration
-- [CHATBOT_GUIDE.md](CHATBOT_GUIDE.md) - User guide
-- [NVIDIA_NIM_SETUP.md](NVIDIA_NIM_SETUP.md) - AI model setup
-
----
-
-## Management Commands
-
-### Send follow-up actions
-
-```bash
-python manage.py send_followups
-```
-
-Triggers chatbot-driven automated follow-up handling for leads and appointments.
-
-### Setup payment packages helper
-
-```bash
-python manage.py setup_payment_packages
-```
-
-Current implementation deactivates active payment packages globally.
-
----
-
-## Route Map
-
-| Route Prefix | Module |
-|---|---|
-| `/` | Properties (home, list, detail, search, compare) |
-| `/auth/` | Accounts (register/login/profile/OTP) |
-| `/accounts/` | Django Allauth |
-| `/favorites/` | Favorite actions and list |
-| `/messaging/` | Conversations and notifications |
-| `/payments/` | Pricing, payment flow, subscriptions, webhooks |
-| `/dashboard/` | Admin analytics |
-| `/admin/` | Django admin |
-
-Static info pages:
-
-- `/about/`
-- `/terms/`
-- `/privacy/`
-- `/cookies/`
-- `/sitemap/`
 
 ---
 
 ## Troubleshooting
 
+### Telegram Bot Issues
+
+**Problem**: Bot not responding
+- Verify `TELEGRAM_BOT_TOKEN` is correct in `.env`
+- Check webhook is set: `python manage.py setup_telegram_webhook`
+- Ensure server is publicly accessible (use ngrok for local dev)
+- Check `telegram_debug.log` for errors
+
+**Problem**: "No listings found" on every message
+- Clear stale conversation state:
+  ```bash
+  python manage.py shell -c "from properties.models import TelegramUser; TelegramUser.objects.all().update(conversation_state={})"
+  ```
+- Restart the Django server to reload updated code
+
 ### OTP/Email Issues
 
 **Problem**: Emails not being sent
-- **Solution**: Verify SMTP credentials in `.env`
+- Verify SMTP credentials in `.env`
 - Check Gmail app-specific password (if using Gmail)
-- Enable "Less secure apps" if using older email providers
-- Review app logs for TLS/certificate errors
 - Test with debug email backend locally
-
-**Command to test email:**
-```bash
-python manage.py shell
-from django.core.mail import send_mail
-send_mail('Test', 'Test message', 'from@example.com', ['to@example.com'])
-```
 
 ### Payment Issues
 
@@ -633,60 +627,21 @@ send_mail('Test', 'Test message', 'from@example.com', ['to@example.com'])
 - Re-check Razorpay keys and webhook secret in `.env`
 - Confirm webhook URL is reachable from internet (test with ngrok)
 - Check payment webhook logs in database
-- Verify signature calculation matches Razorpay format
-
-**Problem**: Payment verification failing
-- Ensure `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` are correct
-- Check payment status in Razorpay dashboard
-- Review database payment records for status
 
 ### AI/Chatbot Issues
 
 **Problem**: Chatbot not responding
 - Verify `NVIDIA_API_KEY` is correct and active
 - Check NVIDIA NIM API status
-- Review chatbot logs for API errors
 - Ensure `NIM_CHAT_MODEL` is valid
-- Test API key: `curl -H "Authorization: Bearer $NVIDIA_API_KEY" https://integrate.api.nvidia.com/v1/models`
-
-**Problem**: Image search not working
-- Verify `NVIDIA_VISION_MODEL` is configured
-- Check image file size and format (JPEG, PNG recommended)
-- Review image processing logs
-- Ensure vision model API key is active
-
-### Static/Media Files Issues
-
-**Problem**: Static files not loading in production
-- Re-run `python manage.py collectstatic --noinput`
-- Verify static files directory permissions
-- Check WhiteNoise configuration
-- Review web server static file serving config (nginx, Apache)
-
-**Problem**: Media uploads not working
-- Check media directory permissions
-- Verify `MEDIA_URL` and `MEDIA_ROOT` settings
-- Ensure disk space available
-- Check file upload size limits in settings
 
 ### Database Issues
 
 **Problem**: Migration failures
 ```bash
-# Check migration status
 python manage.py showmigrations
-
-# Migrate specific app
-python manage.py migrate accounts
-
-# View specific migration
-python manage.py sqlmigrate accounts 0001_initial
+python manage.py migrate properties
 ```
-
-**Problem**: Foreign key constraint errors
-- Ensure related objects exist before creation
-- Check data integrity in admin interface
-- Review recent model changes
 
 ### WebSocket/Messaging Issues
 
@@ -694,37 +649,9 @@ python manage.py sqlmigrate accounts 0001_initial
 - Verify Django Channels is installed: `pip list | grep channels`
 - Check `CHANNEL_LAYERS` configuration in settings
 - Ensure Redis is running (if using Redis backend)
-- Test WebSocket connection: Check browser console for connection errors
-- Review Daphne/ASGI server logs
-
-### General Debugging
-
-Enable verbose logging:
-```python
-# In settings.py
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'DEBUG',
-    },
-}
-```
-
-Check application logs:
-```bash
-tail -f logs/django.log
-python manage.py runserver --verbosity 2
-```
 
 ---
 
-**Last Updated**: May 4, 2026
+**Last Updated**: May 5, 2026
 
 For more information and latest updates, visit the [GitHub repository](https://github.com/jainam-shah-18/LuxeEstate)
