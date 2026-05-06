@@ -93,6 +93,8 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.media',
                 'django.template.context_processors.static',
+                'properties.context_processors.telegram_bot_context',
+                'properties.context_processors.site_settings_context',
             ],
             'libraries': {
                 'social_helpers': 'accounts.templatetags.social_helpers',

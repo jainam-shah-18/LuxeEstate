@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Property, PropertyImage, PropertyReview, PropertyComparison
+from .models import Property, PropertyImage, PropertyReview, PropertyComparison, Lead, Appointment, TelegramUser
 
 
 class PropertyImageInline(admin.TabularInline):
@@ -71,3 +71,79 @@ class PropertyComparisonAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'name')
     filter_horizontal = ('properties',)
     readonly_fields = ('created_at',)
+
+
+@admin.register(Lead)
+class LeadAdmin(admin.ModelAdmin):
+    list_display = ('name', 'contact', 'intent', 'qualification_stage', 'status', 'source', 'created_at')
+    list_filter = ('qualification_stage', 'status', 'source', 'intent', 'created_at')
+    search_fields = ('name', 'contact', 'location', 'session_id')
+    readonly_fields = ('created_at', 'updated_at', 'score')
+    
+    fieldsets = (
+        ('Lead Information', {
+            'fields': ('name', 'contact', 'intent', 'source', 'session_id')
+        }),
+        ('Property Criteria', {
+            'fields': ('location', 'property_type', 'bhk', 'budget')
+        }),
+        ('Qualification & Status', {
+            'fields': ('qualification_stage', 'status', 'score', 'assigned_agent')
+        }),
+        ('Notes & History', {
+            'fields': ('notes', 'ip_address', 'created_at', 'updated_at', 'last_contacted'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(Appointment)
+class AppointmentAdmin(admin.ModelAdmin):
+    list_display = ('lead', 'property', 'scheduled_datetime', 'status', 'assigned_agent', 'created_at')
+    list_filter = ('status', 'scheduled_datetime', 'created_at')
+    search_fields = ('lead__name', 'property__title')
+    readonly_fields = ('created_at', 'updated_at', 'confirmed_at', 'completed_at')
+    
+    fieldsets = (
+        ('Lead & Property', {
+            'fields': ('lead', 'property')
+        }),
+        ('Appointment Details', {
+            'fields': ('scheduled_datetime', 'duration_minutes', 'status')
+        }),
+        ('Assignment & Confirmation', {
+            'fields': ('assigned_agent', 'confirmation_sent', 'reminder_sent', 'notes')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at', 'confirmed_at', 'completed_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(TelegramUser)
+class TelegramUserAdmin(admin.ModelAdmin):
+    list_display = ('telegram_username', 'telegram_first_name', 'message_count', 'last_active_at', 'is_connected', 'lead')
+    list_filter = ('is_connected', 'language', 'last_active_at', 'connection_started_at')
+    search_fields = ('telegram_username', 'telegram_first_name', 'telegram_id', 'session_id')
+    readonly_fields = ('telegram_id', 'session_id', 'connection_started_at', 'last_active_at', 'message_count')
+    
+    fieldsets = (
+        ('Telegram Profile', {
+            'fields': ('telegram_id', 'telegram_username', 'telegram_first_name', 'telegram_last_name')
+        }),
+        ('Session Information', {
+            'fields': ('session_id', 'conversation_state', 'last_message_text')
+        }),
+        ('Activity', {
+            'fields': ('message_count', 'last_message_at', 'last_active_at', 'is_connected')
+        }),
+        ('Linked Data', {
+            'fields': ('lead', 'language', 'receive_notifications')
+        }),
+        ('Timeline', {
+            'fields': ('connection_started_at',),
+            'classes': ('collapse',)
+        }),
+    )
+

@@ -359,3 +359,59 @@ class Appointment(models.Model):
             self.reminder_sent = True
             self.save(update_fields=['reminder_sent'])
 
+
+class TelegramUser(models.Model):
+    """Track Telegram users and their conversation sessions with LuxeAI chatbot"""
+    
+    # Telegram identifiers
+    telegram_id = models.BigIntegerField(unique=True, db_index=True, help_text="Telegram user ID")
+    telegram_username = models.CharField(max_length=255, blank=True, null=True, help_text="Telegram @username")
+    telegram_first_name = models.CharField(max_length=255, blank=True, null=True)
+    telegram_last_name = models.CharField(max_length=255, blank=True, null=True)
+    
+    # Connection to Lead (if user provides details)
+    lead = models.ForeignKey('Lead', on_delete=models.SET_NULL, null=True, blank=True, related_name='telegram_users')
+    
+    # Session management
+    session_id = models.CharField(max_length=255, unique=True, db_index=True, help_text="LuxeAI session ID for this Telegram user")
+    conversation_state = models.JSONField(default=dict, blank=True, help_text="Current conversation state with chatbot")
+    
+    # Conversation history
+    message_count = models.PositiveIntegerField(default=0, help_text="Number of messages exchanged")
+    last_message_text = models.TextField(blank=True, null=True)
+    last_message_at = models.DateTimeField(blank=True, null=True, db_index=True)
+    
+    # Connection status
+    is_connected = models.BooleanField(default=True, db_index=True, help_text="User is actively using Telegram bot")
+    connection_started_at = models.DateTimeField(auto_now_add=True)
+    last_active_at = models.DateTimeField(auto_now=True)
+    
+    # Preferences
+    language = models.CharField(max_length=10, default='en', choices=[('en', 'English'), ('hi', 'Hindi')])
+    receive_notifications = models.BooleanField(default=True)
+    
+    class Meta:
+        ordering = ['-last_active_at']
+        indexes = [
+            models.Index(fields=['telegram_id']),
+            models.Index(fields=['session_id']),
+            models.Index(fields=['-last_active_at']),
+            models.Index(fields=['is_connected', '-last_active_at']),
+        ]
+    
+    def __str__(self):
+        name = self.telegram_username or f"{self.telegram_first_name} {self.telegram_last_name}".strip()
+        return f"TelegramUser: {name} ({self.telegram_id})"
+    
+    def get_full_name(self):
+        """Get Telegram user's full name"""
+        parts = [self.telegram_first_name, self.telegram_last_name]
+        return " ".join(p for p in parts if p).strip() or self.telegram_username or f"User {self.telegram_id}"
+    
+    def update_last_message(self, message_text: str):
+        """Update last message info"""
+        self.last_message_text = message_text[:500]  # Store first 500 chars
+        self.last_message_at = timezone.now()
+        self.message_count += 1
+        self.save(update_fields=['last_message_text', 'last_message_at', 'message_count', 'last_active_at'])
+

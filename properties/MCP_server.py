@@ -122,6 +122,17 @@ async def list_tools():
                 },
             },
         ),
+        types.Tool(
+            name="get_telegram_bot_link",
+            description=(
+                "Get the Telegram bot link for users to connect with LuxeAI chatbot. "
+                "Useful for sharing with users who want to interact via Telegram."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {},
+            },
+        ),
     ]
 
 
@@ -135,6 +146,8 @@ async def call_tool(name: str, arguments: dict):
         return await _ask_luxe_ai(arguments)
     if name == "book_call":
         return await _book_call(arguments)
+    if name == "get_telegram_bot_link":
+        return await _get_telegram_bot_link(arguments)
     return [types.TextContent(type="text", text=f"Unknown tool: {name}")]
 
 
@@ -250,6 +263,38 @@ async def _book_call(args: dict):
         "message": (
             f"✅ Booking confirmed for {args['name']}. "
             f"An agent will contact you at {args['contact']} shortly."
+        ),
+    }
+    return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+async def _get_telegram_bot_link(args: dict):
+    """Get Telegram bot link for users to connect"""
+    from django.conf import settings
+    
+    bot_username = settings.TELEGRAM_BOT_USERNAME
+    if not bot_username:
+        return [types.TextContent(
+            type="text",
+            text="Telegram bot is not configured. Please contact administrator."
+        )]
+    
+    telegram_link = f"https://t.me/{bot_username}"
+    
+    result = {
+        "success": True,
+        "bot_username": bot_username,
+        "telegram_link": telegram_link,
+        "message": (
+            f"🤖 Connect with LuxeAI Telegram Bot\n\n"
+            f"Bot Username: @{bot_username}\n"
+            f"Direct Link: {telegram_link}\n\n"
+            f"Features:\n"
+            f"• Search properties by location, type, budget\n"
+            f"• Get instant property details\n"
+            f"• Schedule property visits\n"
+            f"• Book calls with agents\n"
+            f"• AI-powered recommendations"
         ),
     }
     return [types.TextContent(type="text", text=json.dumps(result, indent=2))]

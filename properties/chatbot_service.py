@@ -4,7 +4,7 @@ LuxeEstate chatbot backend (rewritten from scratch).
 Design goals:
 - deterministic and fast first response path
 - live listing snapshot from Property table on every request
-- session-friendly state shape compatible with existing view layer
+- session-friendly state shape compatible with existing view layer 
 - optional NIM generation with graceful fallback
 """
 
@@ -51,6 +51,13 @@ GREETING_RE = re.compile(
     re.IGNORECASE,
 )
 GOODBYE_RE = re.compile(r"^\s*(bye|goodbye|exit|quit|stop|see you)\s*[!.,\s]*$", re.IGNORECASE)
+SMALL_TALK_RE = re.compile(
+    r"^[\s]*(ok\s+|no\s+)?(thank(?:s| you|s? you)?|than you|bye|goodbye|see you|take care|no thanks|no thank you"
+    r"|ok bye|ok thank you|got it|noted|sure|great|perfect|nice|cool|awesome|alright"
+    r"|that.?s all|thats all|nothing else|i.?m good|im good|all good|sounds good)"
+    r"(\s+(bye|goodbye|thank(?:s| you)?|ok|sure))?[!.,\s]*$",
+    re.IGNORECASE,
+)
 DATETIME_HINT_RE = re.compile(
     r"\b("
     r"time|date|day|today|tomorrow|yesterday|current|now|"
@@ -253,7 +260,7 @@ class LuxeChatbot:
                 break
 
         city_match = re.search(
-            r"\b(?:in|at|near)\s+([A-Za-z][A-Za-z\s]{1,30}?)(?:\s+(?:for|under|budget|price|with)\b|[.,]|$)",
+            r"\b(?:in|at|near|from)\s+([A-Za-z][A-Za-z\s]{0,30}?)(?:\s+(?:for|under|budget|price|with|property|properties|area|city)\b|[.,;!?]|$)",
             text,
             re.IGNORECASE,
         )
@@ -431,8 +438,41 @@ class LuxeChatbot:
         state = conversation_state or {}
         history = list(state.get("chat_history", []) or [])
         extracted = self.extract_entities(raw)
-        lead = self._merge(state.get("lead", {}), extracted.get("lead", {}), DEFAULT_LEAD)
+        extracted_lead = extracted.get('lead', {})
+
+        # If user mentions a new city explicitly, reset stale property_type/bhk/budget filters
+        if extracted_lead.get('location'):
+            old_state_lead = state.get('lead', {})
+            if extracted_lead['location'].lower() != (old_state_lead.get('location') or '').lower():
+                old_state_lead = {k: v for k, v in old_state_lead.items() if k in ('name', 'contact', 'intent')}
+                state = dict(state)
+                state['lead'] = old_state_lead
+                state['search_criteria'] = {}
+
+        lead = self._merge(state.get("lead", {}), extracted_lead, DEFAULT_LEAD)
         criteria = dict(state.get("search_criteria", {}) or {})
+
+        # If message contains a pasted property title with (City), override location/filters
+        pasted_city_match = re.findall(r'\(([A-Za-z][A-Za-z\s]{1,30})\)', raw)
+        for m in reversed(pasted_city_match):
+            city = m.strip()
+            normalized = CITY_ABBREVIATIONS.get(city.lower(), city)
+            from .models import Property as _Prop
+            if _Prop.objects.filter(is_active=True, city__iexact=normalized).exists():
+                lead['location'] = normalized
+                # Reset stale filters that don't apply to the new property
+                lead['property_type'] = extracted.get('lead', {}).get('property_type', '')
+                lead['bhk'] = extracted.get('lead', {}).get('bhk', '')
+                lead['budget'] = extracted.get('lead', {}).get('budget', '')
+                criteria = {'location': normalized}
+                break
+
+        # If message is small talk / farewell / thanks — don't carry over stale location filters
+        _is_small_talk = bool(GREETING_RE.match(raw) or GOODBYE_RE.match(raw) or SMALL_TALK_RE.match(raw))
+        if _is_small_talk:
+            criteria = {}
+            lead = self._merge({}, extracted_lead, DEFAULT_LEAD)
+
         for key in ("location", "property_type", "budget", "bhk"):
             if lead.get(key):
                 criteria[key] = lead[key]
@@ -483,6 +523,257 @@ class LuxeChatbot:
             "intent": intent,
         }
 
+    def _parse_nearby_entry(self, entry: str):
+        """Parse a nearby place entry string and extract name + km distance."""
+        entry = entry.replace('\\n', ' ').replace('\n', ' ').strip()
+        # Patterns: '5.5km', '5.5 km', '(4 km)', '(2.5 km)', '20 mins'
+        km_match = re.search(r'([\d.]+)\s*km', entry, re.IGNORECASE)
+        if km_match:
+            km = float(km_match.group(1))
+            name = entry[:km_match.start()].strip().rstrip('(,- ')
+            return name or entry, km
+        # mins to km approximation (avg 30 km/h in city)
+        min_match = re.search(r'([\d.]+)\s*min', entry, re.IGNORECASE)
+        if min_match:
+            km = float(min_match.group(1)) * 30 / 60
+            name = entry[:min_match.start()].strip().rstrip('(,- ')
+            return name or entry, round(km, 1)
+        return entry, None
+
+    def _travel_modes(self, km: float) -> str:
+        """Return estimated travel times by different modes for a given distance in km."""
+        walking_min = km / 5 * 60          # 5 km/h
+        cycling_min = km / 15 * 60         # 15 km/h
+        bus_min = km / 25 * 60             # 25 km/h (city bus with stops)
+        driving_min = km / 40 * 60         # 40 km/h (city driving)
+        train_min = km / 60 * 60           # 60 km/h (local train)
+        flight_applicable = km >= 150       # flights only make sense 150+ km
+
+        def fmt(mins):
+            if mins < 60:
+                return f"{int(round(mins))} min"
+            h = int(mins // 60)
+            m = int(round(mins % 60))
+            return f"{h}h {m}m" if m else f"{h}h"
+
+        parts = [
+            f"Walking: {fmt(walking_min)}",
+            f"Cycling: {fmt(cycling_min)}",
+            f"Bus: {fmt(bus_min)}",
+            f"Driving: {fmt(driving_min)}",
+            f"Train: {fmt(train_min)}",
+        ]
+        if flight_applicable:
+            flight_min = (km / 800 * 60) + 90  # 800 km/h + 90 min airport overhead
+            parts.append(f"Flight: {fmt(flight_min)} (incl. airport time)")
+        return ' | '.join(parts)
+
+    def _extract_property_from_message(self, raw: str) -> Optional['Property']:
+        """Try to find a property by title pasted in the message."""
+        # Match pattern after ':-', '-:', ':', '-' separators
+        title_match = re.search(r'(?::-|-:|:\s*|\-\s*)\s*([A-Za-z0-9][^|\n]{10,80}?)\s*\(([A-Za-z\s]+)\)', raw)
+        if title_match:
+            title_fragment = title_match.group(1).strip()
+            try:
+                prop = Property.objects.filter(
+                    is_active=True, title__icontains=title_fragment[:40]
+                ).first()
+                if prop:
+                    return prop
+            except Exception:
+                pass
+        # Fallback: search by any (City) pattern + surrounding words
+        city_match = re.search(r'([A-Za-z0-9][^|\n]{10,80}?)\s*\([A-Za-z\s]+\)', raw)
+        if city_match:
+            fragment = city_match.group(1).strip()[-40:]
+            try:
+                return Property.objects.filter(
+                    is_active=True, title__icontains=fragment
+                ).first()
+            except Exception:
+                pass
+        return None
+
+    def _extract_city_from_pasted_title(self, raw: str) -> Optional[str]:
+        """Extract city from pasted property title like 'Title (Pune)' or 'Title (Pune) | ...'."""
+        # Pattern: last occurrence of (CityName) in the message
+        matches = re.findall(r'\(([A-Za-z][A-Za-z\s]{1,30})\)', raw)
+        for m in reversed(matches):
+            city = m.strip()
+            normalized = CITY_ABBREVIATIONS.get(city.lower(), city)
+            # Verify it's a real city in our DB
+            if Property.objects.filter(is_active=True, city__iexact=normalized).exists():
+                return normalized
+        return None
+
+    def _answer_specific_question(self, raw: str, lead: Dict[str, str], criteria: Dict[str, Any]) -> Optional[str]:
+        """Answer specific property questions (amenities, nearby, price, area, payment, etc.)"""
+        lower = raw.lower()
+
+        # --- CONTACT NUMBER / APPOINTMENT CONFIRMATION ---
+        if re.search(r'(?:\+91|0)?\s*[1-9]\d{9}\b', raw) or re.search(r'\b(contact|number|phone|mobile|call me|reach me|my number)\b', lower):
+            phone_match = re.search(r'(?:\+91|0)?\s*([1-9]\d{9})\b', raw)
+            phone = phone_match.group(1) if phone_match else lead.get('contact', '')
+            appointment = criteria.get('appointment') or lead.get('appointment_hint', '')
+            if phone:
+                return (
+                    f"Thank you! We have noted your contact number: {phone}.\n"
+                    f"Our LuxeEstate team will call you shortly to confirm your appointment.\n"
+                    f"Is there anything else you would like to know about the property?"
+                )
+
+        # --- PAYMENT METHODS ---
+        if re.search(r'\b(payment|pay|emi|loan|finance|installment|method)\b', lower):
+            return (
+                "LuxeEstate accepts the following payment methods:\n"
+                "- Full payment (lump sum)\n"
+                "- Home loan (bank financing)\n"
+                "- EMI via approved banks (SBI, HDFC, ICICI, Axis, etc.)\n"
+                "- Construction-linked payment plan\n"
+                "- Down payment + balance on possession\n\n"
+                "Would you like help calculating your EMI? Share loan amount, interest rate, and tenure."
+            )
+
+        # --- APPOINTMENT for a specific pasted property ---
+        if re.search(r'\b(schedule|appointment|visit|book|meeting)\b', lower):
+            prop = self._extract_property_from_message(raw)
+            if prop:
+                dt = self._extract_appointment_datetime(raw)
+                if dt:
+                    return (
+                        f"Appointment request received for:\n"
+                        f"{prop.title} ({prop.city})\n"
+                        f"Requested date/time: {dt}\n\n"
+                        f"Please share your contact number or email so our team can confirm the visit."
+                    )
+                return (
+                    f"I can schedule a visit for {prop.title} ({prop.city}).\n"
+                    f"Please share your preferred date, time, and contact number."
+                )
+
+        # Try to get city from pasted property title first, then fall back to lead/criteria
+        pasted_city = self._extract_city_from_pasted_title(raw)
+        if pasted_city:
+            criteria = dict(criteria)
+            criteria['location'] = pasted_city
+            lead = dict(lead)
+            lead['location'] = pasted_city
+
+        # Try to find a specific property by pasted title
+        has_pasted_title = bool(re.search(r'\([A-Za-z][A-Za-z\s]{2,30}\)', raw))
+        pasted_prop = self._extract_property_from_message(raw) if has_pasted_title else None
+
+        qs = self._query_from_lead(lead, criteria)
+        # If we found a specific property, use it directly
+        if pasted_prop:
+            qs = Property.objects.filter(pk=pasted_prop.pk)
+
+        # Need at least one property to answer property-specific questions
+        if qs.count() == 0:
+            return None
+
+        props = list(qs.order_by('-is_featured', '-created_at')[:5])
+        first = props[0]
+
+        # --- AMENITIES ---
+        if re.search(r'\b(amenities|amenity|facilities|features|gym|pool|parking|lift|elevator|garden|security|club)\b', lower):
+            lines = []
+            for p in props:
+                amenities = p.amenities if p.amenities else []
+                amenity_str = ', '.join(amenities) if amenities else 'Not specified'
+                lines.append(f"- {p.title} ({p.city}): {amenity_str}")
+            return f"Amenities for matching properties:\n" + '\n'.join(lines)
+
+        # --- NEARBY PLACES + DISTANCE BY TRAVEL MODE ---
+        if re.search(r'\b(nearby|near|close to|around|distance|how far|km|kilometre|kilometer|hospital|school|mall|metro|railway|airport|park|restaurant|pharmacy|bank|atm|gym|university|bus|train|walk|driv|aeroplane|flight|travel)\b', lower):
+            lines = []
+            for p in props[:3]:
+                nearby_map = {
+                    'Hospital': p.nearby_hospital,
+                    'School': p.nearby_school,
+                    'Mall': p.nearby_shopping_mall,
+                    'Metro': p.nearby_metro,
+                    'Railway': p.nearby_railway_station,
+                    'Airport': p.nearby_airport,
+                    'Park': p.nearby_park,
+                    'Restaurant': p.nearby_restaurant,
+                    'Pharmacy': p.nearby_pharmacy,
+                    'Bank': p.nearby_bank,
+                    'Bus Stand': p.nearby_bus_stand,
+                    'Gym': p.nearby_gym,
+                }
+                place_lines = []
+                for place_type, place_list in nearby_map.items():
+                    if not place_list:
+                        continue
+                    for entry in place_list[:2]:
+                        name, km = self._parse_nearby_entry(str(entry))
+                        travel = self._travel_modes(km) if km else ''
+                        place_lines.append(f"  {place_type}: {name} ({km:.1f} km)\n    {travel}" if km else f"  {place_type}: {name}")
+                if place_lines:
+                    lines.append(f"- {p.title} ({p.city}):\n" + '\n'.join(place_lines))
+                else:
+                    lines.append(f"- {p.title} ({p.city}): Nearby data not available")
+            return ("Nearby places with travel distances:\n" + '\n'.join(lines)) if lines else None
+
+        # --- PRICE ---
+        if re.search(r'\b(price|cost|rate|how much|worth|value|budget)\b', lower):
+            lines = []
+            for p in props:
+                price_cr = float(p.price) / 10000000
+                price_l = float(p.price) / 100000
+                if price_cr >= 1:
+                    price_str = f"{price_cr:.2f} Cr"
+                else:
+                    price_str = f"{price_l:.1f} L"
+                lines.append(f"- {p.title} ({p.city}): {price_str}")
+            return f"Property prices:\n" + '\n'.join(lines)
+
+        # --- AREA / SQUARE FEET ---
+        if re.search(r'\b(area|square|sqft|sq ft|size|how big|how large|carpet|built.?up)\b', lower):
+            lines = []
+            for p in props:
+                area = f"{p.area_sqft} sq ft" if p.area_sqft else 'Not specified'
+                lines.append(f"- {p.title} ({p.city}): {area}")
+            return f"Property areas:\n" + '\n'.join(lines)
+
+        # --- BEDROOMS / BHK ---
+        if re.search(r'\b(bedrooms?|bhk|rooms?|beds?)\b', lower):
+            # Use city-only query (no BHK filter) so we list what's available
+            location = (criteria.get('location') or lead.get('location') or '').strip()
+            bhk_qs = Property.objects.filter(is_active=True)
+            if location:
+                bhk_qs = bhk_qs.filter(city__iexact=CITY_ABBREVIATIONS.get(location.lower(), location))
+            lines = []
+            for p in list(bhk_qs.order_by('-is_featured', '-created_at')[:5]):
+                bhk = f"{p.bedrooms} BHK" if p.bedrooms else 'Not specified'
+                lines.append(f"- {p.title} ({p.city}): {bhk}")
+            if not lines:
+                return None
+            return f"BHK details:\n" + '\n'.join(lines)
+
+        # --- FURNISHING ---
+        if re.search(r'\b(furnish|furnished|unfurnished|semi.?furnished|furniture)\b', lower):
+            lines = []
+            for p in props:
+                lines.append(f"- {p.title} ({p.city}): {p.get_furnishing_display() if hasattr(p, 'get_furnishing_display') else p.furnishing}")
+            return f"Furnishing status:\n" + '\n'.join(lines)
+
+        # --- DESCRIPTION / DETAILS ---
+        if re.search(r'\b(detail|describe|tell me about|more about|info|information|overview)\b', lower):
+            p = first
+            desc = (p.ai_generated_description or p.description or 'No description available.')[:300]
+            return (
+                f"{p.title}\n"
+                f"Location: {p.address}, {p.city}\n"
+                f"Type: {p.property_type.title()} | {p.bedrooms or 'N/A'} BHK\n"
+                f"Area: {p.area_sqft or 'N/A'} sq ft | Furnishing: {p.furnishing}\n"
+                f"Status: {p.status.title()}\n"
+                f"Description: {desc}"
+            )
+
+        return None
+
     def generate_response(
         self,
         raw: str,
@@ -495,25 +786,61 @@ class LuxeChatbot:
         next_question: str,
         asked_fields: set,
     ) -> Tuple[str, str, set]:
-        """Generate response using NVIDIA NIM ONLY - all responses from real-time AI, no hardcoded fallbacks"""
-        
-        message = ""
-        model = ""
-        try:
-            message, model = self._nim_reply(raw, history, lead, criteria)
-            logger.info(f"Successfully generated response using NVIDIA NIM model: {model}")
-            return message, model, asked_fields
-        except Exception as exc:
-            error_msg = str(exc)
-            logger.error(f"NVIDIA NIM failed - no hardcoded fallback will be used: {error_msg}")
-            # Return error to user indicating AI service issue - NO hardcoded fallback allowed
-            message = (
-                f"⚠️ AI service temporarily unavailable ({error_msg}). "
-                "Please check NVIDIA_API_KEY and NIM configuration in .env file."
+        """Generate response from live DB with specific question handling."""
+
+        # --- SMALL TALK / GREETINGS / FAREWELLS --- bypass listing search
+        if GREETING_RE.match(raw):
+            return "Hello! How can I help you today? Ask me about properties, prices, amenities, or schedule a visit!", 'static', asked_fields
+        if GOODBYE_RE.match(raw):
+            return "Thank you for chatting with LuxeEstate! Feel free to reach out anytime. Have a great day!", 'static', asked_fields
+        if SMALL_TALK_RE.match(raw):
+            return "You're welcome! Is there anything else I can help you with?", 'static', asked_fields
+
+        # --- DATE / TIME QUESTIONS ---
+        if re.search(r'\b(what|which|today|tomorrow|yesterday|current|now|time|date|day)\b', raw, re.IGNORECASE):
+            if re.search(r'\b(time|current time|what time|time now)\b', raw, re.IGNORECASE):
+                _, _, _, time_text = self._now_context()
+                return f"The current time is {time_text}.", 'static', asked_fields
+            if re.search(r'\b(yesterday)\b', raw, re.IGNORECASE):
+                now = timezone.localtime(timezone.now())
+                yesterday = now - timedelta(days=1)
+                return f"Yesterday was {yesterday.strftime('%A, %d %B %Y')}.", 'static', asked_fields
+            if re.search(r'\b(tomorrow|tomorrow.?s date|which date tomorrow)\b', raw, re.IGNORECASE):
+                tomorrow_date, tomorrow_day = self._tomorrow_context()
+                return f"Tomorrow is {tomorrow_day}, {tomorrow_date}.", 'static', asked_fields
+            if re.search(r'\b(today|which day|what day|what.?s today|today.?s date|current date)\b', raw, re.IGNORECASE):
+                _, day_name, date_text, _ = self._now_context()
+                return f"Today is {day_name}, {date_text}.", 'static', asked_fields
+        # Try to answer specific questions first (amenities, nearby, price, area, etc.)
+        specific = self._answer_specific_question(raw, lead, criteria)
+        if specific:
+            logger.info(f"Bot specific answer: {raw[:50]}")
+            return specific, 'database', asked_fields
+
+        listing_text, info = self._listing_snapshot(lead, criteria)
+        if info.get('count', 0) == 0:
+            # If no location given at all, don't show "No listings found" — just ask for city
+            location = (criteria.get('location') or lead.get('location') or '').strip()
+            if not location:
+                return (
+                    "I'd be happy to help! Which city are you looking for a property in?\n"
+                    "We have properties in: Ahmedabad, Bhopal, Hyderabad, Kochi, Kolkata, Mumbai, North Goa, Pune, Visakhapatnam"
+                ), 'database', asked_fields
+            available_cities = list(
+                Property.objects.filter(is_active=True)
+                .values_list('city', flat=True)
+                .distinct().order_by('city')
             )
-            model = "error"
-        
-        return message, model, asked_fields
+            cities_str = ', '.join(available_cities) if available_cities else 'None'
+            response = (
+                f"No listings found for '{location}'.\n"
+                f"We have properties in: {cities_str}\n"
+                f"Try: \"properties in Mumbai\" or \"show Pune villas\""
+            )
+        else:
+            response = f"LuxeEstate Active ({info['count']}):\n{listing_text}\n\nTell me your city/budget/type?"
+        logger.info(f"Bot DB response: {info['count']} properties")
+        return response, 'database', asked_fields
 
     def _merge(self, base: Dict[str, Any], update: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, Any]:
         merged = {**defaults, **(base or {})}
@@ -706,8 +1033,8 @@ class LuxeChatbot:
         # Get API configuration from settings
         api_key = (getattr(settings, "NVIDIA_API_KEY", None) or "").strip()
         if not api_key:
-            logger.warning("NVIDIA_API_KEY is not configured. Set NVIDIA_API_KEY in .env file for AI enhancements.")
-            raise RuntimeError("NVIDIA_API_KEY not configured. Chatbot will use deterministic fallback responses.")
+            logger.warning("NVIDIA_AI disabled - using live DB listings (set NVIDIA_API_KEY for AI)")
+            return self._deterministic_reply(user_message, intent, lead, criteria, appointment), "deterministic"
         
         # Get NIM endpoint configuration (support both cloud and self-hosted)
         nim_endpoint = getattr(settings, "NVIDIA_NIM_ENDPOINT", "https://integrate.api.nvidia.com/v1").strip()
@@ -883,7 +1210,10 @@ class LuxeChatbot:
             requires_human = True
             handoff_reason = "User requested human escalation"
             model = ""
-        elif intent == "out_of_scope":
+        elif intent == "out_of_scope" and not re.search(
+            r'\b(nearby|near|distance|how far|km|kilometre|kilometer|bus|train|walk|driv|flight|aeroplane|hospital|school|mall|metro|railway|airport|amenities|amenity|price|cost|area|sqft|sq ft|bedroom|bhk|furnish|payment|time|date|day|today|tomorrow|yesterday|current|now)\b',
+            raw, re.IGNORECASE
+        ):
             message = get_scope_redirect(raw)
             out_of_scope_flagged = True
             model = ""
@@ -940,6 +1270,17 @@ class LuxeChatbot:
             except Exception as e:
                 logger.error(f"Failed to save appointment: {e}")
 
+        # Build conversation state for persistence
+        conversation_state = {
+            "chat_history": history,
+            "lead": lead,
+            "search_criteria": criteria,
+            "appointment": appointment,
+            "asked_fields": list(asked_fields),
+            "intent": intent,
+            "session_id": session_id,
+        }
+
         result.update({
             "message": message,
             "intent": intent,
@@ -971,6 +1312,7 @@ class LuxeChatbot:
             "next_question_field": next_question,
             "asked_fields": list(asked_fields),
             "last_question_field": next_question if next_question else "",
+            "conversation_state": conversation_state,
         })
         return result
 
